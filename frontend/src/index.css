@@ -108,6 +108,37 @@ body {
   .card-lift:hover { transform: none; }
 }
 
+/* --- "Tapping morning" concept tokens (LandingConcept) --- */
+:root {
+  --font-tap-display: "Fraunces", "Newsreader", Georgia, serif;
+  --font-tap-body: "Work Sans", "Manrope", system-ui, sans-serif;
+  --font-tap-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
+}
+.font-tap-display {
+  font-family: var(--font-tap-display);
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+.font-tap-body {
+  font-family: var(--font-tap-body);
+}
+.font-tap-mono {
+  font-family: var(--font-tap-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Single glinting point of light in the predawn hero. */
+@keyframes tap-glint {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.tap-glint {
+  animation: tap-glint 3.4s var(--ease-in-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tap-glint { animation: none; opacity: 0.9; }
+}
+
 /* Print: show only the receipt document, hide everything else. */
 @media print {
   body * {
