@@ -1,0 +1,302 @@
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router";
+import api, { apiError } from "../../lib/api";
+import {
+  Button,
+  Card,
+  Input,
+  Select,
+  Spinner,
+  PageHeader,
+  Badge,
+  StatCard,
+  BackButton,
+} from "../../components/ui";
+import { Scale, Wallet, Boxes, Plus } from "lucide-react";
+import ShowComputation from "../../components/ShowComputation";
+import { formatDate } from "../../lib/format";
+
+const STATUS_COLOR = { OPEN: "green", CLOSED: "amber", SETTLED: "slate" };
+const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+export default function BatchDetail() {
+  const { id } = useParams();
+  const [batch, setBatch] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [defaults, setDefaults] = useState({ cbu: 0, membershipFee: 0, supplies: 0, dayong: 0 });
+  const emptyForm = () => ({
+    memberId: "",
+    weightKg: "",
+    drc: "",
+    pricePerKg: "",
+    cbu: String(defaults.cbu),
+    membershipFee: String(defaults.membershipFee),
+    supplies: String(defaults.supplies),
+    dayong: String(defaults.dayong),
+  });
+  const [form, setForm] = useState({
+    memberId: "", weightKg: "", drc: "", pricePerKg: "",
+    cbu: "", membershipFee: "", supplies: "", dayong: "",
+  });
+
+  async function load() {
+    const res = await api.get(`/production/batches/${id}`);
+    setBatch(res.data);
+  }
+
+  useEffect(() => {
+    load();
+    api.get("/members", { params: { pageSize: 200 } }).then((res) => setMembers(res.data.items));
+    api.get("/production/deduction-defaults").then((res) => {
+      setDefaults(res.data);
+      setForm((f) => ({
+        ...f,
+        cbu: String(res.data.cbu),
+        membershipFee: String(res.data.membershipFee),
+        supplies: String(res.data.supplies),
+        dayong: String(res.data.dayong),
+      }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const previewTotal = useMemo(() => {
+    const w = parseFloat(form.weightKg);
+    const p = parseFloat(form.pricePerKg);
+    if (isNaN(w) || isNaN(p)) return null;
+    return w * p;
+  }, [form.weightKg, form.pricePerKg]);
+
+  // Net before the automatic loan deduction (loan is only known on submit).
+  const previewNetBeforeLoan = useMemo(() => {
+    if (previewTotal == null) return null;
+    const d =
+      (parseFloat(form.cbu) || 0) +
+      (parseFloat(form.membershipFee) || 0) +
+      (parseFloat(form.supplies) || 0) +
+      (parseFloat(form.dayong) || 0);
+    return previewTotal - d;
+  }, [previewTotal, form.cbu, form.membershipFee, form.supplies, form.dayong]);
+
+  async function recordDelivery(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api.post("/production/deliveries", {
+        memberId: Number(form.memberId),
+        batchId: Number(id),
+        weightKg: parseFloat(form.weightKg),
+        drc: form.drc ? parseFloat(form.drc) : null,
+        pricePerKg: parseFloat(form.pricePerKg),
+        cbu: parseFloat(form.cbu) || 0,
+        membershipFee: parseFloat(form.membershipFee) || 0,
+        supplies: parseFloat(form.supplies) || 0,
+        dayong: parseFloat(form.dayong) || 0,
+      });
+      setForm(emptyForm());
+      await load();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function changeStatus(status) {
+    setBusy(true);
+    try {
+      await api.patch(`/production/batches/${id}/status`, { status });
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!batch) return <Spinner />;
+  const isOpen = batch.status === "OPEN";
+
+  return (
+    <div>
+      <BackButton to="/batches" label="Back to loading batches" />
+      <PageHeader
+        title={`${batch.barangay.name} — ${batch.periodType}`}
+        subtitle={`${formatDate(batch.startDate)} → ${formatDate(batch.endDate)}`}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge color={STATUS_COLOR[batch.status]}>{batch.status}</Badge>
+            {batch.status === "OPEN" && (
+              <Button variant="secondary" onClick={() => changeStatus("CLOSED")} disabled={busy}>
+                Close batch
+              </Button>
+            )}
+            {batch.status === "CLOSED" && (
+              <>
+                <Button variant="secondary" onClick={() => changeStatus("OPEN")} disabled={busy}>
+                  Reopen
+                </Button>
+                <Button onClick={() => changeStatus("SETTLED")} disabled={busy}>
+                  Mark settled
+                </Button>
+              </>
+            )}
+            {batch.status === "SETTLED" && (
+              <Button variant="secondary" onClick={() => changeStatus("CLOSED")} disabled={busy}>
+                Un-settle
+              </Button>
+            )}
+          </div>
+        }
+      />
+
+      <div className="mb-4 grid grid-cols-3 gap-4">
+        <StatCard label="Total volume (kg)" value={batch.totals.totalKg.toLocaleString()} icon={Scale} />
+        <StatCard label="Total amount" value={peso(batch.totals.totalAmount)} icon={Wallet} accent="blue" />
+        <StatCard label="Deliveries" value={batch.deliveries.length} icon={Boxes} accent="amber" />
+      </div>
+
+      {isOpen && (
+        <Card className="mb-4">
+          <h3 className="mb-3 font-semibold text-[#2F3437]">Record delivery</h3>
+          <form onSubmit={recordDelivery} className="grid grid-cols-5 items-end gap-3">
+            {error && <p className="col-span-5 text-sm text-[#9F2F2D]">{error}</p>}
+            <Select
+              label="Member"
+              value={form.memberId}
+              onChange={(e) => setForm({ ...form, memberId: e.target.value })}
+              required
+            >
+              <option value="">Select…</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.memberNo} — {m.firstName} {m.lastName}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="Weight (kg)"
+              type="number"
+              step="0.01"
+              value={form.weightKg}
+              onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
+              required
+            />
+            <Input
+              label="DRC (%)"
+              type="number"
+              step="0.01"
+              value={form.drc}
+              onChange={(e) => setForm({ ...form, drc: e.target.value })}
+            />
+            <Input
+              label="Price / kg (₱)"
+              type="number"
+              step="0.01"
+              value={form.pricePerKg}
+              onChange={(e) => setForm({ ...form, pricePerKg: e.target.value })}
+              required
+            />
+            <div>
+              <p className="mb-1 text-sm font-medium text-[#2F3437]">Gross</p>
+              <div className="rounded-lg bg-[#F7F6F3] px-3 py-2 text-sm font-semibold text-[#346538]">
+                {previewTotal != null ? peso(previewTotal) : "—"}
+              </div>
+            </div>
+
+            {/* Net-income deductions (loan is deducted automatically) */}
+            <Input
+              label="CBU (₱)"
+              type="number"
+              step="0.01"
+              value={form.cbu}
+              onChange={(e) => setForm({ ...form, cbu: e.target.value })}
+            />
+            <Input
+              label="Membership (₱)"
+              type="number"
+              step="0.01"
+              value={form.membershipFee}
+              onChange={(e) => setForm({ ...form, membershipFee: e.target.value })}
+            />
+            <Input
+              label="Acid / Tapping Knife (₱)"
+              type="number"
+              step="0.01"
+              value={form.supplies}
+              onChange={(e) => setForm({ ...form, supplies: e.target.value })}
+            />
+            <Input
+              label="Dayong (₱)"
+              type="number"
+              step="0.01"
+              value={form.dayong}
+              onChange={(e) => setForm({ ...form, dayong: e.target.value })}
+            />
+            <div>
+              <p className="mb-1 text-sm font-medium text-[#2F3437]">Net (before loan)</p>
+              <div className="rounded-lg bg-[#F7F6F3] px-3 py-2 text-sm font-semibold text-[#346538]">
+                {previewNetBeforeLoan != null ? peso(previewNetBeforeLoan) : "—"}
+              </div>
+            </div>
+
+            <p className="col-span-5 text-xs text-[#B0AFAB]">
+              Any due loan installment is deducted automatically on top of these. Final net appears on the
+              receipt (use “Show computation”).
+            </p>
+
+            <div className="col-span-5 flex justify-end">
+              <Button type="submit" disabled={busy}>
+                <Plus size={16} />
+                Add delivery
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      <Card className="p-0">
+        <table className="w-full text-sm">
+          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+            <tr>
+              <th className="px-4 py-3 font-medium">Member</th>
+              <th className="px-4 py-3 font-medium">Weight (kg)</th>
+              <th className="px-4 py-3 font-medium">DRC</th>
+              <th className="px-4 py-3 font-medium">Price/kg</th>
+              <th className="px-4 py-3 font-medium">Total</th>
+              <th className="px-4 py-3 font-medium">Net (receipt)</th>
+              <th className="px-4 py-3 font-medium">Date</th>
+              <th className="px-4 py-3 font-medium"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#F2F1ED]">
+            {batch.deliveries.map((d) => (
+              <tr key={d.id} className="hover:bg-[#F7F6F3]">
+                <td className="px-4 py-3">
+                  {d.member.memberNo} — {d.member.firstName} {d.member.lastName}
+                </td>
+                <td className="px-4 py-3 text-[#787774]">{Number(d.weightKg).toLocaleString()}</td>
+                <td className="px-4 py-3 text-[#787774]">{d.drc != null ? `${d.drc}%` : "—"}</td>
+                <td className="px-4 py-3 text-[#787774]">{peso(d.pricePerKg)}</td>
+                <td className="px-4 py-3 font-medium text-[#2F3437]">{peso(d.totalAmount)}</td>
+                <td className="px-4 py-3 text-[#346538]">{d.receipt ? peso(d.receipt.netAmount) : "—"}</td>
+                <td className="px-4 py-3 text-[#787774]">{formatDate(d.deliveryDate)}</td>
+                <td className="px-4 py-3">
+                  <ShowComputation url={`/production/deliveries/${d.id}/explain`} label="Show computation" />
+                </td>
+              </tr>
+            ))}
+            {batch.deliveries.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  No deliveries recorded for this batch yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}

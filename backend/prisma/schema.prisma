@@ -1,0 +1,418 @@
+// SMARTCOOP database schema (MySQL)
+// Full ERD built now; feature code lands module-by-module.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  ADMIN
+  STAFF
+  MEMBER
+  MAO
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MembershipType {
+  REGULAR
+  ASSOCIATE
+}
+
+enum MemberStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// Dynamic Member Categorization result (Algorithm3).
+enum ActivityCategory {
+  ACTIVE
+  MODERATE
+  INACTIVE
+  NOT_APPLICABLE
+}
+
+enum PeriodType {
+  KINSINA // 15-day period
+  KATAPUSAN // monthly close
+}
+
+enum BatchStatus {
+  OPEN
+  CLOSED
+  SETTLED
+}
+
+enum LoanStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ScheduleStatus {
+  PENDING
+  PARTIAL
+  PAID
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+enum ProgramStatus {
+  PLANNED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum TagSeverity {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+// Public membership application review state.
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ---------- Foundation / Membership / MAO (built this milestone) ----------
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  passwordHash String     @map("password_hash")
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  memberId     Int?       @unique @map("member_id")
+  member       Member?    @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  sentNotifications Notification[] @relation("NotificationSender")
+  activityLogs      ActivityLog[]
+  taggedAreas       AffectedAreaTag[]
+
+  @@map("users")
+}
+
+model Member {
+  id              Int            @id @default(autoincrement())
+  memberNo        String         @unique @map("member_no")
+  firstName       String         @map("first_name")
+  middleName      String?        @map("middle_name")
+  lastName        String         @map("last_name")
+  sex             String?
+  birthdate       DateTime?
+  address         String?
+  barangayId      Int?           @map("barangay_id")
+  barangay        Barangay?      @relation(fields: [barangayId], references: [id], onDelete: SetNull)
+  contactNo       String?        @map("contact_no")
+  profilePhoto    String?        @map("profile_photo")
+  membershipType  MembershipType @default(ASSOCIATE) @map("membership_type")
+  shareCapital    Decimal        @default(0) @map("share_capital") @db.Decimal(12, 2)
+  dateJoined      DateTime       @default(now()) @map("date_joined")
+  status          MemberStatus   @default(ACTIVE)
+  // Dynamic Member Categorization Algorithm results
+  deliveryScore   Int?              @map("delivery_score")
+  loanScore       Int?              @map("loan_score")
+  activityScore   Int?              @map("activity_score")
+  repaymentRate   Decimal?          @map("repayment_rate") @db.Decimal(6, 2)
+  activityCategory ActivityCategory? @map("activity_category")
+  lastCategorizedAt DateTime?        @map("last_categorized_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  user                User?
+  deliveries          RubberDelivery[]
+  receipts            Receipt[]
+  loans               Loan[]
+  settlements         Settlement[]
+  creditScores        CreditScore[]
+  notifications       Notification[]              @relation("NotificationRecipient")
+  programRecipients   SupportProgramRecipient[]
+
+  @@index([barangayId])
+  @@index([membershipType])
+  @@map("members")
+}
+
+model Barangay {
+  id   Int     @id @default(autoincrement())
+  name String  @unique
+  code String? @unique
+
+  members         Member[]
+  loadingBatches  LoadingBatch[]
+  affectedTags    AffectedAreaTag[]
+  supportPrograms SupportProgram[]
+  applications    MembershipApplication[]
+
+  @@map("barangays")
+}
+
+// A prospective member's public application, reviewed by staff. On approval a
+// real Member record is created and linked via memberId.
+model MembershipApplication {
+  id               Int               @id @default(autoincrement())
+  firstName        String            @map("first_name")
+  middleName       String?           @map("middle_name")
+  lastName         String            @map("last_name")
+  sex              String?
+  birthdate        DateTime?
+  address          String?
+  barangayId       Int?              @map("barangay_id")
+  barangay         Barangay?         @relation(fields: [barangayId], references: [id], onDelete: SetNull)
+  contactNo        String?           @map("contact_no")
+  email            String?
+  membershipType   MembershipType    @default(ASSOCIATE) @map("membership_type")
+  reason           String?           @db.Text
+  status           ApplicationStatus @default(PENDING)
+  reviewNote       String?           @map("review_note") @db.Text
+  reviewedByUserId Int?              @map("reviewed_by_user_id")
+  reviewedAt       DateTime?         @map("reviewed_at")
+  memberId         Int?              @map("member_id")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("membership_applications")
+}
+
+// ---------- Production (schema only; module built later) ----------
+
+model LoadingBatch {
+  id         Int         @id @default(autoincrement())
+  barangayId Int         @map("barangay_id")
+  barangay   Barangay    @relation(fields: [barangayId], references: [id])
+  periodType PeriodType  @map("period_type")
+  startDate  DateTime    @map("start_date")
+  endDate    DateTime    @map("end_date")
+  status     BatchStatus @default(OPEN)
+
+  deliveries RubberDelivery[]
+
+  @@index([barangayId])
+  @@map("loading_batches")
+}
+
+model RubberDelivery {
+  id           Int          @id @default(autoincrement())
+  memberId     Int          @map("member_id")
+  member       Member       @relation(fields: [memberId], references: [id])
+  batchId      Int          @map("batch_id")
+  batch        LoadingBatch @relation(fields: [batchId], references: [id])
+  weightKg     Decimal      @map("weight_kg") @db.Decimal(10, 2)
+  drc          Decimal?     @db.Decimal(5, 2) // Dry Rubber Content (%)
+  pricePerKg   Decimal      @map("price_per_kg") @db.Decimal(10, 2)
+  totalAmount  Decimal      @map("total_amount") @db.Decimal(12, 2)
+  deliveryDate DateTime     @map("delivery_date")
+
+  receipt      Receipt?
+  loanPayments LoanPayment[]
+
+  @@index([memberId])
+  @@index([batchId])
+  @@map("rubber_deliveries")
+}
+
+model Receipt {
+  id            Int            @id @default(autoincrement())
+  deliveryId    Int            @unique @map("delivery_id")
+  delivery      RubberDelivery @relation(fields: [deliveryId], references: [id])
+  memberId      Int            @map("member_id")
+  member        Member         @relation(fields: [memberId], references: [id])
+  grossAmount   Decimal        @map("gross_amount") @db.Decimal(12, 2)
+  // Deductions: gross - (loan + CBU + membership + supplies + dayong) = net
+  loanDeduction Decimal        @default(0) @map("loan_deduction") @db.Decimal(12, 2)
+  cbu           Decimal        @default(0) @db.Decimal(12, 2)
+  membershipFee Decimal        @default(0) @map("membership_fee") @db.Decimal(12, 2)
+  supplies      Decimal        @default(0) @db.Decimal(12, 2) // acid / tapping knife
+  dayong        Decimal        @default(0) @db.Decimal(12, 2)
+  netAmount     Decimal        @map("net_amount") @db.Decimal(12, 2)
+  dateIssued    DateTime       @default(now()) @map("date_issued")
+
+  @@index([memberId])
+  @@map("receipts")
+}
+
+// ---------- Financial (schema only; module built later) ----------
+
+model Loan {
+  id               Int        @id @default(autoincrement())
+  memberId         Int        @map("member_id")
+  member           Member     @relation(fields: [memberId], references: [id])
+  principalAmount  Decimal    @map("principal_amount") @db.Decimal(12, 2)
+  interestRate     Decimal    @map("interest_rate") @db.Decimal(5, 2) // periodic rate (%) per month
+  termMonths       Int        @map("term_months")
+  remainingBalance Decimal    @map("remaining_balance") @db.Decimal(12, 2)
+  status           LoanStatus @default(ACTIVE)
+  dateIssued       DateTime   @default(now()) @map("date_issued")
+
+  payments LoanPayment[]
+  schedule LoanSchedule[]
+
+  @@index([memberId])
+  @@map("loans")
+}
+
+model LoanSchedule {
+  id           Int            @id @default(autoincrement())
+  loanId       Int            @map("loan_id")
+  loan         Loan           @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  periodNo     Int            @map("period_no")
+  dueDate      DateTime       @map("due_date")
+  principalDue Decimal        @map("principal_due") @db.Decimal(12, 2)
+  interestDue  Decimal        @map("interest_due") @db.Decimal(12, 2)
+  totalDue     Decimal        @map("total_due") @db.Decimal(12, 2)
+  amountPaid   Decimal        @default(0) @map("amount_paid") @db.Decimal(12, 2)
+  status       ScheduleStatus @default(PENDING)
+
+  @@index([loanId])
+  @@map("loan_schedules")
+}
+
+model LoanPayment {
+  id            Int             @id @default(autoincrement())
+  loanId        Int             @map("loan_id")
+  loan          Loan            @relation(fields: [loanId], references: [id])
+  deliveryId    Int?            @map("delivery_id")
+  delivery      RubberDelivery? @relation(fields: [deliveryId], references: [id])
+  amountDeducted Decimal        @map("amount_deducted") @db.Decimal(12, 2)
+  paymentDate   DateTime        @default(now()) @map("payment_date")
+
+  @@index([loanId])
+  @@map("loan_payments")
+}
+
+model Settlement {
+  id              Int       @id @default(autoincrement())
+  memberId        Int       @map("member_id")
+  member          Member    @relation(fields: [memberId], references: [id])
+  fiscalYear      Int       @map("fiscal_year")
+  periodStart     DateTime? @map("period_start")
+  periodEnd       DateTime? @map("period_end")
+  dividend        Decimal   @default(0) @db.Decimal(12, 2)
+  patronageRefund Decimal   @default(0) @map("patronage_refund") @db.Decimal(12, 2)
+  totalAmount     Decimal   @map("total_amount") @db.Decimal(12, 2)
+  datePaid        DateTime? @map("date_paid")
+
+  @@index([memberId])
+  @@map("settlements")
+}
+
+model CreditScore {
+  id         Int      @id @default(autoincrement())
+  memberId   Int      @map("member_id")
+  member     Member   @relation(fields: [memberId], references: [id])
+  score      Decimal  @db.Decimal(6, 2)
+  factors    Json?
+  computedAt DateTime @default(now()) @map("computed_at")
+
+  @@index([memberId])
+  @@map("credit_scores")
+}
+
+// ---------- Communication & audit (built this milestone) ----------
+
+model Notification {
+  id                Int                @id @default(autoincrement())
+  title             String
+  message           String             @db.Text
+  senderUserId      Int?               @map("sender_user_id")
+  sender            User?              @relation("NotificationSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+  recipientRole     Role?              @map("recipient_role")
+  recipientMemberId Int?               @map("recipient_member_id")
+  recipientMember   Member?            @relation("NotificationRecipient", fields: [recipientMemberId], references: [id], onDelete: Cascade)
+  dateSent          DateTime           @default(now()) @map("date_sent")
+  status            NotificationStatus @default(UNREAD)
+
+  @@index([recipientRole])
+  @@index([recipientMemberId])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   @db.Text
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@map("activity_logs")
+}
+
+// ---------- MAO module (built this milestone) ----------
+
+model SupportProgram {
+  id             Int           @id @default(autoincrement())
+  name           String
+  type           String // e.g. "Fertilizer Distribution"
+  description    String?       @db.Text
+  targetBarangayId Int?        @map("target_barangay_id")
+  targetBarangay Barangay?     @relation(fields: [targetBarangayId], references: [id], onDelete: SetNull)
+  startDate      DateTime?     @map("start_date")
+  endDate        DateTime?     @map("end_date")
+  status         ProgramStatus @default(PLANNED)
+  budget         Decimal?      @db.Decimal(14, 2)
+
+  recipients SupportProgramRecipient[]
+
+  @@map("support_programs")
+}
+
+model SupportProgramRecipient {
+  id               Int            @id @default(autoincrement())
+  programId        Int            @map("program_id")
+  program          SupportProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  memberId         Int            @map("member_id")
+  member           Member         @relation(fields: [memberId], references: [id])
+  quantityOrAmount Decimal?       @map("quantity_or_amount") @db.Decimal(12, 2)
+  dateDistributed  DateTime?      @map("date_distributed")
+
+  @@index([programId])
+  @@index([memberId])
+  @@map("support_program_recipients")
+}
+
+model AffectedAreaTag {
+  id             Int         @id @default(autoincrement())
+  barangayId     Int         @map("barangay_id")
+  barangay       Barangay    @relation(fields: [barangayId], references: [id])
+  reason         String
+  severity       TagSeverity @default(MODERATE)
+  note           String?     @db.Text
+  taggedByUserId Int?        @map("tagged_by_user_id")
+  taggedBy       User?       @relation(fields: [taggedByUserId], references: [id], onDelete: SetNull)
+  dateTagged     DateTime    @default(now()) @map("date_tagged")
+  resolvedAt     DateTime?   @map("resolved_at")
+
+  @@index([barangayId])
+  @@map("affected_area_tags")
+}
+
+// ---------- Config ----------
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}

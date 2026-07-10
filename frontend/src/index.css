@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* --- Landing page typographic + motion tokens (minimalist editorial) --- */
+:root {
+  --font-sans: "Manrope", "Helvetica Neue", system-ui, sans-serif;
+  --font-serif: "Newsreader", "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
+
+  /* Strong custom easings — the built-in CSS curves are too weak. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Pressable elements: instant, GPU-only feedback (transform + color). */
+.btn-press {
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 160ms var(--ease-out),
+    color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out);
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Card hover lift — ultra-diffuse, gated to real hover devices only. */
+.card-lift {
+  transition:
+    transform 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* App-wide base: editorial minimalist palette + type, matched to the landing. */
+html {
+  scroll-behavior: smooth;
+}
+body {
+  font-family: var(--font-sans);
+  background: #fbfbfa;
+  color: #2f3437;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures for data-heavy tables and metrics. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Gentle page-header entry on route change (ease-out, transform + opacity). */
+@keyframes page-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.page-head {
+  animation: page-rise 420ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-head { animation: none; }
+}
+
+.font-serif-display {
+  font-family: var(--font-serif);
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+.font-sans-ui {
+  font-family: var(--font-sans);
+}
+.font-mono-meta {
+  font-family: var(--font-mono);
+}
+
+/* Scroll-entry reveal — transform/opacity only. */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Slow ambient drift for the hero backdrop blob. */
+@keyframes ambient-drift {
+  0% { transform: translate(-4%, -2%) scale(1); }
+  50% { transform: translate(4%, 3%) scale(1.08); }
+  100% { transform: translate(-4%, -2%) scale(1); }
+}
+.ambient-blob {
+  animation: ambient-drift 26s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .ambient-blob { animation: none; }
+  .btn-press:active { transform: none; }
+  .card-lift { transition: box-shadow 200ms var(--ease-out); }
+  .card-lift:hover { transform: none; }
+}
+
+/* Print: show only the receipt document, hide everything else. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

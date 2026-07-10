@@ -1,0 +1,318 @@
+import prisma from "../../config/db.js";
+import { notFound } from "../../utils/httpError.js";
+import { logActivity } from "../../utils/activityLog.js";
+
+// ---------------------------------------------------------------------------
+// Agricultural Credit Scoring System
+// ---------------------------------------------------------------------------
+// A standardized, algorithmic creditworthiness assessment (Objective 3 /
+// Problem 6). Score 0-100 from three weighted pillars, each normalized 0-100:
+//
+//   1. Repayment history       — loan installments paid on time, overdue, and
+//                                loans fully repaid (historical financial interactions)
+//   2. Production consistency  — delivery volume + how regularly the member
+//                                delivers over the last 12 months
+//   3. Farm characteristics    — share capital, membership tenure, and class
+//                                (standing within the cooperative)
+//
+// The score maps to a risk band + lending recommendation + a suggested credit
+// limit. Weights/caps are tunable via app_settings key "creditScoring".
+// ---------------------------------------------------------------------------
+
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+
+const DEFAULT_CONFIG = {
+  weights: { repayment: 0.35, production: 0.3, farm: 0.35 },
+  caps: { volumeKg: 5000, consistencyMonths: 12, shareCapital: 20000, tenureMonths: 60 },
+  bands: { low: 75, medium: 50 }, // >=low LOW risk; >=medium MEDIUM; else HIGH
+  // Suggested credit limit = (shareCapital*scMult + annualDeliveryValue*deliveryMult) * score%
+  limit: { scMult: 2, deliveryMult: 0.5 },
+};
+
+export async function getConfig() {
+  const setting = await prisma.appSetting.findUnique({ where: { key: "creditScoring" } });
+  const v = setting?.value;
+  if (!v) return DEFAULT_CONFIG;
+  return {
+    weights: { ...DEFAULT_CONFIG.weights, ...(v.weights ?? {}) },
+    caps: { ...DEFAULT_CONFIG.caps, ...(v.caps ?? {}) },
+    bands: { ...DEFAULT_CONFIG.bands, ...(v.bands ?? {}) },
+    limit: { ...DEFAULT_CONFIG.limit, ...(v.limit ?? {}) },
+  };
+}
+
+const norm = (value, cap) => (cap > 0 ? Math.min(100, (Number(value) / cap) * 100) : 0);
+
+function monthsBetween(from, to = new Date()) {
+  if (!from) return 0;
+  return Math.max(0, (to.getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+}
+
+function bandFor(score, bands) {
+  if (score >= bands.low) return "LOW";
+  if (score >= bands.medium) return "MEDIUM";
+  return "HIGH";
+}
+
+const RECOMMENDATION = {
+  LOW: "Approve — low risk",
+  MEDIUM: "Review — standard terms / partial guarantee",
+  HIGH: "High risk — require collateral or decline",
+};
+
+// Pure scoring function over already-gathered data.
+export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONFIG) {
+  const now = new Date();
+
+  // --- 1. Repayment history ---
+  let dueCount = 0;
+  let paidDue = 0;
+  let overdue = 0;
+  let outstanding = 0;
+  let fullyRepaidLoans = 0;
+
+  for (const loan of loans) {
+    if (loan.status === "ACTIVE") outstanding += Number(loan.remainingBalance);
+    const allPaid = loan.schedule.length > 0 && loan.schedule.every((r) => r.status === "PAID");
+    if (loan.status === "INACTIVE" && allPaid) fullyRepaidLoans += 1;
+    for (const row of loan.schedule) {
+      if (new Date(row.dueDate) <= now) {
+        dueCount += 1;
+        if (row.status === "PAID") paidDue += 1;
+        else overdue += 1;
+      }
+    }
+  }
+  const onTimeRatio = dueCount > 0 ? paidDue / dueCount : null;
+  let repaymentScore;
+  if (loans.length === 0) {
+    repaymentScore = 65; // no history — neutral, slightly cautious
+  } else if (dueCount === 0) {
+    repaymentScore = 72; // has a loan but nothing due yet
+  } else {
+    repaymentScore = round2(onTimeRatio * 100);
+  }
+  repaymentScore = Math.min(100, repaymentScore + fullyRepaidLoans * 5); // reward clean closures
+
+  // --- 2. Production consistency (last 12 months) ---
+  const since = new Date();
+  since.setMonth(since.getMonth() - 12);
+  const recent = deliveries.filter((d) => new Date(d.deliveryDate) >= since);
+  const totalVolume = recent.reduce((s, d) => s + Number(d.weightKg), 0);
+  const annualDeliveryValue = recent.reduce((s, d) => s + Number(d.totalAmount), 0);
+  const activeMonths = new Set(
+    recent.map((d) => new Date(d.deliveryDate).toISOString().slice(0, 7))
+  ).size;
+  const normVolume = norm(totalVolume, config.caps.volumeKg);
+  const normConsistency = norm(activeMonths, config.caps.consistencyMonths);
+  const productionScore = round2(0.6 * normVolume + 0.4 * normConsistency);
+
+  // --- 3. Farm characteristics / cooperative standing ---
+  const shareCapital = Number(member.shareCapital);
+  const tenureMonths = monthsBetween(member.dateJoined);
+  const normShare = norm(shareCapital, config.caps.shareCapital);
+  const normTenure = norm(tenureMonths, config.caps.tenureMonths);
+  const classPoints = member.membershipType === "REGULAR" ? 100 : 60;
+  const farmScore = round2(0.4 * normShare + 0.3 * normTenure + 0.3 * classPoints);
+
+  // --- Composite ---
+  const score = round2(
+    config.weights.repayment * repaymentScore +
+      config.weights.production * productionScore +
+      config.weights.farm * farmScore
+  );
+  const riskBand = bandFor(score, config.bands);
+
+  const capacity = shareCapital * config.limit.scMult + annualDeliveryValue * config.limit.deliveryMult;
+  const suggestedCreditLimit = Math.round((capacity * score) / 100 / 100) * 100;
+
+  return {
+    score,
+    riskBand,
+    recommendation: RECOMMENDATION[riskBand],
+    suggestedCreditLimit,
+    factors: {
+      repaymentScore,
+      productionScore,
+      farmScore,
+      onTimeRatio: onTimeRatio != null ? round2(onTimeRatio) : null,
+      dueInstallments: dueCount,
+      paidOnTime: paidDue,
+      overdueInstallments: overdue,
+      fullyRepaidLoans,
+      outstandingBalance: round2(outstanding),
+      totalVolumeKg: round2(totalVolume),
+      activeMonths,
+      annualDeliveryValue: round2(annualDeliveryValue),
+      shareCapital,
+      tenureMonths: round2(tenureMonths),
+      membershipType: member.membershipType,
+    },
+  };
+}
+
+async function gather(memberId) {
+  const member = await prisma.member.findUnique({ where: { id: memberId } });
+  if (!member) return null;
+  const loans = await prisma.loan.findMany({
+    where: { memberId },
+    include: { schedule: true },
+  });
+  const deliveries = await prisma.rubberDelivery.findMany({
+    where: { memberId },
+    select: { weightKg: true, totalAmount: true, deliveryDate: true },
+  });
+  return { member, loans, deliveries };
+}
+
+// Computes and persists a credit score (keeps a history row per computation).
+export async function evaluateAndSave(memberId, actorId) {
+  const data = await gather(memberId);
+  if (!data) return null;
+  const config = await getConfig();
+  const result = scoreMember(data, config);
+
+  const saved = await prisma.creditScore.create({
+    data: {
+      memberId,
+      score: result.score,
+      factors: {
+        ...result.factors,
+        riskBand: result.riskBand,
+        recommendation: result.recommendation,
+        suggestedCreditLimit: result.suggestedCreditLimit,
+      },
+    },
+  });
+
+  if (actorId) {
+    await logActivity(
+      actorId,
+      `Computed credit score for ${data.member.memberNo}: ${result.score} (${result.riskBand} risk)`
+    );
+  }
+  return { memberId, ...result, computedAt: saved.computedAt };
+}
+
+export async function evaluateAll(actorId) {
+  const members = await prisma.member.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true },
+  });
+  const bands = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+  for (const m of members) {
+    const res = await evaluateAndSave(m.id, actorId);
+    if (res) bands[res.riskBand] += 1;
+  }
+  return { evaluated: members.length, ...bands };
+}
+
+export async function latestForMember(memberId) {
+  return prisma.creditScore.findFirst({
+    where: { memberId },
+    orderBy: { computedAt: "desc" },
+  });
+}
+
+export async function historyForMember(memberId) {
+  return prisma.creditScore.findMany({
+    where: { memberId },
+    orderBy: { computedAt: "desc" },
+    take: 20,
+  });
+}
+
+const fmt = (n) =>
+  Number(Math.round(Number(n) * 100) / 100).toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  });
+
+// Step-by-step explanation of a member's latest credit score.
+export async function explain(memberId) {
+  const latest = await latestForMember(memberId);
+  if (!latest) return null;
+  const f = latest.factors;
+  const config = await getConfig();
+  const w = config.weights;
+  const caps = config.caps;
+
+  const normVolume = norm(f.totalVolumeKg, caps.volumeKg);
+  const normConsistency = norm(f.activeMonths, caps.consistencyMonths);
+  const normShare = norm(f.shareCapital, caps.shareCapital);
+  const normTenure = norm(f.tenureMonths, caps.tenureMonths);
+  const classPoints = f.membershipType === "REGULAR" ? 100 : 60;
+
+  const steps = [
+    {
+      label: `Pillar 1 — Repayment history (weight ${w.repayment})`,
+      formula:
+        f.dueInstallments > 0
+          ? "100 × (paidOnTime ÷ dueInstallments) + 5 × loansFullyRepaid"
+          : "baseline (no installments due yet)",
+      substitution:
+        f.dueInstallments > 0
+          ? `100 × (${f.paidOnTime} ÷ ${f.dueInstallments}) + 5 × ${f.fullyRepaidLoans}`
+          : `outstanding balance ₱${fmt(f.outstandingBalance)}`,
+      result: fmt(f.repaymentScore),
+    },
+    {
+      label: `Pillar 2 — Production consistency (weight ${w.production})`,
+      formula: "0.6 × normVolume + 0.4 × normMonths",
+      substitution: `0.6 × ${fmt(normVolume)} + 0.4 × ${fmt(normConsistency)}  [vol ${fmt(
+        f.totalVolumeKg
+      )}kg, ${f.activeMonths} active month(s)]`,
+      result: fmt(f.productionScore),
+    },
+    {
+      label: `Pillar 3 — Farm characteristics (weight ${w.farm})`,
+      formula: "0.4 × normShareCapital + 0.3 × normTenure + 0.3 × classPoints",
+      substitution: `0.4 × ${fmt(normShare)} + 0.3 × ${fmt(normTenure)} + 0.3 × ${classPoints} [${
+        f.membershipType
+      }]`,
+      result: fmt(f.farmScore),
+    },
+    {
+      label: "Composite credit score",
+      formula: "wRepay·P1 + wProd·P2 + wFarm·P3",
+      substitution: `${w.repayment}×${fmt(f.repaymentScore)} + ${w.production}×${fmt(
+        f.productionScore
+      )} + ${w.farm}×${fmt(f.farmScore)}`,
+      result: fmt(latest.score),
+    },
+    {
+      label: "Risk band",
+      formula: `LOW if ≥ ${config.bands.low}; MEDIUM if ≥ ${config.bands.medium}; else HIGH`,
+      substitution: `score = ${fmt(latest.score)}`,
+      result: `${f.riskBand} — ${f.recommendation}`,
+    },
+    {
+      label: "Suggested credit limit",
+      formula: "(shareCapital × scMult + annualDeliveryValue × deliveryMult) × score%  → nearest ₱100",
+      substitution: `(₱${fmt(f.shareCapital)} × ${config.limit.scMult} + ₱${fmt(
+        f.annualDeliveryValue
+      )} × ${config.limit.deliveryMult}) × ${fmt(latest.score)}%`,
+      result: `₱${fmt(f.suggestedCreditLimit)}`,
+    },
+  ];
+
+  return {
+    title: "Agricultural Credit Score",
+    description:
+      "Composite of three weighted pillars (each 0–100). Weights, caps, and risk bands are configurable in system settings (app_settings → creditScoring).",
+    steps,
+    result: { label: "Credit score", value: fmt(latest.score) },
+  };
+}
+
+// Latest credit score per active member (for the staff Credit Scoring page).
+export async function listLatest() {
+  const members = await prisma.member.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true, memberNo: true, firstName: true, lastName: true, membershipType: true },
+    orderBy: { lastName: "asc" },
+  });
+  const scores = await prisma.creditScore.findMany({ orderBy: { computedAt: "desc" } });
+  const latest = new Map();
+  for (const s of scores) if (!latest.has(s.memberId)) latest.set(s.memberId, s);
+  return members.map((m) => ({ ...m, creditScore: latest.get(m.id) ?? null }));
+}
