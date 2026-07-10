@@ -3,7 +3,7 @@
 /* --- Landing page typographic + motion tokens (minimalist editorial) --- */
 :root {
   --font-sans: "Manrope", "Helvetica Neue", system-ui, sans-serif;
-  --font-serif: "Newsreader", "Playfair Display", Georgia, serif;
+  --font-serif: "Fraunces", "Newsreader", "Playfair Display", Georgia, serif;
   --font-mono: "JetBrains Mono", "SF Mono", monospace;
 
   /* Strong custom easings — the built-in CSS curves are too weak. */

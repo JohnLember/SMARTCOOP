@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Landing from "./pages/Landing";
-import LandingConcept from "./pages/LandingConcept";
 import Login from "./pages/Login";
 import Apply from "./pages/Apply";
 import Applications from "./pages/Applications";
@@ -31,7 +30,6 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/concept" element={<LandingConcept />} />
       <Route path="/login" element={<Login />} />
       <Route path="/apply" element={<Apply />} />
 

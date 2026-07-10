@@ -60,8 +60,9 @@ export default function MaoDashboard() {
   return (
     <div>
       <PageHeader
-        title="MAO Dashboard"
-        subtitle="Municipal Agriculture Office — production monitoring & support programs"
+        eyebrow="Municipal Agriculture Office"
+        title="Production & support overview"
+        subtitle="Live figures from the cooperative's deliveries, aggregated by barangay, plus the programs and area alerts the MAO manages directly."
       />
 
       {/* Stat cards */}
@@ -81,26 +82,28 @@ export default function MaoDashboard() {
       {/* Charts */}
       <div className="mt-4 grid grid-cols-2 gap-4">
         <Card>
-          <h3 className="mb-4 font-semibold text-[#2F3437]">Monthly production trend (kg)</h3>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Trend</p>
+          <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Monthly production (kg)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={stats.monthlyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-              <XAxis dataKey="month" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip />
-              <Line type="monotone" dataKey="totalKg" stroke="#059669" strokeWidth={2} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
+              <XAxis dataKey="month" fontSize={12} stroke="#B0AFAB" />
+              <YAxis fontSize={12} stroke="#B0AFAB" />
+              <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#EAEAEA", fontSize: 13 }} />
+              <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
         <Card>
-          <h3 className="mb-4 font-semibold text-[#2F3437]">Production by barangay (kg)</h3>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">By barangay</p>
+          <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Production by barangay (kg)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={stats.byBarangay}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-              <XAxis dataKey="barangay" fontSize={11} />
-              <YAxis fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="totalKg" fill="#059669" radius={[4, 4, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
+              <XAxis dataKey="barangay" fontSize={11} stroke="#B0AFAB" />
+              <YAxis fontSize={12} stroke="#B0AFAB" />
+              <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#EAEAEA", fontSize: 13 }} />
+              <Bar dataKey="totalKg" fill="#B9701F" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -145,7 +148,10 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
   return (
     <Card>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-semibold text-[#2F3437]">Support programs</h3>
+        <div>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Assistance</p>
+          <h3 className="mt-1 font-semibold text-[#2F3437]">Support programs</h3>
+        </div>
         <Button variant="secondary" onClick={() => setShow((s) => !s)}>
           <Plus size={16} />
           New
@@ -369,7 +375,8 @@ function AffectedAreas({ tags, barangays, onChange }) {
 
   return (
     <Card>
-      <h3 className="mb-3 flex items-center gap-2 font-semibold text-[#2F3437]">
+      <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Advisory</p>
+      <h3 className="mb-3 mt-1 flex items-center gap-2 font-semibold text-[#2F3437]">
         <AlertTriangle size={16} className="text-amber-500" />
         Affected areas
       </h3>
@@ -432,7 +439,8 @@ function AnnouncementComposer() {
 
   return (
     <Card>
-      <h3 className="mb-3 flex items-center gap-2 font-semibold text-[#2F3437]">
+      <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Outreach</p>
+      <h3 className="mb-3 mt-1 flex items-center gap-2 font-semibold text-[#2F3437]">
         <Megaphone size={16} className="text-[#346538]" />
         Send announcement
       </h3>

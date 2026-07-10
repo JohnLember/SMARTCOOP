@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { HerringboneRule } from "./ui";
 import {
   Users,
   MapPin,
@@ -17,45 +18,66 @@ import {
   UserPlus,
 } from "lucide-react";
 
-// Navigation items per role.
+// Navigation items per role, grouped into sections so a long flat list
+// reads as an organized menu rather than nine equal-weight links.
 const NAV = {
   ADMIN: [
-    { to: "/members", label: "Members", icon: Users },
-    { to: "/applications", label: "Applications", icon: UserPlus },
-    { to: "/batches", label: "Loading & Deliveries", icon: Truck },
-    { to: "/loans", label: "Loans", icon: Wallet },
-    { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
-    { to: "/settlements", label: "Settlements", icon: Coins },
-    { to: "/barangays", label: "Barangays", icon: MapPin },
-    { to: "/users", label: "User Management", icon: UserCog },
-    { to: "/notifications", label: "Notifications", icon: Bell },
+    { section: "Membership", items: [
+      { to: "/members", label: "Members", icon: Users },
+      { to: "/applications", label: "Applications", icon: UserPlus },
+      { to: "/barangays", label: "Barangays", icon: MapPin },
+    ] },
+    { section: "Production", items: [
+      { to: "/batches", label: "Loading & Deliveries", icon: Truck },
+    ] },
+    { section: "Finance", items: [
+      { to: "/loans", label: "Loans", icon: Wallet },
+      { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
+      { to: "/settlements", label: "Settlements", icon: Coins },
+    ] },
+    { section: "System", items: [
+      { to: "/users", label: "User Management", icon: UserCog },
+      { to: "/notifications", label: "Notifications", icon: Bell },
+    ] },
   ],
   STAFF: [
-    { to: "/members", label: "Members", icon: Users },
-    { to: "/applications", label: "Applications", icon: UserPlus },
-    { to: "/batches", label: "Loading & Deliveries", icon: Truck },
-    { to: "/loans", label: "Loans", icon: Wallet },
-    { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
-    { to: "/settlements", label: "Settlements", icon: Coins },
-    { to: "/barangays", label: "Barangays", icon: MapPin },
-    { to: "/notifications", label: "Notifications", icon: Bell },
+    { section: "Membership", items: [
+      { to: "/members", label: "Members", icon: Users },
+      { to: "/applications", label: "Applications", icon: UserPlus },
+      { to: "/barangays", label: "Barangays", icon: MapPin },
+    ] },
+    { section: "Production", items: [
+      { to: "/batches", label: "Loading & Deliveries", icon: Truck },
+    ] },
+    { section: "Finance", items: [
+      { to: "/loans", label: "Loans", icon: Wallet },
+      { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
+      { to: "/settlements", label: "Settlements", icon: Coins },
+    ] },
+    { section: "System", items: [
+      { to: "/notifications", label: "Notifications", icon: Bell },
+    ] },
   ],
   MAO: [
-    { to: "/mao", label: "MAO Dashboard", icon: LayoutDashboard },
-    { to: "/notifications", label: "Notifications", icon: Bell },
+    { section: null, items: [
+      { to: "/mao", label: "MAO Dashboard", icon: LayoutDashboard },
+      { to: "/notifications", label: "Notifications", icon: Bell },
+    ] },
   ],
   MEMBER: [
-    { to: "/me", label: "My Profile", icon: UserCircle },
-    { to: "/my-deliveries", label: "My Deliveries", icon: Truck },
-    { to: "/my-receipts", label: "My Receipts", icon: ReceiptText },
-    { to: "/notifications", label: "Notifications", icon: Bell },
+    { section: null, items: [
+      { to: "/me", label: "My Profile", icon: UserCircle },
+      { to: "/my-deliveries", label: "My Deliveries", icon: Truck },
+      { to: "/my-receipts", label: "My Receipts", icon: ReceiptText },
+      { to: "/notifications", label: "Notifications", icon: Bell },
+    ] },
   ],
 };
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const items = NAV[user?.role] ?? [];
+  const groups = NAV[user?.role] ?? [];
 
   function handleLogout() {
     logout();
@@ -69,32 +91,55 @@ export default function Layout() {
   return (
     <div className="flex min-h-[100dvh] bg-[#FBFBFA]">
       <aside className="sticky top-0 flex h-[100dvh] w-64 flex-col border-r border-[#EAEAEA] bg-white">
-        <NavLink to="/" className="flex items-center gap-2.5 border-b border-[#EAEAEA] px-6 py-5">
+        <NavLink to="/" className="flex items-center gap-2.5 px-6 py-5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111111] text-white">
             <Leaf size={18} />
           </span>
           <div>
-            <p className="text-[15px] font-semibold tracking-tight text-[#111111]">SMARTCOOP</p>
+            <p className="font-serif-display text-[17px] font-light tracking-tight text-[#111111]">SMARTCOOP</p>
             <p className="text-xs text-[#787774]">Rubber Cooperative</p>
           </div>
         </NavLink>
+        <HerringboneRule height={8} className="border-b border-[#EAEAEA]" />
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `btn-press flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
-                  isActive
-                    ? "bg-[#EDF3EC] text-[#346538]"
-                    : "text-[#787774] hover:bg-[#F2F1ED] hover:text-[#111111]"
-                }`
-              }
-            >
-              <item.icon size={18} />
-              {item.label}
-            </NavLink>
+        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-5">
+          {groups.map((group, gi) => (
+            <div key={group.section ?? gi}>
+              {group.section && (
+                <p className="mb-1.5 px-3 font-mono-meta text-[10px] uppercase tracking-[0.16em] text-[#B0AFAB]">
+                  {group.section}
+                </p>
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `btn-press relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+                        isActive
+                          ? "bg-[#EDF3EC] text-[#346538]"
+                          : "text-[#787774] hover:bg-[#F2F1ED] hover:text-[#111111]"
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {isActive && (
+                          <span
+                            aria-hidden="true"
+                            className="absolute -left-3 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full"
+                            style={{ background: "#B9701F" }}
+                          />
+                        )}
+                        <item.icon size={18} />
+                        {item.label}
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

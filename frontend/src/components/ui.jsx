@@ -2,6 +2,30 @@
 import { X, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 
+// The tapping-cut motif from the landing page, reused sparingly as a brand
+// echo in the app shell — a thin low-opacity chevron band, not a full divider.
+export function HerringboneRule({ className = "", stroke = "#B9701F", height = 10 }) {
+  const id = "herr-app-rule";
+  return (
+    <div aria-hidden="true" className={`relative w-full overflow-hidden ${className}`} style={{ height }}>
+      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+        <defs>
+          <pattern id={id} width="18" height={height * 1.4} patternUnits="userSpaceOnUse">
+            <path
+              d={`M0 ${height * 0.7} L9 ${height * 0.1} L18 ${height * 0.7}`}
+              fill="none"
+              stroke={stroke}
+              strokeWidth="1.2"
+              opacity="0.4"
+            />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#${id})`} />
+      </svg>
+    </div>
+  );
+}
+
 // Navigates back to the previous page. Optionally pass `to` for a fixed target.
 export function BackButton({ to, label = "Back", className = "" }) {
   const navigate = useNavigate();
@@ -138,11 +162,16 @@ export function Spinner() {
   );
 }
 
-export function PageHeader({ title, subtitle, actions }) {
+export function PageHeader({ eyebrow, title, subtitle, actions }) {
   return (
     <div className="page-head mb-8 flex items-start justify-between gap-4">
       <div>
-        <h1 className="font-serif-display text-3xl text-[#111111]">{title}</h1>
+        {eyebrow && (
+          <p className="font-mono-meta mb-1.5 text-[11px] uppercase tracking-[0.16em] text-[#B0AFAB]">
+            {eyebrow}
+          </p>
+        )}
+        <h1 className="font-serif-display text-3xl font-light text-[#111111]">{title}</h1>
         {subtitle && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#787774]">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-none gap-2">{actions}</div>}
@@ -160,7 +189,7 @@ const ACCENTS = {
 
 export function StatCard({ label, value, icon: Icon, accent = "emerald" }) {
   return (
-    <Card className="flex items-center gap-4">
+    <Card className="card-lift flex items-center gap-4">
       {Icon && (
         <div className={`rounded-[10px] p-3 ${ACCENTS[accent] ?? ACCENTS.emerald}`}>
           <Icon size={22} />
