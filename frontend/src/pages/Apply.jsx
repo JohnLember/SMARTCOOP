@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { Button, Input, Select, Textarea } from "../components/ui";
-import { Leaf, ArrowLeft, Check } from "lucide-react";
+import { IconLeaf, Herringbone } from "../components/brand";
+import { BRAND } from "../lib/brandTokens";
+import { ArrowLeft, Check } from "lucide-react";
+import aboutPhoto from "../assets/about_photo.jpg";
 
 const EMPTY = {
   firstName: "",
@@ -59,105 +62,166 @@ export default function Apply() {
   }
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[#FBFBFA] font-sans-ui text-[#2F3437]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="ambient-blob absolute -top-40 left-1/2 h-[560px] w-[560px] -translate-x-1/2 rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(52,101,56,0.10) 0%, rgba(52,101,56,0) 70%)" }}
+    <div className="flex min-h-[100dvh] font-tap-body" style={{ background: BRAND.latex }}>
+      {/* Left pane — the world: dark canopy, photography, what joining means. */}
+      <div
+        className="sticky top-0 hidden h-[100dvh] w-[38%] flex-none overflow-hidden lg:block"
+        style={{ background: BRAND.canopy }}
+      >
+        <img
+          src={aboutPhoto}
+          alt="Members bringing rubber to a cooperative collection point"
+          className="h-full w-full object-cover opacity-60"
         />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: `linear-gradient(180deg, rgba(16,23,15,0.5), rgba(16,23,15,0.9))` }}
+        />
+
+        <div className="relative flex h-full flex-col justify-between p-10">
+          <Link to="/" className="inline-flex items-center gap-2.5">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+              style={{ background: "#111111" }}
+            >
+              <IconLeaf size={16} />
+            </span>
+            <span className="font-tap-display text-[15px] font-medium tracking-tight" style={{ color: BRAND.latex }}>
+              SMARTCOOP
+            </span>
+          </Link>
+
+          <div>
+            <p className="font-tap-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: BRAND.amberSoft }}>
+              Becoming a member
+            </p>
+            <h2 className="font-tap-display mt-4 max-w-xs text-3xl font-light leading-[1.15]" style={{ color: BRAND.latex }}>
+              Join as an Associate, share your rubber, and let the cooperative do the counting.
+            </h2>
+            <p className="mt-5 max-w-xs text-sm leading-[1.6]" style={{ color: "rgba(242,236,218,0.55)" }}>
+              Every applicant is reviewed by the cooperative office. Once approved, you get an
+              account with your own deliveries, receipts, and loan history.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="relative mx-auto max-w-2xl px-6 py-12">
-        <Link
-          to="/"
-          className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-[#787774] transition-colors hover:text-[#111111]"
-        >
-          <ArrowLeft size={16} />
-          Back to home
-        </Link>
+      {/* Herringbone seam between the two panes. */}
+      <div className="sticky top-0 hidden h-[100dvh] w-3.5 flex-none lg:block" style={{ background: BRAND.latex }}>
+        <Herringbone orientation="vertical" stroke={BRAND.inkMuted} size={14} />
+      </div>
 
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg bg-[#111111] text-white">
-            <Leaf size={22} />
+      {/* Right pane — the task: the application form. */}
+      <div className="flex-1 px-6 py-12">
+        <div className="page-head mx-auto max-w-xl">
+          <Link
+            to="/"
+            className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium transition-colors lg:hidden"
+            style={{ color: BRAND.inkMuted }}
+          >
+            <ArrowLeft size={16} />
+            Back to home
+          </Link>
+
+          <span
+            className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg text-white lg:hidden"
+            style={{ background: "#111111" }}
+          >
+            <IconLeaf size={22} />
           </span>
-          <h1 className="page-head font-serif-display text-4xl text-[#111111]">
+
+          <h1 className="font-tap-display text-4xl font-light" style={{ color: BRAND.ink }}>
             Apply for membership
           </h1>
-          <p className="mt-3 max-w-md text-[15px] leading-[1.6] text-[#787774]">
-            Join the San Luis Rubber Producer&apos;s Cooperative. Submit your details and the
-            cooperative office will review your application.
+          <p className="mt-3 max-w-md text-[15px] leading-[1.6]" style={{ color: BRAND.inkMuted }}>
+            Submit your details and the cooperative office will review your application.
           </p>
-        </div>
 
-        {done ? (
-          <div className="rounded-xl border border-[#EAEAEA] bg-white p-8 text-center">
-            <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#EDF3EC] text-[#346538]">
-              <Check size={24} />
-            </span>
-            <h2 className="font-serif-display text-2xl text-[#111111]">Application received</h2>
-            <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.6] text-[#787774]">
-              Thank you, {form.firstName}. The cooperative office will review your application and
-              contact you about the next steps. Once approved, an account can be issued for you.
-            </p>
-            <Link to="/" className="mt-6 inline-block">
-              <Button variant="secondary">Return home</Button>
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={submit} className="rounded-xl border border-[#EAEAEA] bg-white p-7">
-            {error && (
-              <div className="mb-4 rounded-lg border border-[#F6D9DA] bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">
-                {error}
-              </div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="First name" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} required />
-              <Input label="Last name" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} required />
-              <Input label="Middle name" value={form.middleName} onChange={(e) => set("middleName", e.target.value)} />
-              <Select label="Sex" value={form.sex} onChange={(e) => set("sex", e.target.value)}>
-                <option value="">Prefer not to say</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </Select>
-              <Input label="Birthdate" type="date" value={form.birthdate} onChange={(e) => set("birthdate", e.target.value)} required />
-              <Input label="Contact number" value={form.contactNo} onChange={(e) => set("contactNo", e.target.value)} placeholder="+63 9xx xxx xxxx" required />
-              <Input label="Email (optional)" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-              <Select label="Barangay" value={form.barangayId} onChange={(e) => set("barangayId", e.target.value)} required>
-                <option value="">Select barangay…</option>
-                {barangays.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </Select>
-              <div className="sm:col-span-2">
-                <Input label="Address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Purok / street, barangay, municipality" required />
-              </div>
-              <div className="sm:col-span-2">
-                <Textarea
-                  label="Why do you want to join? (optional)"
-                  value={form.reason}
-                  onChange={(e) => set("reason", e.target.value)}
-                  placeholder="Tell the cooperative a little about your rubber farming."
-                />
-              </div>
-            </div>
-
-            <p className="mt-4 rounded-lg bg-[#F7F6F3] px-3 py-2 text-xs leading-relaxed text-[#787774]">
-              New members join as <span className="font-medium text-[#2F3437]">Associate</span> and
-              become <span className="font-medium text-[#2F3437]">Regular</span> once their CBU or
-              savings reach ₱10,000.
-            </p>
-
-            <div className="mt-6 flex items-center justify-between gap-4">
-              <p className="text-xs text-[#B0AFAB]">
-                Already a member? <Link to="/login" className="text-[#346538] hover:underline">Sign in</Link>
+          {done ? (
+            <div className="mt-8 rounded-sm p-8 text-center" style={{ background: "#FBF9F1", border: `1px solid ${BRAND.latexLine}` }}>
+              <span
+                className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+                style={{ background: "rgba(63,90,62,0.12)", color: BRAND.moss }}
+              >
+                <Check size={24} />
+              </span>
+              <h2 className="font-tap-display text-2xl font-light" style={{ color: BRAND.ink }}>
+                Application received
+              </h2>
+              <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.6]" style={{ color: BRAND.inkMuted }}>
+                Thank you, {form.firstName}. The cooperative office will review your application and
+                contact you about the next steps. Once approved, an account can be issued for you.
               </p>
-              <Button type="submit" disabled={busy}>
-                {busy ? "Submitting…" : "Submit application"}
-              </Button>
+              <Link to="/" className="mt-6 inline-block">
+                <Button variant="secondary">Return home</Button>
+              </Link>
             </div>
-          </form>
-        )}
+          ) : (
+            <form
+              onSubmit={submit}
+              className="mt-8 rounded-sm p-7"
+              style={{ background: "#FBF9F1", border: `1px solid ${BRAND.latexLine}` }}
+            >
+              {error && (
+                <div className="mb-4 rounded-lg border border-[#F6D9DA] bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input label="First name" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} required />
+                <Input label="Last name" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} required />
+                <Input label="Middle name" value={form.middleName} onChange={(e) => set("middleName", e.target.value)} />
+                <Select label="Sex" value={form.sex} onChange={(e) => set("sex", e.target.value)}>
+                  <option value="">Prefer not to say</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </Select>
+                <Input label="Birthdate" type="date" value={form.birthdate} onChange={(e) => set("birthdate", e.target.value)} required />
+                <Input label="Contact number" value={form.contactNo} onChange={(e) => set("contactNo", e.target.value)} placeholder="+63 9xx xxx xxxx" required />
+                <Input label="Email (optional)" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+                <Select label="Barangay" value={form.barangayId} onChange={(e) => set("barangayId", e.target.value)} required>
+                  <option value="">Select barangay…</option>
+                  {barangays.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </Select>
+                <div className="sm:col-span-2">
+                  <Input label="Address" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder="Purok / street, barangay, municipality" required />
+                </div>
+                <div className="sm:col-span-2">
+                  <Textarea
+                    label="Why do you want to join? (optional)"
+                    value={form.reason}
+                    onChange={(e) => set("reason", e.target.value)}
+                    placeholder="Tell the cooperative a little about your rubber farming."
+                  />
+                </div>
+              </div>
+
+              <p
+                className="mt-4 rounded-lg px-3 py-2 text-xs leading-relaxed"
+                style={{ background: BRAND.cured, color: BRAND.inkMuted }}
+              >
+                New members join as <span className="font-medium" style={{ color: BRAND.ink }}>Associate</span> and
+                become <span className="font-medium" style={{ color: BRAND.ink }}>Regular</span> once their CBU or
+                savings reach ₱10,000.
+              </p>
+
+              <div className="mt-6 flex items-center justify-between gap-4">
+                <p className="text-xs" style={{ color: BRAND.inkMuted }}>
+                  Already a member?{" "}
+                  <Link to="/login" className="font-medium hover:underline" style={{ color: BRAND.moss }}>
+                    Sign in
+                  </Link>
+                </p>
+                <Button type="submit" disabled={busy}>
+                  {busy ? "Submitting…" : "Submit application"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
