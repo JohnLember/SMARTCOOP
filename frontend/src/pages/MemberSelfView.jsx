@@ -7,7 +7,6 @@ import {
   Spinner,
   PageHeader,
   MembershipBadge,
-  CategoryBadge,
   Badge,
   Button,
   Input,
@@ -17,6 +16,7 @@ import {
 } from "../components/ui";
 import { Truck, Wallet, Pencil, Camera } from "lucide-react";
 import CreditScoreCard from "../components/CreditScoreCard";
+import MemberCategoryCard from "../components/MemberCategoryCard";
 import ShowComputation from "../components/ShowComputation";
 import { formatDate } from "../lib/format";
 
@@ -135,30 +135,7 @@ export default function MemberSelfView() {
         </Card>
 
         <div className="space-y-4">
-          <Card>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold text-[#2F3437]">Member category</h3>
-              <CategoryBadge category={member.activityCategory} />
-            </div>
-            <p className="text-xs text-[#B0AFAB]">Activity score</p>
-            <p className="mb-3 text-3xl font-bold text-[#346538]">
-              {member.activityScore != null ? member.activityScore : "—"}
-            </p>
-            <div className="mb-3 space-y-1 text-xs text-[#787774]">
-              <div className="flex justify-between">
-                <span>Delivery Score</span>
-                <span className="font-medium text-[#2F3437]">{member.deliveryScore ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Loan Score</span>
-                <span className="font-medium text-[#2F3437]">{member.loanScore ?? "N/A"}</span>
-              </div>
-            </div>
-            <ShowComputation
-              url={`/members/${member.id}/progression/explain`}
-              label="Show computation"
-            />
-          </Card>
+          <MemberCategoryCard member={member} />
 
           <CreditScoreCard memberId={member.id} />
         </div>

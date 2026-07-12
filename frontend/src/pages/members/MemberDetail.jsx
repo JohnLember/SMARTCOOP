@@ -9,15 +9,14 @@ import {
   Spinner,
   PageHeader,
   MembershipBadge,
-  CategoryBadge,
   Badge,
   BackButton,
   Modal,
   Avatar,
 } from "../../components/ui";
-import { Pencil, RefreshCw, KeyRound, Eye, Printer } from "lucide-react";
+import { Pencil, KeyRound, Eye, Printer } from "lucide-react";
 import CreditScoreCard from "../../components/CreditScoreCard";
-import ShowComputation from "../../components/ShowComputation";
+import MemberCategoryCard from "../../components/MemberCategoryCard";
 import ReceiptDocument from "../../components/ReceiptDocument";
 import { formatDate } from "../../lib/format";
 
@@ -68,19 +67,6 @@ export default function MemberDetail() {
     loadHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  async function evaluate() {
-    setBusy(true);
-    setError("");
-    try {
-      const res = await api.post(`/members/${id}/evaluate`);
-      setMember((m) => ({ ...m, ...res.data.member }));
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function changeStatus(status) {
     setBusy(true);
@@ -171,50 +157,11 @@ export default function MemberDetail() {
         </Card>
 
         <div className="space-y-4">
-          <Card>
-            <h3 className="mb-3 font-semibold text-[#2F3437]">Member Categorization</h3>
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-[#B0AFAB]">Activity score</p>
-                <p className="text-3xl font-bold text-[#346538]">
-                  {member.activityScore != null ? member.activityScore : "—"}
-                </p>
-              </div>
-              <CategoryBadge category={member.activityCategory} />
-            </div>
-            <div className="mb-3 space-y-1 rounded-lg bg-[#F7F6F3] p-3 text-xs text-[#787774]">
-              <div className="flex justify-between">
-                <span>Delivery Score (DS)</span>
-                <span className="font-medium text-[#2F3437]">{member.deliveryScore ?? "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Loan Score (LS)</span>
-                <span className="font-medium text-[#2F3437]">{member.loanScore ?? "N/A"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Repayment Rate (RR)</span>
-                <span className="font-medium text-[#2F3437]">
-                  {member.repaymentRate != null ? `${Number(member.repaymentRate)}%` : "N/A"}
-                </span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Button variant="secondary" className="w-full" onClick={evaluate} disabled={busy}>
-                <RefreshCw size={16} className={busy ? "animate-spin" : ""} />
-                Re-categorize
-              </Button>
-              <ShowComputation
-                url={`/members/${id}/progression/explain`}
-                label="Show computation"
-                className="w-full"
-              />
-            </div>
-            {member.lastCategorizedAt && (
-              <p className="mt-2 text-xs text-[#B0AFAB]">
-                Last categorized {formatDate(member.lastCategorizedAt)}
-              </p>
-            )}
-          </Card>
+          <MemberCategoryCard
+            member={member}
+            canRecategorize
+            onRecategorized={(updated) => setMember((m) => ({ ...m, ...updated }))}
+          />
 
           <Card>
             <h3 className="mb-3 font-semibold text-[#2F3437]">Login account</h3>
