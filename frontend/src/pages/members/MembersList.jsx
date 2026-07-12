@@ -12,21 +12,27 @@ import {
   CategoryBadge,
   Badge,
 } from "../../components/ui";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, X } from "lucide-react";
 
 export default function MembersList() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
+  const [barangayId, setBarangayId] = useState("");
+  const [barangays, setBarangays] = useState([]);
   const [evaluating, setEvaluating] = useState(false);
 
-  async function load() {
+  async function load(overrides = {}) {
+    const s = overrides.search ?? search;
+    const t = overrides.type ?? type;
+    const b = overrides.barangayId ?? barangayId;
     setLoading(true);
     try {
       const params = {};
-      if (search) params.search = search;
-      if (type) params.membershipType = type;
+      if (s) params.search = s;
+      if (t) params.membershipType = t;
+      if (b) params.barangayId = b;
       const res = await api.get("/members", { params });
       setData(res.data);
     } finally {
@@ -35,9 +41,22 @@ export default function MembersList() {
   }
 
   useEffect(() => {
+    api.get("/barangays").then((res) => setBarangays(res.data));
+  }, []);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+  }, [type, barangayId]);
+
+  function clearFilters() {
+    setSearch("");
+    setType("");
+    setBarangayId("");
+    load({ search: "", type: "", barangayId: "" });
+  }
+
+  const hasFilters = search || type || barangayId;
 
   async function evaluateAll() {
     setEvaluating(true);
@@ -93,10 +112,28 @@ export default function MembersList() {
               <option value="ASSOCIATE">Associate</option>
             </Select>
           </div>
+          <div className="w-48">
+            <Select
+              label="Barangay"
+              value={barangayId}
+              onChange={(e) => setBarangayId(e.target.value)}
+            >
+              <option value="">All barangays</option>
+              {barangays.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </Select>
+          </div>
           <Button type="submit" variant="secondary">
             <Search size={16} />
             Filter
           </Button>
+          {hasFilters && (
+            <Button type="button" variant="ghost" onClick={clearFilters}>
+              <X size={16} />
+              Clear filter
+            </Button>
+          )}
         </form>
       </Card>
 
