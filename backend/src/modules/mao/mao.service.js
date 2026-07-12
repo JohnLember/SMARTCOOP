@@ -25,6 +25,29 @@ export async function membersLookup() {
   }));
 }
 
+// Active members grouped by barangay, for the printable roster report.
+// Same non-sensitive field set as membersLookup — no contact/financial data.
+export async function membersByBarangay() {
+  const barangays = await prisma.barangay.findMany({
+    orderBy: { name: "asc" },
+    include: {
+      members: {
+        where: { status: "ACTIVE" },
+        select: {
+          id: true,
+          memberNo: true,
+          firstName: true,
+          lastName: true,
+          membershipType: true,
+          dateJoined: true,
+        },
+        orderBy: { lastName: "asc" },
+      },
+    },
+  });
+  return barangays.map((b) => ({ id: b.id, name: b.name, members: b.members }));
+}
+
 // ---------------------------------------------------------------------------
 // Aggregated production analytics (read-only)
 // Reads from rubber_deliveries. Returns zeros/empty until the Production module

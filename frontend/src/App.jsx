@@ -20,6 +20,7 @@ import MyDeliveries from "./pages/MyDeliveries";
 import MyReceipts from "./pages/MyReceipts";
 import Notifications from "./pages/Notifications";
 import MaoDashboard from "./pages/mao/MaoDashboard";
+import MembersByBarangay from "./pages/mao/MembersByBarangay";
 
 const STAFF = ["ADMIN", "STAFF"];
 const ADMIN_ONLY = ["ADMIN"];
@@ -63,6 +64,7 @@ function App() {
 
         {/* MAO */}
         <Route path="/mao" element={<ProtectedRoute roles={MAO_ACCESS}><MaoDashboard /></ProtectedRoute>} />
+        <Route path="/mao/members-by-barangay" element={<ProtectedRoute roles={MAO_ACCESS}><MembersByBarangay /></ProtectedRoute>} />
 
         {/* Member self-view */}
         <Route path="/me" element={<ProtectedRoute roles={["MEMBER"]}><MemberSelfView /></ProtectedRoute>} />

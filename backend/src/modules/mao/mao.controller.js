@@ -41,6 +41,14 @@ export async function membersLookup(_req, res, next) {
   }
 }
 
+export async function membersByBarangay(_req, res, next) {
+  try {
+    res.json(await service.membersByBarangay());
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listTags(_req, res, next) {
   try {
     res.json(await service.listTags());

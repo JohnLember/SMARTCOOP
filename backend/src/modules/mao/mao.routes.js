@@ -15,6 +15,9 @@ router.get("/stats", controller.stats);
 // Minimal member lookup for the recipient picker.
 router.get("/members", controller.membersLookup);
 
+// Active members grouped by barangay (printable roster report).
+router.get("/members-by-barangay", controller.membersByBarangay);
+
 // Affected-area tagging.
 router.get("/tags", controller.listTags);
 router.post("/tags", controller.createTag);

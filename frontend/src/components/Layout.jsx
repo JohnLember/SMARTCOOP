@@ -58,6 +58,7 @@ const NAV = {
   MAO: [
     { section: null, items: [
       { to: "/mao", label: "MAO Dashboard", icon: LayoutDashboard },
+      { to: "/mao/members-by-barangay", label: "Members by Barangay", icon: MapPin },
       { to: "/notifications", label: "Notifications", icon: Bell },
     ] },
   ],
