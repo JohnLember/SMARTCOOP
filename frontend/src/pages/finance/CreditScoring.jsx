@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api from "../../lib/api";
-import { Button, Card, Spinner, PageHeader, RiskBadge, StatCard } from "../../components/ui";
+import { Button, Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination } from "../../components/ui";
 import ShowComputation from "../../components/ShowComputation";
 import { formatDate } from "../../lib/format";
+import { usePagination } from "../../lib/usePagination";
 import { RefreshCw, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 
 export default function CreditScoring() {
   const [rows, setRows] = useState(null);
   const [busy, setBusy] = useState(false);
+  const { page, setPage, pageCount, pageItems } = usePagination(rows);
 
   async function load() {
     const res = await api.get("/finance/credit-scores");
@@ -84,7 +86,7 @@ export default function CreditScoring() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F2F1ED]">
-            {rows.map((r) => (
+            {pageItems.map((r) => (
               <tr key={r.id} className="hover:bg-[#F7F6F3]">
                 <td className="px-4 py-3">
                   <Link to={`/members/${r.id}`} className="font-medium text-[#346538] hover:underline">
@@ -120,6 +122,8 @@ export default function CreditScoring() {
           </tbody>
         </table>
       </Card>
+
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
     </div>
   );
 }

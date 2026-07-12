@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
-import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge } from "../../components/ui";
+import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination } from "../../components/ui";
+import { usePagination } from "../../lib/usePagination";
 import { Plus, AlertTriangle, Search, X } from "lucide-react";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -23,6 +24,7 @@ export default function LoansList() {
   const [assessment, setAssessment] = useState(null);
   const [search, setSearch] = useState("");
   const [barangayId, setBarangayId] = useState("");
+  const { page, setPage, pageCount, pageItems } = usePagination(loans);
 
   async function load(overrides = {}) {
     const s = overrides.search ?? search;
@@ -32,6 +34,7 @@ export default function LoansList() {
     if (b) params.barangayId = b;
     const res = await api.get("/finance/loans", { params });
     setLoans(res.data);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -230,7 +233,7 @@ export default function LoansList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F1ED]">
-              {loans.map((l) => (
+              {pageItems.map((l) => (
                 <tr key={l.id} className="hover:bg-[#F7F6F3]">
                   <td className="px-4 py-3">
                     <Link to={`/loans/${l.id}`} className="font-medium text-[#346538] hover:underline">
@@ -255,6 +258,8 @@ export default function LoansList() {
           </table>
         </Card>
       )}
+
+      {loans && <Pagination page={page} pageCount={pageCount} onPage={setPage} />}
     </div>
   );
 }

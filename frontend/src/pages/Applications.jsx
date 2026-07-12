@@ -9,8 +9,10 @@ import {
   PageHeader,
   Badge,
   Modal,
+  Pagination,
 } from "../components/ui";
 import { formatDate } from "../lib/format";
+import { usePagination } from "../lib/usePagination";
 import { Check, X, Search } from "lucide-react";
 
 const STATUS_COLOR = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
@@ -23,6 +25,7 @@ export default function Applications() {
   const [search, setSearch] = useState("");
   const [barangayId, setBarangayId] = useState("");
   const [barangays, setBarangays] = useState([]);
+  const { page, setPage, pageCount, pageItems } = usePagination(rows);
 
   async function load(overrides = {}) {
     const s = overrides.search ?? search;
@@ -33,6 +36,7 @@ export default function Applications() {
     if (b) params.barangayId = b;
     const res = await api.get("/applications", { params });
     setRows(res.data);
+    setPage(1);
   }
 
   useEffect(() => {
@@ -126,7 +130,7 @@ export default function Applications() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F1ED]">
-              {rows.map((a) => (
+              {pageItems.map((a) => (
                 <tr key={a.id} className="hover:bg-[#F7F6F3]">
                   <td className="px-4 py-3 font-medium text-[#346538]">{a.applicationNo}</td>
                   <td className="px-4 py-3 font-medium text-[#2F3437]">
@@ -156,6 +160,8 @@ export default function Applications() {
           </table>
         </Card>
       )}
+
+      {rows && <Pagination page={page} pageCount={pageCount} onPage={setPage} />}
 
       <ReviewModal
         application={active}

@@ -219,6 +219,26 @@ export function RiskBadge({ band }) {
   return <Badge color={RISK_COLOR[band] ?? "slate"}>{band} risk</Badge>;
 }
 
+// Prev/next table pager. Renders nothing when there's only one page.
+export function Pagination({ page, pageCount, onPage }) {
+  if (pageCount <= 1) return null;
+  return (
+    <div className="mt-4 flex items-center justify-end gap-3">
+      <span className="text-sm text-[#787774]">
+        Page {page} of {pageCount}
+      </span>
+      <div className="flex gap-2">
+        <Button variant="secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+          Previous
+        </Button>
+        <Button variant="secondary" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
+          Next
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Circular profile photo with an initials fallback when no photo is set.
 export function Avatar({ src, name = "", size = 40 }) {
   const initials = name

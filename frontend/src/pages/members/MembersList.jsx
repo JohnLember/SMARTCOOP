@@ -12,6 +12,7 @@ import {
   CategoryBadge,
   Badge,
   Avatar,
+  Pagination,
 } from "../../components/ui";
 import { Plus, Search, RefreshCw, X } from "lucide-react";
 
@@ -22,15 +23,15 @@ export default function MembersList() {
   const [type, setType] = useState("");
   const [barangayId, setBarangayId] = useState("");
   const [barangays, setBarangays] = useState([]);
+  const [page, setPage] = useState(1);
   const [evaluating, setEvaluating] = useState(false);
 
-  async function load(overrides = {}) {
-    const s = overrides.search ?? search;
-    const t = overrides.type ?? type;
-    const b = overrides.barangayId ?? barangayId;
+  const PAGE_SIZE = 10;
+
+  async function load({ search: s = search, type: t = type, barangayId: b = barangayId, page: p = page } = {}) {
     setLoading(true);
     try {
-      const params = {};
+      const params = { page: p, pageSize: PAGE_SIZE };
       if (s) params.search = s;
       if (t) params.membershipType = t;
       if (b) params.barangayId = b;
@@ -43,21 +44,30 @@ export default function MembersList() {
 
   useEffect(() => {
     api.get("/barangays").then((res) => setBarangays(res.data));
-  }, []);
-
-  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, barangayId]);
+  }, []);
+
+  // Any filter change (dropdown, search submit, or clear) resets to page 1.
+  function applyFilters(patch = {}) {
+    if (patch.type !== undefined) setType(patch.type);
+    if (patch.barangayId !== undefined) setBarangayId(patch.barangayId);
+    if (patch.search !== undefined) setSearch(patch.search);
+    setPage(1);
+    load({ ...patch, page: 1 });
+  }
 
   function clearFilters() {
-    setSearch("");
-    setType("");
-    setBarangayId("");
-    load({ search: "", type: "", barangayId: "" });
+    applyFilters({ search: "", type: "", barangayId: "" });
+  }
+
+  function goPage(p) {
+    setPage(p);
+    load({ page: p });
   }
 
   const hasFilters = search || type || barangayId;
+  const pageCount = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
   async function evaluateAll() {
     setEvaluating(true);
@@ -94,7 +104,7 @@ export default function MembersList() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            load();
+            applyFilters();
           }}
           className="flex flex-wrap items-end gap-3"
         >
@@ -107,7 +117,7 @@ export default function MembersList() {
             />
           </div>
           <div className="w-44">
-            <Select label="Type" value={type} onChange={(e) => setType(e.target.value)}>
+            <Select label="Type" value={type} onChange={(e) => applyFilters({ type: e.target.value })}>
               <option value="">All types</option>
               <option value="REGULAR">Regular</option>
               <option value="ASSOCIATE">Associate</option>
@@ -117,7 +127,7 @@ export default function MembersList() {
             <Select
               label="Barangay"
               value={barangayId}
-              onChange={(e) => setBarangayId(e.target.value)}
+              onChange={(e) => applyFilters({ barangayId: e.target.value })}
             >
               <option value="">All barangays</option>
               {barangays.map((b) => (
@@ -196,9 +206,12 @@ export default function MembersList() {
         </Card>
       )}
       {data && (
-        <p className="mt-3 text-sm text-[#787774]">
-          {data.total} member{data.total !== 1 ? "s" : ""} total
-        </p>
+        <>
+          <Pagination page={page} pageCount={pageCount} onPage={goPage} />
+          <p className="mt-3 text-sm text-[#787774]">
+            {data.total} member{data.total !== 1 ? "s" : ""} total
+          </p>
+        </>
       )}
     </div>
   );
