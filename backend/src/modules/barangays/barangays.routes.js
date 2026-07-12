@@ -8,7 +8,6 @@ router.use(authenticate);
 
 // All authenticated roles can read barangays (used in dropdowns / MAO views).
 router.get("/", controller.list);
-router.post("/", requireRole("ADMIN", "STAFF"), controller.create);
 router.put("/:id", requireRole("ADMIN", "STAFF"), controller.update);
 
 export default router;

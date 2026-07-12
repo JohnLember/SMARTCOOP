@@ -122,14 +122,14 @@ function Field({ label, value }) {
 }
 
 function ReviewModal({ application, onClose, onReviewed }) {
-  const [approve, setApprove] = useState({ memberNo: "", shareCapital: "" });
+  const [approve, setApprove] = useState({ memberNo: "" });
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (application) {
-      setApprove({ memberNo: "", shareCapital: "" });
+      setApprove({ memberNo: "" });
       setNote("");
       setError("");
     }
@@ -144,7 +144,6 @@ function ReviewModal({ application, onClose, onReviewed }) {
     try {
       await api.post(`/applications/${application.id}/approve`, {
         memberNo: approve.memberNo || undefined,
-        shareCapital: approve.shareCapital ? parseFloat(approve.shareCapital) : undefined,
       });
       onReviewed();
     } catch (err) {
@@ -202,14 +201,6 @@ function ReviewModal({ application, onClose, onReviewed }) {
                 value={approve.memberNo}
                 onChange={(e) => setApprove({ ...approve, memberNo: e.target.value })}
                 placeholder="e.g. M-0006"
-              />
-              <Input
-                label="Initial share capital (₱)"
-                type="number"
-                step="0.01"
-                value={approve.shareCapital}
-                onChange={(e) => setApprove({ ...approve, shareCapital: e.target.value })}
-                placeholder="0.00"
               />
               <p className="text-xs leading-relaxed text-[#787774]">
                 Joins as <span className="font-medium text-[#2F3437]">Associate</span> and

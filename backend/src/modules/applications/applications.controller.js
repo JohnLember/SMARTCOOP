@@ -16,7 +16,6 @@ const applicationSchema = z.object({
 
 const approveSchema = z.object({
   memberNo: z.string().optional(),
-  shareCapital: z.number().nonnegative().optional(),
 });
 
 const rejectSchema = z.object({ note: z.string().optional() });

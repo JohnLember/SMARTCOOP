@@ -99,16 +99,6 @@ export default function ReceiptDocument({ receipt }) {
         <span className="text-lg font-bold text-[#346538]">{peso(receipt.netAmount)}</span>
       </div>
 
-      {/* Signatures */}
-      <div className="mt-8 grid grid-cols-2 gap-6 text-center text-xs text-[#787774]">
-        <div>
-          <div className="border-t border-[#B0AFAB] pt-1">Member's signature</div>
-        </div>
-        <div>
-          <div className="border-t border-[#B0AFAB] pt-1">Authorized signature</div>
-        </div>
-      </div>
-
       <p className="mt-4 text-center text-[10px] text-[#B0AFAB]">
         This is a system-generated receipt from SMARTCOOP.
       </p>

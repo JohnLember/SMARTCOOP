@@ -142,7 +142,6 @@ model Member {
   deliveries          RubberDelivery[]
   receipts            Receipt[]
   loans               Loan[]
-  settlements         Settlement[]
   creditScores        CreditScore[]
   notifications       Notification[]              @relation("NotificationRecipient")
   programRecipients   SupportProgramRecipient[]
@@ -298,22 +297,6 @@ model LoanPayment {
 
   @@index([loanId])
   @@map("loan_payments")
-}
-
-model Settlement {
-  id              Int       @id @default(autoincrement())
-  memberId        Int       @map("member_id")
-  member          Member    @relation(fields: [memberId], references: [id])
-  fiscalYear      Int       @map("fiscal_year")
-  periodStart     DateTime? @map("period_start")
-  periodEnd       DateTime? @map("period_end")
-  dividend        Decimal   @default(0) @db.Decimal(12, 2)
-  patronageRefund Decimal   @default(0) @map("patronage_refund") @db.Decimal(12, 2)
-  totalAmount     Decimal   @map("total_amount") @db.Decimal(12, 2)
-  datePaid        DateTime? @map("date_paid")
-
-  @@index([memberId])
-  @@map("settlements")
 }
 
 model CreditScore {

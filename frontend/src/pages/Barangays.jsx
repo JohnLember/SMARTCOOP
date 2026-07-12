@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import api, { apiError } from "../lib/api";
-import { Button, Card, Input, Spinner, PageHeader } from "../components/ui";
-import { Plus } from "lucide-react";
+import api from "../lib/api";
+import { Card, Spinner, PageHeader } from "../components/ui";
 
 export default function Barangays() {
   const [list, setList] = useState(null);
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
 
   async function load() {
     const res = await api.get("/barangays");
@@ -19,41 +14,9 @@ export default function Barangays() {
     load();
   }, []);
 
-  async function add(e) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await api.post("/barangays", { name, code: code || null });
-      setName("");
-      setCode("");
-      await load();
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div>
       <PageHeader title="Barangays" subtitle="Geographic areas for members and loading batches" />
-
-      <Card className="mb-4">
-        <form onSubmit={add} className="flex items-end gap-3">
-          <div className="flex-1">
-            <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-          </div>
-          <div className="w-40">
-            <Input label="Code (optional)" value={code} onChange={(e) => setCode(e.target.value)} />
-          </div>
-          <Button type="submit" disabled={busy}>
-            <Plus size={16} />
-            Add
-          </Button>
-        </form>
-        {error && <p className="mt-2 text-sm text-[#9F2F2D]">{error}</p>}
-      </Card>
 
       {!list ? (
         <Spinner />

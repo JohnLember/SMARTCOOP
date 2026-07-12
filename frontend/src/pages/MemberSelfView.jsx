@@ -10,7 +10,7 @@ import {
   CategoryBadge,
   Badge,
 } from "../components/ui";
-import { Truck, Wallet, Receipt } from "lucide-react";
+import { Truck, Wallet } from "lucide-react";
 import CreditScoreCard from "../components/CreditScoreCard";
 import ShowComputation from "../components/ShowComputation";
 import { formatDate } from "../lib/format";
@@ -31,7 +31,6 @@ export default function MemberSelfView() {
   const [member, setMember] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [loans, setLoans] = useState([]);
-  const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,13 +42,11 @@ export default function MemberSelfView() {
       api.get(`/members/${user.memberId}`),
       api.get("/production/deliveries"),
       api.get("/finance/loans"),
-      api.get("/finance/settlements"),
     ])
-      .then(([m, d, l, s]) => {
+      .then(([m, d, l]) => {
         setMember(m.data);
         setDeliveries(d.data);
         setLoans(l.data);
-        setSettlements(s.data);
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -64,7 +61,6 @@ export default function MemberSelfView() {
   );
 
   const activeLoan = loans.find((l) => l.status === "ACTIVE");
-  const settlementTotal = settlements.reduce((s, x) => s + Number(x.totalAmount), 0);
 
   if (loading) return <Spinner />;
   if (!member)
@@ -126,7 +122,7 @@ export default function MemberSelfView() {
       </div>
 
       <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Activity</h3>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Link to="/my-deliveries">
           <Card className="h-full transition hover:border-[#8FB392] hover:shadow">
             <div className="mb-2 flex items-center gap-2 text-[#346538]">
@@ -165,27 +161,6 @@ export default function MemberSelfView() {
               <p className="text-2xl font-bold text-[#111111]">₱0.00</p>
               <p className="text-sm text-[#787774]">No active loan</p>
             </>
-          )}
-        </Card>
-
-        <Card className="h-full">
-          <div className="mb-2 flex items-center gap-2 text-[#346538]">
-            <Receipt size={20} />
-            <span className="text-sm font-semibold text-[#2F3437]">Settlements</span>
-          </div>
-          <p className="text-2xl font-bold text-[#111111]">{peso(settlementTotal)}</p>
-          <p className="text-sm text-[#787774]">
-            {settlements.length > 0
-              ? `Dividends + patronage across ${settlements.length} year(s)`
-              : "No settlements yet"}
-          </p>
-          {settlements.length > 0 && (
-            <div className="mt-2">
-              <ShowComputation
-                url={`/finance/settlements/explain?fiscalYear=${settlements[0].fiscalYear}`}
-                label="Show computation"
-              />
-            </div>
           )}
         </Card>
       </div>

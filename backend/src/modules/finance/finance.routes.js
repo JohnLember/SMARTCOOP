@@ -13,11 +13,6 @@ router.post("/loans", controller.createLoan);
 router.get("/loans/:id/explain", controller.explainLoan);
 router.get("/loans/:id", controller.getLoan);
 
-// Settlements — staff compute/list by year; members read their own.
-router.get("/settlements", controller.listSettlements);
-router.get("/settlements/explain", controller.explainSettlement);
-router.post("/settlements/compute", controller.computeSettlements);
-
 // Agricultural Credit Scoring — staff compute/list; members read their own.
 // Specific routes before the parameterized ones.
 router.get("/credit-scores", staff, controller.listCreditScores);

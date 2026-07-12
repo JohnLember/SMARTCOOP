@@ -14,14 +14,6 @@ export async function list(_req, res, next) {
   }
 }
 
-export async function create(req, res, next) {
-  try {
-    res.status(201).json(await service.create(schema.parse(req.body), req.user.id));
-  } catch (err) {
-    next(err);
-  }
-}
-
 export async function update(req, res, next) {
   try {
     res.json(await service.update(Number(req.params.id), schema.partial().parse(req.body), req.user.id));

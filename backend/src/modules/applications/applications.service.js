@@ -68,7 +68,7 @@ async function nextMemberNo() {
 // Approve: create a real Member from the application, then mark it approved.
 // New members always start as ASSOCIATE; they are auto-promoted to REGULAR once
 // their CBU or savings reach the threshold (see promoteIfEligible).
-export async function approve(id, { memberNo, shareCapital }, actorId) {
+export async function approve(id, { memberNo }, actorId) {
   const app = await getById(id);
   if (app.status !== "PENDING") throw badRequest("This application has already been reviewed");
 
@@ -88,7 +88,6 @@ export async function approve(id, { memberNo, shareCapital }, actorId) {
       barangayId: app.barangayId,
       contactNo: app.contactNo,
       membershipType: "ASSOCIATE",
-      shareCapital: shareCapital ?? 0,
       dateJoined: new Date(),
       status: "ACTIVE",
     },

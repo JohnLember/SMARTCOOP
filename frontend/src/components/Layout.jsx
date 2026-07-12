@@ -11,7 +11,6 @@ import {
   UserCircle,
   Truck,
   Wallet,
-  Coins,
   ShieldCheck,
   ReceiptText,
   UserCog,
@@ -33,7 +32,6 @@ const NAV = {
     { section: "Finance", items: [
       { to: "/loans", label: "Loans", icon: Wallet },
       { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
-      { to: "/settlements", label: "Settlements", icon: Coins },
     ] },
     { section: "System", items: [
       { to: "/users", label: "User Management", icon: UserCog },
@@ -52,7 +50,6 @@ const NAV = {
     { section: "Finance", items: [
       { to: "/loans", label: "Loans", icon: Wallet },
       { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
-      { to: "/settlements", label: "Settlements", icon: Coins },
     ] },
     { section: "System", items: [
       { to: "/notifications", label: "Notifications", icon: Bell },

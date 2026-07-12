@@ -14,7 +14,6 @@ import BatchesList from "./pages/production/BatchesList";
 import BatchDetail from "./pages/production/BatchDetail";
 import LoansList from "./pages/finance/LoansList";
 import LoanDetail from "./pages/finance/LoanDetail";
-import Settlements from "./pages/finance/Settlements";
 import CreditScoring from "./pages/finance/CreditScoring";
 import MemberSelfView from "./pages/MemberSelfView";
 import MyDeliveries from "./pages/MyDeliveries";
@@ -60,7 +59,6 @@ function App() {
         {/* Finance (staff) */}
         <Route path="/loans" element={<ProtectedRoute roles={STAFF}><LoansList /></ProtectedRoute>} />
         <Route path="/loans/:id" element={<ProtectedRoute roles={STAFF}><LoanDetail /></ProtectedRoute>} />
-        <Route path="/settlements" element={<ProtectedRoute roles={STAFF}><Settlements /></ProtectedRoute>} />
         <Route path="/credit" element={<ProtectedRoute roles={STAFF}><CreditScoring /></ProtectedRoute>} />
 
         {/* MAO */}

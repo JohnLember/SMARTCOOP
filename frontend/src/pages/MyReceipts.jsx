@@ -3,7 +3,7 @@ import api from "../lib/api";
 import { Button, Card, Spinner, PageHeader, Badge, Modal } from "../components/ui";
 import ReceiptDocument from "../components/ReceiptDocument";
 import { formatDate } from "../lib/format";
-import { Printer, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -66,17 +66,7 @@ export default function MyReceipts() {
       </Card>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title="Receipt">
-        {selected && (
-          <>
-            <ReceiptDocument receipt={selected} />
-            <div className="mt-4 flex justify-end no-print">
-              <Button onClick={() => window.print()}>
-                <Printer size={16} />
-                Print
-              </Button>
-            </div>
-          </>
-        )}
+        {selected && <ReceiptDocument receipt={selected} />}
       </Modal>
     </div>
   );

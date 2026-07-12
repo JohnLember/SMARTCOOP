@@ -1,8 +1,7 @@
 import { z } from "zod";
 import * as loans from "./loans.service.js";
-import * as settlements from "./settlements.service.js";
 import * as credit from "./credit.service.js";
-import { forbidden, badRequest, notFound } from "../../utils/httpError.js";
+import { forbidden, notFound } from "../../utils/httpError.js";
 
 const isStaff = (user) => user.role === "ADMIN" || user.role === "STAFF";
 
@@ -43,35 +42,6 @@ export async function createLoan(req, res, next) {
   try {
     if (!isStaff(req.user)) throw forbidden("Only staff can issue loans");
     res.status(201).json(await loans.create(loanSchema.parse(req.body), req.user.id));
-  } catch (err) {
-    next(err);
-  }
-}
-
-// --- Settlements ---
-
-const computeSchema = z.object({
-  fiscalYear: z.number().int().min(2000).max(2100),
-  dividendPool: z.number().nonnegative(),
-  patronagePool: z.number().nonnegative(),
-});
-
-export async function listSettlements(req, res, next) {
-  try {
-    if (req.user.role === "MEMBER") {
-      return res.json(await settlements.listForMember(req.user.memberId));
-    }
-    if (!req.query.fiscalYear) throw badRequest("fiscalYear query param is required");
-    res.json(await settlements.listByYear(req.query.fiscalYear));
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function computeSettlements(req, res, next) {
-  try {
-    if (!isStaff(req.user)) throw forbidden("Only staff can compute settlements");
-    res.status(201).json(await settlements.computeForYear(computeSchema.parse(req.body), req.user.id));
   } catch (err) {
     next(err);
   }
@@ -130,20 +100,6 @@ export async function explainLoan(req, res, next) {
       throw forbidden("You can only view your own loan computation");
     }
     res.json(await loans.explainSchedule(id));
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function explainSettlement(req, res, next) {
-  try {
-    const memberId =
-      req.user.role === "MEMBER" ? req.user.memberId : Number(req.query.memberId);
-    if (!memberId) throw badRequest("memberId is required");
-    if (!req.query.fiscalYear) throw badRequest("fiscalYear is required");
-    const result = await settlements.explain(memberId, req.query.fiscalYear);
-    if (!result) throw notFound("No settlement found for that member/year");
-    res.json(result);
   } catch (err) {
     next(err);
   }
