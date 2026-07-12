@@ -275,6 +275,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deliveries, setDeliveries] = useState(null);
 
   useEffect(() => {
     if (application) {
@@ -287,6 +288,18 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
       setNote("");
       setError("");
     }
+  }, [application]);
+
+  // Load the applicant's delivery history so staff can weigh production when
+  // deciding on the loan.
+  useEffect(() => {
+    const memberId = application?.member?.id;
+    if (!memberId) return;
+    setDeliveries(null);
+    api
+      .get("/production/deliveries", { params: { memberId } })
+      .then((res) => setDeliveries(res.data))
+      .catch(() => setDeliveries([]));
   }, [application]);
 
   if (!application) return null;
@@ -348,6 +361,53 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
           {application.purpose && (
             <div className="col-span-2 sm:col-span-3">
               <Field label="Purpose" value={application.purpose} />
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-[#EAEAEA] pt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[#111111]">Delivery history</h3>
+            {deliveries?.length > 0 && (
+              <span className="text-xs text-[#787774]">
+                {deliveries.reduce((s, d) => s + Number(d.weightKg), 0).toLocaleString()} kg ·{" "}
+                {deliveries.length} deliveries
+              </span>
+            )}
+          </div>
+          {deliveries === null ? (
+            <p className="text-sm text-[#B0AFAB]">Loading…</p>
+          ) : deliveries.length === 0 ? (
+            <p className="text-sm text-[#B0AFAB]">No deliveries recorded for this member yet.</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-[#F2F1ED]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-[#F7F6F3] text-left text-[#787774]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Date</th>
+                    <th className="px-3 py-2 font-medium">Batch</th>
+                    <th className="px-3 py-2 font-medium">Weight</th>
+                    <th className="px-3 py-2 font-medium">Net</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F2F1ED]">
+                  {deliveries.map((d) => (
+                    <tr key={d.id}>
+                      <td className="px-3 py-2 text-[#787774]">{formatDate(d.deliveryDate)}</td>
+                      <td className="px-3 py-2 text-[#787774]">
+                        <Badge color="blue">{d.batch?.periodType}</Badge>{" "}
+                        {d.batch?.barangay?.name ?? ""}
+                      </td>
+                      <td className="px-3 py-2 text-[#787774]">
+                        {Number(d.weightKg).toLocaleString()} kg
+                      </td>
+                      <td className="px-3 py-2 font-medium text-[#346538]">
+                        {d.receipt ? peso(d.receipt.netAmount) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
