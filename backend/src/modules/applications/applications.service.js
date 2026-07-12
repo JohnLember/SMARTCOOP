@@ -5,10 +5,25 @@ import { promoteIfEligible } from "../members/members.service.js";
 
 const withBarangay = { barangay: { select: { id: true, name: true } } };
 
+// Builds the next "APP-0001"-style application number from the current max.
+async function nextApplicationNo() {
+  const applications = await prisma.membershipApplication.findMany({
+    where: { applicationNo: { startsWith: "APP-" } },
+    select: { applicationNo: true },
+  });
+  let max = 0;
+  for (const a of applications) {
+    const n = parseInt(a.applicationNo.slice(4), 10);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  return `APP-${String(max + 1).padStart(4, "0")}`;
+}
+
 // Public: a prospective member submits an application.
 export async function create(data) {
   return prisma.membershipApplication.create({
     data: {
+      applicationNo: await nextApplicationNo(),
       firstName: data.firstName,
       middleName: data.middleName ?? null,
       lastName: data.lastName,
@@ -20,7 +35,7 @@ export async function create(data) {
       email: data.email ?? null,
       reason: data.reason ?? null,
     },
-    select: { id: true, firstName: true, lastName: true, status: true, createdAt: true },
+    select: { id: true, applicationNo: true, firstName: true, lastName: true, status: true, createdAt: true },
   });
 }
 
@@ -32,9 +47,11 @@ export function publicBarangays() {
   });
 }
 
-export async function list({ status }) {
+export async function list({ status, search, barangayId }) {
   const where = {};
   if (status) where.status = status;
+  if (barangayId) where.barangayId = Number(barangayId);
+  if (search) where.applicationNo = { contains: search };
   return prisma.membershipApplication.findMany({
     where,
     include: withBarangay,

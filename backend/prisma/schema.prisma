@@ -169,6 +169,7 @@ model Barangay {
 // real Member record is created and linked via memberId.
 model MembershipApplication {
   id               Int               @id @default(autoincrement())
+  applicationNo    String            @unique @map("application_no")
   firstName        String            @map("first_name")
   middleName       String?           @map("middle_name")
   lastName         String            @map("last_name")

@@ -11,7 +11,7 @@ import {
   Modal,
 } from "../components/ui";
 import { formatDate } from "../lib/format";
-import { Check, X } from "lucide-react";
+import { Check, X, Search } from "lucide-react";
 
 const STATUS_COLOR = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
 const STATUSES = ["PENDING", "APPROVED", "REJECTED"];
@@ -20,17 +20,37 @@ export default function Applications() {
   const [rows, setRows] = useState(null);
   const [status, setStatus] = useState("PENDING");
   const [active, setActive] = useState(null); // application under review
+  const [search, setSearch] = useState("");
+  const [barangayId, setBarangayId] = useState("");
+  const [barangays, setBarangays] = useState([]);
 
-  async function load() {
-    const res = await api.get("/applications", { params: status ? { status } : {} });
+  async function load(overrides = {}) {
+    const s = overrides.search ?? search;
+    const b = overrides.barangayId ?? barangayId;
+    const params = {};
+    if (status) params.status = status;
+    if (s) params.search = s;
+    if (b) params.barangayId = b;
+    const res = await api.get("/applications", { params });
     setRows(res.data);
   }
 
   useEffect(() => {
+    api.get("/barangays").then((res) => setBarangays(res.data));
+  }, []);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  }, [status, barangayId]);
 
+  function clearFilters() {
+    setSearch("");
+    setBarangayId("");
+    load({ search: "", barangayId: "" });
+  }
+
+  const hasFilters = search || barangayId;
   const pendingCount = rows?.filter((r) => r.status === "PENDING").length;
 
   return (
@@ -48,6 +68,47 @@ export default function Applications() {
         }
       />
 
+      <Card className="mb-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            load();
+          }}
+          className="flex flex-wrap items-end gap-3"
+        >
+          <div className="flex-1 min-w-48">
+            <Input
+              label="Search"
+              placeholder="Application No."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="w-48">
+            <Select
+              label="Barangay"
+              value={barangayId}
+              onChange={(e) => setBarangayId(e.target.value)}
+            >
+              <option value="">All barangays</option>
+              {barangays.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </Select>
+          </div>
+          <Button type="submit" variant="secondary">
+            <Search size={16} />
+            Filter
+          </Button>
+          {hasFilters && (
+            <Button type="button" variant="ghost" onClick={clearFilters}>
+              <X size={16} />
+              Clear filter
+            </Button>
+          )}
+        </form>
+      </Card>
+
       {!rows ? (
         <Spinner />
       ) : (
@@ -55,6 +116,7 @@ export default function Applications() {
           <table className="w-full text-sm">
             <thead className="bg-[#F7F6F3] text-left text-[#787774]">
               <tr>
+                <th className="px-4 py-3 font-medium">Application No.</th>
                 <th className="px-4 py-3 font-medium">Applicant</th>
                 <th className="px-4 py-3 font-medium">Barangay</th>
                 <th className="px-4 py-3 font-medium">Contact</th>
@@ -66,6 +128,7 @@ export default function Applications() {
             <tbody className="divide-y divide-[#F2F1ED]">
               {rows.map((a) => (
                 <tr key={a.id} className="hover:bg-[#F7F6F3]">
+                  <td className="px-4 py-3 font-medium text-[#346538]">{a.applicationNo}</td>
                   <td className="px-4 py-3 font-medium text-[#2F3437]">
                     {a.firstName} {a.lastName}
                   </td>
@@ -84,7 +147,7 @@ export default function Applications() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={7} className="px-4 py-10 text-center text-[#B0AFAB]">
                     No {status ? status.toLowerCase() : ""} applications.
                   </td>
                 </tr>
@@ -176,6 +239,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
         )}
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Field label="Application No." value={application.applicationNo} />
           <Field label="Barangay" value={application.barangay?.name} />
           <Field label="Contact" value={application.contactNo} />
           <Field label="Email" value={application.email} />

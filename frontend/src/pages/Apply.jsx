@@ -26,6 +26,7 @@ export default function Apply() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [applicationNo, setApplicationNo] = useState("");
 
   useEffect(() => {
     api.get("/applications/barangays").then((res) => setBarangays(res.data)).catch(() => {});
@@ -40,7 +41,7 @@ export default function Apply() {
     setBusy(true);
     setError("");
     try {
-      await api.post("/applications", {
+      const res = await api.post("/applications", {
         firstName: form.firstName,
         middleName: form.middleName || null,
         lastName: form.lastName,
@@ -52,6 +53,7 @@ export default function Apply() {
         address: form.address,
         reason: form.reason || null,
       });
+      setApplicationNo(res.data.applicationNo);
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -148,9 +150,21 @@ export default function Apply() {
               <h2 className="font-tap-display text-2xl font-light" style={{ color: BRAND.ink }}>
                 Application received
               </h2>
+              <div
+                className="mx-auto mt-4 inline-block rounded-sm px-4 py-2"
+                style={{ background: "rgba(63,90,62,0.08)", border: `1px solid ${BRAND.latexLine}` }}
+              >
+                <p className="font-tap-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: BRAND.inkMuted }}>
+                  Application No.
+                </p>
+                <p className="font-tap-display text-xl font-medium" style={{ color: BRAND.moss }}>
+                  {applicationNo}
+                </p>
+              </div>
               <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.6]" style={{ color: BRAND.inkMuted }}>
-                Thank you, {form.firstName}. The cooperative office will review your application and
-                contact you about the next steps. Once approved, an account can be issued for you.
+                Thank you, {form.firstName}. Keep your application number for reference. The
+                cooperative office will review your application and contact you about the next
+                steps. Once approved, an account can be issued for you.
               </p>
               <Link to="/" className="mt-6 inline-block">
                 <Button variant="secondary">Return home</Button>
