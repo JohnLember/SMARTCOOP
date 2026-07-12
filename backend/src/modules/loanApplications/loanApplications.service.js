@@ -98,6 +98,7 @@ export async function approve(id, overrides, actorId) {
       principalAmount: overrides.principalAmount ?? Number(app.principalAmount),
       interestRate: overrides.interestRate ?? Number(app.interestRate),
       termMonths: overrides.termMonths ?? app.termMonths,
+      dateIssued: overrides.dateIssued ?? null,
     },
     actorId
   );

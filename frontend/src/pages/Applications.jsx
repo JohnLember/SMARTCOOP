@@ -271,7 +271,7 @@ function LoanTable({ rows, status, onOpen }) {
 }
 
 function LoanReviewModal({ application, onClose, onReviewed }) {
-  const [terms, setTerms] = useState({ principalAmount: "", interestRate: "", termMonths: "" });
+  const [terms, setTerms] = useState({ principalAmount: "", interestRate: "", termMonths: "", dateIssued: "" });
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -282,6 +282,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
         principalAmount: String(Number(application.principalAmount)),
         interestRate: String(Number(application.interestRate)),
         termMonths: String(application.termMonths),
+        dateIssued: "",
       });
       setNote("");
       setError("");
@@ -299,6 +300,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
         principalAmount: terms.principalAmount ? parseFloat(terms.principalAmount) : undefined,
         interestRate: terms.interestRate ? parseFloat(terms.interestRate) : undefined,
         termMonths: terms.termMonths ? parseInt(terms.termMonths, 10) : undefined,
+        dateIssued: terms.dateIssued || undefined,
       });
       onReviewed();
     } catch (err) {
@@ -374,6 +376,12 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
                 type="number"
                 value={terms.termMonths}
                 onChange={(e) => setTerms({ ...terms, termMonths: e.target.value })}
+              />
+              <Input
+                label="Date issued (blank = today)"
+                type="date"
+                value={terms.dateIssued}
+                onChange={(e) => setTerms({ ...terms, dateIssued: e.target.value })}
               />
               <Button onClick={doApprove} disabled={busy} className="w-full">
                 <Check size={16} />

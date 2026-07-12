@@ -14,6 +14,7 @@ const approveSchema = z.object({
   principalAmount: z.number().positive().optional(),
   interestRate: z.number().min(0).max(100).optional(),
   termMonths: z.number().int().min(1).max(120).optional(),
+  dateIssued: z.string().optional().nullable(),
 });
 
 const rejectSchema = z.object({ note: z.string().optional() });
