@@ -13,6 +13,7 @@ import {
   Badge,
   BackButton,
   Modal,
+  Avatar,
 } from "../../components/ui";
 import { Pencil, RefreshCw, KeyRound, Eye, Printer } from "lucide-react";
 import CreditScoreCard from "../../components/CreditScoreCard";
@@ -147,7 +148,15 @@ export default function MemberDetail() {
 
       <div className="grid grid-cols-3 gap-4">
         <Card className="col-span-2">
-          <h3 className="mb-4 font-semibold text-[#2F3437]">Profile</h3>
+          <div className="mb-4 flex items-center gap-4">
+            <Avatar src={member.profilePhoto} name={`${member.firstName} ${member.lastName}`} size={64} />
+            <div>
+              <h3 className="font-semibold text-[#2F3437]">
+                {member.firstName} {member.lastName}
+              </h3>
+              <p className="text-xs text-[#B0AFAB]">Profile</p>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-4">
             <Field label="Membership" value={<MembershipBadge type={member.membershipType} />} />
             <Field label="Status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
