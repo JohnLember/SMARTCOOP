@@ -11,6 +11,7 @@ import {
   MembershipBadge,
   CategoryBadge,
   Badge,
+  Avatar,
 } from "../../components/ui";
 import { Plus, Search, RefreshCw, X } from "lucide-react";
 
@@ -145,6 +146,7 @@ export default function MembersList() {
             <thead className="bg-[#F7F6F3] text-left text-[#787774]">
               <tr>
                 <th className="px-4 py-3 font-medium">Member No.</th>
+                <th className="px-4 py-3 font-medium">Photo</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Barangay</th>
                 <th className="px-4 py-3 font-medium">Type</th>
@@ -160,6 +162,9 @@ export default function MembersList() {
                     <Link to={`/members/${m.id}`} className="font-medium text-[#346538] hover:underline">
                       {m.memberNo}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Avatar src={m.profilePhoto} name={`${m.firstName} ${m.lastName}`} size={36} />
                   </td>
                   <td className="px-4 py-3">
                     {m.firstName} {m.lastName}
@@ -181,7 +186,7 @@ export default function MembersList() {
               ))}
               {data?.items.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={8} className="px-4 py-10 text-center text-[#B0AFAB]">
                     No members found.
                   </td>
                 </tr>

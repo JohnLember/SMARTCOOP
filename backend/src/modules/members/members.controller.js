@@ -32,6 +32,7 @@ const profileSchema = z.object({
   address: z.string().optional().nullable(),
   barangayId: z.number().int().positive().optional().nullable(),
   contactNo: z.string().optional().nullable(),
+  profilePhoto: z.string().optional().nullable(),
 });
 
 export async function list(req, res, next) {

@@ -219,6 +219,28 @@ export function RiskBadge({ band }) {
   return <Badge color={RISK_COLOR[band] ?? "slate"}>{band} risk</Badge>;
 }
 
+// Circular profile photo with an initials fallback when no photo is set.
+export function Avatar({ src, name = "", size = 40 }) {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join("");
+  return (
+    <span
+      className="inline-flex flex-none items-center justify-center overflow-hidden rounded-full bg-[#EDF3EC] font-medium text-[#346538]"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
+    >
+      {src ? (
+        <img src={src} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        initials || "—"
+      )}
+    </span>
+  );
+}
+
 // Helper badge for the Dynamic Member Categorization result.
 const CATEGORY_COLOR = { ACTIVE: "green", MODERATE: "amber", INACTIVE: "red", NOT_APPLICABLE: "slate" };
 const CATEGORY_LABEL = {

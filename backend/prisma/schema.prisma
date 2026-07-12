@@ -123,7 +123,7 @@ model Member {
   barangayId      Int?           @map("barangay_id")
   barangay        Barangay?      @relation(fields: [barangayId], references: [id], onDelete: SetNull)
   contactNo       String?        @map("contact_no")
-  profilePhoto    String?        @map("profile_photo")
+  profilePhoto    String?        @map("profile_photo") @db.MediumText
   membershipType  MembershipType @default(ASSOCIATE) @map("membership_type")
   shareCapital    Decimal        @default(0) @map("share_capital") @db.Decimal(12, 2)
   dateJoined      DateTime       @default(now()) @map("date_joined")
