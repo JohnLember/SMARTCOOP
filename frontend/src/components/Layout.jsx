@@ -57,7 +57,7 @@ const NAV = {
   ],
   MAO: [
     { section: null, items: [
-      { to: "/mao", label: "MAO Dashboard", icon: LayoutDashboard },
+      { to: "/mao", label: "MAO Dashboard", icon: LayoutDashboard, end: true },
       { to: "/mao/members-by-barangay", label: "Members by Barangay", icon: MapPin },
       { to: "/notifications", label: "Notifications", icon: Bell },
     ] },
@@ -113,6 +113,7 @@ export default function Layout() {
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.end}
                     className={({ isActive }) =>
                       `btn-press relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
                         isActive
