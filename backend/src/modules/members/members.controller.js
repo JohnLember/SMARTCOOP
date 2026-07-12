@@ -24,6 +24,16 @@ const accountSchema = z.object({
   password: z.string().min(6),
 });
 
+// Fields a member may edit on their own profile — no membership type, share
+// capital, member no., status, or date joined (those stay staff-controlled).
+const profileSchema = z.object({
+  sex: z.string().optional().nullable(),
+  birthdate: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  barangayId: z.number().int().positive().optional().nullable(),
+  contactNo: z.string().optional().nullable(),
+});
+
 export async function list(req, res, next) {
   try {
     res.json(await service.list(req.query));
@@ -58,6 +68,19 @@ export async function update(req, res, next) {
   try {
     const data = memberSchema.partial().parse(req.body);
     res.json(await service.update(Number(req.params.id), data, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateProfile(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    if (req.user.role !== "MEMBER" || req.user.memberId !== id) {
+      throw forbidden("You can only edit your own profile");
+    }
+    const data = profileSchema.parse(req.body);
+    res.json(await service.update(id, data, req.user.id));
   } catch (err) {
     next(err);
   }

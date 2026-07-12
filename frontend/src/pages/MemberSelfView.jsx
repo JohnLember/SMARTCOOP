@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import api from "../lib/api";
+import api, { apiError } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import {
   Card,
@@ -9,8 +9,12 @@ import {
   MembershipBadge,
   CategoryBadge,
   Badge,
+  Button,
+  Input,
+  Select,
+  Modal,
 } from "../components/ui";
-import { Truck, Wallet } from "lucide-react";
+import { Truck, Wallet, Pencil } from "lucide-react";
 import CreditScoreCard from "../components/CreditScoreCard";
 import ShowComputation from "../components/ShowComputation";
 import { formatDate } from "../lib/format";
@@ -32,6 +36,7 @@ export default function MemberSelfView() {
   const [deliveries, setDeliveries] = useState([]);
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!user?.memberId) {
@@ -74,7 +79,16 @@ export default function MemberSelfView() {
 
   return (
     <div>
-      <PageHeader title="My Profile" subtitle={member.memberNo} />
+      <PageHeader
+        title="My Profile"
+        subtitle={member.memberNo}
+        actions={
+          <Button variant="secondary" onClick={() => setEditing(true)}>
+            <Pencil size={16} />
+            Edit profile
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-3 gap-4">
         <Card className="col-span-2">
@@ -164,6 +178,107 @@ export default function MemberSelfView() {
           )}
         </Card>
       </div>
+
+      <EditProfileModal
+        open={editing}
+        member={member}
+        onClose={() => setEditing(false)}
+        onSaved={(updated) => {
+          setMember((m) => ({ ...m, ...updated }));
+          setEditing(false);
+        }}
+      />
     </div>
+  );
+}
+
+function EditProfileModal({ open, member, onClose, onSaved }) {
+  const [barangays, setBarangays] = useState([]);
+  const [form, setForm] = useState({ sex: "", birthdate: "", address: "", barangayId: "", contactNo: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      api.get("/barangays").then((res) => setBarangays(res.data));
+      setForm({
+        sex: member.sex ?? "",
+        birthdate: member.birthdate ? member.birthdate.slice(0, 10) : "",
+        address: member.address ?? "",
+        barangayId: member.barangayId ?? "",
+        contactNo: member.contactNo ?? "",
+      });
+      setError("");
+    }
+  }, [open, member]);
+
+  async function save(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const payload = {
+        ...form,
+        birthdate: form.birthdate || null,
+        barangayId: form.barangayId ? Number(form.barangayId) : null,
+      };
+      const res = await api.put(`/members/${member.id}/profile`, payload);
+      onSaved(res.data);
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Edit profile">
+      <form onSubmit={save} className="space-y-4">
+        {error && (
+          <div className="rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">{error}</div>
+        )}
+        <div className="grid grid-cols-2 gap-4">
+          <Select label="Sex" value={form.sex} onChange={(e) => setForm({ ...form, sex: e.target.value })}>
+            <option value="">—</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+          </Select>
+          <Input
+            label="Birthdate"
+            type="date"
+            value={form.birthdate}
+            onChange={(e) => setForm({ ...form, birthdate: e.target.value })}
+          />
+          <Input
+            label="Contact no."
+            value={form.contactNo}
+            onChange={(e) => setForm({ ...form, contactNo: e.target.value })}
+          />
+          <Select
+            label="Barangay"
+            value={form.barangayId}
+            onChange={(e) => setForm({ ...form, barangayId: e.target.value })}
+          >
+            <option value="">—</option>
+            {barangays.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </Select>
+        </div>
+        <Input
+          label="Address"
+          value={form.address}
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
+        />
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy ? "Saving..." : "Save changes"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
