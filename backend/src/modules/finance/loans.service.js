@@ -43,9 +43,21 @@ const loanInclude = {
   member: { select: { id: true, memberNo: true, firstName: true, lastName: true } },
 };
 
-export async function list({ memberId } = {}) {
+export async function list({ memberId, search, barangayId } = {}) {
   const where = {};
   if (memberId) where.memberId = Number(memberId);
+
+  const memberWhere = {};
+  if (barangayId) memberWhere.barangayId = Number(barangayId);
+  if (search) {
+    memberWhere.OR = [
+      { memberNo: { contains: search } },
+      { firstName: { contains: search } },
+      { lastName: { contains: search } },
+    ];
+  }
+  if (Object.keys(memberWhere).length > 0) where.member = memberWhere;
+
   return prisma.loan.findMany({
     where,
     orderBy: { dateIssued: "desc" },
