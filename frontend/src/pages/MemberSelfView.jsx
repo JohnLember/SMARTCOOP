@@ -14,7 +14,7 @@ import {
   Modal,
   Avatar,
 } from "../components/ui";
-import { Truck, Wallet, Pencil, Camera } from "lucide-react";
+import { Truck, Wallet, Pencil, Camera, Plus } from "lucide-react";
 import CreditScoreCard from "../components/CreditScoreCard";
 import MemberCategoryCard from "../components/MemberCategoryCard";
 import ShowComputation from "../components/ShowComputation";
@@ -61,8 +61,14 @@ export default function MemberSelfView() {
   const [member, setMember] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [loanApps, setLoanApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  function reloadLoanApps() {
+    api.get("/loan-applications").then((res) => setLoanApps(res.data));
+  }
 
   useEffect(() => {
     if (!user?.memberId) {
@@ -73,11 +79,13 @@ export default function MemberSelfView() {
       api.get(`/members/${user.memberId}`),
       api.get("/production/deliveries"),
       api.get("/finance/loans"),
+      api.get("/loan-applications"),
     ])
-      .then(([m, d, l]) => {
+      .then(([m, d, l, la]) => {
         setMember(m.data);
         setDeliveries(d.data);
         setLoans(l.data);
+        setLoanApps(la.data);
       })
       .finally(() => setLoading(false));
   }, [user]);
@@ -92,6 +100,7 @@ export default function MemberSelfView() {
   );
 
   const activeLoan = loans.find((l) => l.status === "ACTIVE");
+  const pendingLoanApp = loanApps.find((a) => a.status === "PENDING");
 
   if (loading) return <Spinner />;
   if (!member)
@@ -182,8 +191,39 @@ export default function MemberSelfView() {
               <p className="text-sm text-[#787774]">No active loan</p>
             </>
           )}
+
+          <div className="mt-3 border-t border-[#F2F1ED] pt-3">
+            {member.membershipType === "REGULAR" ? (
+              pendingLoanApp ? (
+                <p className="text-xs text-[#787774]">
+                  Loan application{" "}
+                  <span className="font-medium text-[#2F3437]">{pendingLoanApp.applicationNo}</span> —{" "}
+                  <span className="font-medium text-amber-600">pending review</span>
+                </p>
+              ) : (
+                <Button variant="secondary" className="w-full" onClick={() => setApplying(true)}>
+                  <Plus size={16} />
+                  Apply for loan
+                </Button>
+              )
+            ) : (
+              <p className="text-xs text-[#B0AFAB]">
+                Only <span className="font-medium text-[#2F3437]">Regular</span> members can apply for
+                a loan.
+              </p>
+            )}
+          </div>
         </Card>
       </div>
+
+      <LoanApplyModal
+        open={applying}
+        onClose={() => setApplying(false)}
+        onSubmitted={() => {
+          setApplying(false);
+          reloadLoanApps();
+        }}
+      />
 
       <EditProfileModal
         open={editing}
@@ -315,6 +355,82 @@ function EditProfileModal({ open, member, onClose, onSaved }) {
           </Button>
           <Button type="submit" disabled={busy}>
             {busy ? "Saving..." : "Save changes"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function LoanApplyModal({ open, onClose, onSubmitted }) {
+  const [form, setForm] = useState({ principalAmount: "", termMonths: "12", purpose: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm({ principalAmount: "", termMonths: "12", purpose: "" });
+      setError("");
+    }
+  }, [open]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api.post("/loan-applications", {
+        principalAmount: parseFloat(form.principalAmount),
+        termMonths: parseInt(form.termMonths, 10),
+        purpose: form.purpose || null,
+      });
+      onSubmitted();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Apply for a loan">
+      <form onSubmit={submit} className="space-y-4">
+        {error && (
+          <div className="rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">{error}</div>
+        )}
+        <p className="text-sm text-[#787774]">
+          Cooperative staff will review your request. Interest is charged at the standard 5% per
+          month on the diminishing balance, and repayments are auto-deducted from your deliveries.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Amount requested (₱)"
+            type="number"
+            step="0.01"
+            value={form.principalAmount}
+            onChange={(e) => setForm({ ...form, principalAmount: e.target.value })}
+            required
+          />
+          <Input
+            label="Term (months)"
+            type="number"
+            value={form.termMonths}
+            onChange={(e) => setForm({ ...form, termMonths: e.target.value })}
+            required
+          />
+        </div>
+        <Input
+          label="Purpose (optional)"
+          value={form.purpose}
+          onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+          placeholder="e.g. farm inputs, equipment"
+        />
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {busy ? "Submitting…" : "Submit application"}
           </Button>
         </div>
       </form>

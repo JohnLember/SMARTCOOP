@@ -1,6 +1,7 @@
 import prisma from "../../config/db.js";
 import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
+import { evaluateAndSave } from "../progression/progression.service.js";
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -84,6 +85,10 @@ export async function getById(id) {
 export async function create(data, actorId) {
   const member = await prisma.member.findUnique({ where: { id: data.memberId } });
   if (!member) throw badRequest("Member does not exist");
+  // Business rule: only Regular members may be issued a loan.
+  if (member.membershipType !== "REGULAR") {
+    throw badRequest("Only Regular members can be issued a loan");
+  }
   if (data.termMonths < 1) throw badRequest("Term must be at least 1 month");
 
   const dateIssued = data.dateIssued ? new Date(data.dateIssued) : new Date();
@@ -111,6 +116,9 @@ export async function create(data, actorId) {
     actorId,
     `Issued loan ₱${data.principalAmount} (${data.termMonths} mo @ ${data.interestRate}%/mo) to ${member.memberNo}`
   );
+
+  // A new loan changes the member's Loan Score inputs — refresh categorization.
+  await evaluateAndSave(data.memberId).catch(() => {});
   return loan;
 }
 

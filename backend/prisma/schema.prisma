@@ -142,6 +142,7 @@ model Member {
   deliveries          RubberDelivery[]
   receipts            Receipt[]
   loans               Loan[]
+  loanApplications    LoanApplication[]
   creditScores        CreditScore[]
   notifications       Notification[]              @relation("NotificationRecipient")
   programRecipients   SupportProgramRecipient[]
@@ -298,6 +299,31 @@ model LoanPayment {
 
   @@index([loanId])
   @@map("loan_payments")
+}
+
+// A member's request for a loan (only Regular members may apply). On approval a
+// real Loan is created and linked via loanId. Application no. uses an "LN-" prefix
+// to distinguish it from membership applications ("APP-").
+model LoanApplication {
+  id               Int               @id @default(autoincrement())
+  applicationNo    String            @unique @map("application_no")
+  memberId         Int               @map("member_id")
+  member           Member            @relation(fields: [memberId], references: [id])
+  principalAmount  Decimal           @map("principal_amount") @db.Decimal(12, 2)
+  termMonths       Int               @map("term_months")
+  interestRate     Decimal           @map("interest_rate") @db.Decimal(5, 2)
+  purpose          String?           @db.Text
+  status           ApplicationStatus @default(PENDING)
+  reviewNote       String?           @map("review_note") @db.Text
+  reviewedByUserId Int?              @map("reviewed_by_user_id")
+  reviewedAt       DateTime?         @map("reviewed_at")
+  loanId           Int?              @map("loan_id")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([memberId])
+  @@map("loan_applications")
 }
 
 model CreditScore {
