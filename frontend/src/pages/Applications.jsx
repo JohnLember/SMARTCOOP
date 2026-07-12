@@ -74,7 +74,17 @@ export default function Applications() {
         }
         actions={
           <div className="flex gap-2">
-            <Select value={appType} onChange={(e) => setAppType(e.target.value)} className="w-44">
+            <Select
+              value={appType}
+              onChange={(e) => {
+                // Clear rows in the same update as the type switch so we never
+                // render one type's table against the other type's stale data.
+                setRows(null);
+                setActive(null);
+                setAppType(e.target.value);
+              }}
+              className="w-44"
+            >
               <option value="MEMBERSHIP">Membership</option>
               <option value="LOAN">Loan</option>
             </Select>
@@ -231,9 +241,9 @@ function LoanTable({ rows, status, onOpen }) {
             <tr key={a.id} className="hover:bg-[#F7F6F3]">
               <td className="px-4 py-3 font-medium text-[#346538]">{a.applicationNo}</td>
               <td className="px-4 py-3 font-medium text-[#2F3437]">
-                {a.member.memberNo} — {a.member.firstName} {a.member.lastName}
+                {a.member?.memberNo} — {a.member?.firstName} {a.member?.lastName}
               </td>
-              <td className="px-4 py-3 text-[#787774]">{a.member.barangay?.name ?? "—"}</td>
+              <td className="px-4 py-3 text-[#787774]">{a.member?.barangay?.name ?? "—"}</td>
               <td className="px-4 py-3 text-[#787774]">{peso(a.principalAmount)}</td>
               <td className="px-4 py-3 text-[#787774]">{a.termMonths} mo</td>
               <td className="px-4 py-3 text-[#787774]">{formatDate(a.createdAt)}</td>
@@ -324,11 +334,11 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
           <div className="col-span-2 sm:col-span-3">
             <Field
               label="Member"
-              value={`${application.member.memberNo} — ${application.member.firstName} ${application.member.lastName}`}
+              value={`${application.member?.memberNo} — ${application.member?.firstName} ${application.member?.lastName}`}
             />
           </div>
-          <Field label="Membership" value={application.member.membershipType} />
-          <Field label="Barangay" value={application.member.barangay?.name} />
+          <Field label="Membership" value={application.member?.membershipType} />
+          <Field label="Barangay" value={application.member?.barangay?.name} />
           <Field label="Submitted" value={formatDate(application.createdAt)} />
           <Field label="Amount requested" value={peso(application.principalAmount)} />
           <Field label="Term" value={`${application.termMonths} months`} />
