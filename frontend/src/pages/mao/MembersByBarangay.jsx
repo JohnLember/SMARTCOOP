@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../../lib/api";
-import { Card, Spinner, PageHeader, Button, Badge, MembershipBadge } from "../../components/ui";
+import { Card, Spinner, PageHeader, Button, Badge, MembershipBadge, Modal, Select } from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { FileDown } from "lucide-react";
 
-function exportPdf(data, totalMembers) {
+function exportPdf(data, scopeLabel) {
+  const totalMembers = data.reduce((s, b) => s + b.members.length, 0);
   const doc = new jsPDF({ unit: "pt" });
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
@@ -16,9 +17,7 @@ function exportPdf(data, totalMembers) {
   doc.setFontSize(10);
   doc.setTextColor(120);
   doc.text(
-    `${totalMembers} active member${totalMembers === 1 ? "" : "s"} across ${data.length} barangay${
-      data.length === 1 ? "" : "s"
-    } · Generated ${new Date().toLocaleDateString()}`,
+    `${scopeLabel} · ${totalMembers} active member${totalMembers === 1 ? "" : "s"} · Generated ${new Date().toLocaleDateString()}`,
     margin,
     58
   );
@@ -52,11 +51,14 @@ function exportPdf(data, totalMembers) {
     cursorY = doc.lastAutoTable.finalY + 24;
   });
 
-  doc.save("smartcoop-members-by-barangay.pdf");
+  const slug = scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  doc.save(`smartcoop-members-${slug}.pdf`);
 }
 
 export default function MembersByBarangay() {
   const [data, setData] = useState(null);
+  const [showExport, setShowExport] = useState(false);
+  const [exportBarangayId, setExportBarangayId] = useState("ALL");
 
   useEffect(() => {
     api.get("/mao/members-by-barangay").then((res) => setData(res.data));
@@ -66,6 +68,16 @@ export default function MembersByBarangay() {
 
   const totalMembers = data.reduce((s, b) => s + b.members.length, 0);
 
+  function confirmExport() {
+    if (exportBarangayId === "ALL") {
+      exportPdf(data, "All Barangays");
+    } else {
+      const barangay = data.find((b) => String(b.id) === exportBarangayId);
+      exportPdf([barangay], barangay.name);
+    }
+    setShowExport(false);
+  }
+
   return (
     <div>
       <PageHeader
@@ -73,7 +85,7 @@ export default function MembersByBarangay() {
         title="Members by Barangay"
         subtitle={`${totalMembers} active member${totalMembers === 1 ? "" : "s"} across ${data.length} barangay${data.length === 1 ? "" : "s"}`}
         actions={
-          <Button onClick={() => exportPdf(data, totalMembers)}>
+          <Button onClick={() => setShowExport(true)}>
             <FileDown size={16} />
             Export PDF
           </Button>
@@ -123,6 +135,30 @@ export default function MembersByBarangay() {
           </Card>
         ))}
       </div>
+
+      <Modal open={showExport} onClose={() => setShowExport(false)} title="Export PDF">
+        <div className="space-y-4">
+          <Select
+            label="Barangay"
+            value={exportBarangayId}
+            onChange={(e) => setExportBarangayId(e.target.value)}
+          >
+            <option value="ALL">All Barangays</option>
+            {data.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setShowExport(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={confirmExport}>
+              <FileDown size={16} />
+              Export
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
