@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import { Button, Card, Input, Select, PageHeader, Spinner } from "../../components/ui";
 
 export default function MemberForm() {
@@ -60,9 +61,11 @@ export default function MemberForm() {
     try {
       if (isEdit) {
         await api.put(`/members/${id}`, payload);
+        toast.success("Member updated");
         navigate(`/members/${id}`);
       } else {
         const res = await api.post("/members", payload);
+        toast.success("Member created");
         navigate(`/members/${res.data.id}`);
       }
     } catch (err) {

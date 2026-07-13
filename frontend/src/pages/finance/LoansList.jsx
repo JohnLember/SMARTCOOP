@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination } from "../../components/ui";
 import { usePagination } from "../../lib/usePagination";
 import { Plus, AlertTriangle, Search, X } from "lucide-react";
@@ -95,6 +96,7 @@ export default function LoansList() {
       setForm({ memberId: "", principalAmount: "", interestRate: "5", termMonths: "12", dateIssued: "" });
       setShow(false);
       await load();
+      toast.success("Loan issued");
     } catch (err) {
       setError(apiError(err));
     }

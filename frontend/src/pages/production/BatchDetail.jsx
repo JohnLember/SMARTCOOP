@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import {
   Button,
   Card,
@@ -98,6 +99,7 @@ export default function BatchDetail() {
       });
       setForm(emptyForm());
       await load();
+      toast.success("Delivery recorded");
     } catch (err) {
       setError(apiError(err));
     } finally {
@@ -110,6 +112,9 @@ export default function BatchDetail() {
     try {
       await api.patch(`/production/batches/${id}/status`, { status });
       await load();
+      toast.success(`Batch marked ${status.toLowerCase()}`);
+    } catch (err) {
+      toast.error(apiError(err));
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api, { apiError } from "../lib/api";
+import { toast } from "react-toastify";
 import { Button, Card, CategoryBadge, Modal } from "./ui";
 import ShowComputation from "./ShowComputation";
 import { formatDate } from "../lib/format";
@@ -19,6 +20,7 @@ export default function MemberCategoryCard({ member, canRecategorize = false, on
     setError("");
     try {
       const res = await api.post(`/members/${member.id}/evaluate`);
+      toast.success("Member re-categorized");
       onRecategorized?.(res.data.member);
     } catch (err) {
       setError(apiError(err));

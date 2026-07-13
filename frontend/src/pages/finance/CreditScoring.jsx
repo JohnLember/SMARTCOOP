@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import api from "../../lib/api";
+import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import { Button, Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination } from "../../components/ui";
 import ShowComputation from "../../components/ShowComputation";
 import { formatDate } from "../../lib/format";
@@ -24,8 +25,11 @@ export default function CreditScoring() {
   async function computeAll() {
     setBusy(true);
     try {
-      await api.post("/finance/credit-scores/compute-all");
+      const res = await api.post("/finance/credit-scores/compute-all");
       await load();
+      toast.success(`Computed ${res.data?.evaluated ?? "all"} credit scores`);
+    } catch (err) {
+      toast.error(apiError(err));
     } finally {
       setBusy(false);
     }
@@ -36,6 +40,9 @@ export default function CreditScoring() {
     try {
       await api.post(`/finance/credit-scores/${memberId}/compute`);
       await load();
+      toast.success("Credit score recomputed");
+    } catch (err) {
+      toast.error(apiError(err));
     } finally {
       setBusy(false);
     }

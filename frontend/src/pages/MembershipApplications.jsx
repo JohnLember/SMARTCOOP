@@ -15,6 +15,7 @@ import {
 import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
 import { Check, X, Search } from "lucide-react";
+import { toast } from "react-toastify";
 
 const STATUS_COLOR = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
 const STATUSES = ["PENDING", "APPROVED", "REJECTED"];
@@ -207,6 +208,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
       await api.post(`/applications/${application.id}/approve`, {
         memberNo: approve.memberNo || undefined,
       });
+      toast.success("Application approved — member created");
       onReviewed();
     } catch (err) {
       setError(apiError(err));
@@ -220,6 +222,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
     setError("");
     try {
       await api.post(`/applications/${application.id}/reject`, { note: note || undefined });
+      toast.success("Application rejected");
       onReviewed();
     } catch (err) {
       setError(apiError(err));

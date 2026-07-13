@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import {
   Card,
@@ -287,6 +288,7 @@ function EditProfileModal({ open, member, onClose, onSaved }) {
       // Only send the photo if it changed (new upload or removal).
       if (photo !== null) payload.profilePhoto = photo || null;
       const res = await api.put(`/members/${member.id}/profile`, payload);
+      toast.success("Profile updated");
       onSaved(res.data);
     } catch (err) {
       setError(apiError(err));
@@ -384,6 +386,7 @@ function LoanApplyModal({ open, onClose, onSubmitted }) {
         termMonths: parseInt(form.termMonths, 10),
         purpose: form.purpose || null,
       });
+      toast.success("Loan application submitted");
       onSubmitted();
     } catch (err) {
       setError(apiError(err));

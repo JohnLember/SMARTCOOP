@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import api from "../../lib/api";
+import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import {
   Button,
   Card,
@@ -72,8 +73,11 @@ export default function MembersList() {
   async function evaluateAll() {
     setEvaluating(true);
     try {
-      await api.post("/members/evaluate-all");
+      const res = await api.post("/members/evaluate-all");
       await load();
+      toast.success(`Categorized ${res.data?.evaluated ?? "all"} members`);
+    } catch (err) {
+      toast.error(apiError(err));
     } finally {
       setEvaluating(false);
     }

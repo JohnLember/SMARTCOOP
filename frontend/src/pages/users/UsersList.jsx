@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import {
   Button,
@@ -49,8 +50,10 @@ export default function UsersList() {
   async function toggleStatus(u) {
     setError("");
     try {
-      await api.put(`/users/${u.id}`, { status: u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" });
+      const next = u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+      await api.put(`/users/${u.id}`, { status: next });
       await load();
+      toast.success(`Account ${next === "ACTIVE" ? "activated" : "deactivated"}`);
     } catch (err) {
       setError(apiError(err));
     }
@@ -62,6 +65,7 @@ export default function UsersList() {
     try {
       await api.delete(`/users/${u.id}`);
       await load();
+      toast.success("Account deleted");
     } catch (err) {
       setError(apiError(err));
     }
@@ -238,6 +242,9 @@ function UserModal({ modal, onClose, onSaved, membersWithoutAccount }) {
       } else if (mode === "password") {
         await api.patch(`/users/${user.id}/password`, { password: form.password });
       }
+      toast.success(
+        mode === "create" ? "Account created" : mode === "password" ? "Password reset" : "Account updated"
+      );
       onSaved();
     } catch (err) {
       setError(apiError(err));

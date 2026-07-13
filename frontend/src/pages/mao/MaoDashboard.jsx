@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import {
   Button,
   Card,
@@ -139,6 +140,7 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
       });
       setForm({ name: "", type: "Fertilizer Distribution", targetBarangayId: "", budget: "" });
       setShow(false);
+      toast.success("Support program created");
       onChange();
     } catch (err) {
       setError(apiError(err));
@@ -232,6 +234,7 @@ function ProgramDetailModal({ programId, members, onClose, onChange }) {
     try {
       await api.put(`/mao/programs/${programId}`, { status });
       await load();
+      toast.success(`Program marked ${status.toLowerCase()}`);
       onChange();
     } catch (err) {
       setError(apiError(err));
@@ -252,6 +255,7 @@ function ProgramDetailModal({ programId, members, onClose, onChange }) {
       });
       setRec({ memberId: "", quantityOrAmount: "", dateDistributed: "" });
       await load();
+      toast.success("Recipient added");
       onChange();
     } catch (err) {
       setError(apiError(err));
@@ -362,6 +366,7 @@ function AffectedAreas({ tags, barangays, onChange }) {
         severity: form.severity,
       });
       setForm({ barangayId: "", reason: "", severity: "MODERATE" });
+      toast.success("Area tagged");
       onChange();
     } catch (err) {
       setError(apiError(err));
@@ -369,8 +374,13 @@ function AffectedAreas({ tags, barangays, onChange }) {
   }
 
   async function resolve(id) {
-    await api.patch(`/mao/tags/${id}/resolve`);
-    onChange();
+    try {
+      await api.patch(`/mao/tags/${id}/resolve`);
+      toast.success("Area resolved");
+      onChange();
+    } catch (err) {
+      toast.error(apiError(err));
+    }
   }
 
   return (
@@ -423,17 +433,15 @@ function AffectedAreas({ tags, barangays, onChange }) {
 
 function AnnouncementComposer() {
   const [form, setForm] = useState({ title: "", message: "", recipientRole: "MEMBER" });
-  const [status, setStatus] = useState("");
 
   async function submit(e) {
     e.preventDefault();
-    setStatus("");
     try {
       await api.post("/notifications", form);
       setForm({ title: "", message: "", recipientRole: "MEMBER" });
-      setStatus("Announcement sent.");
+      toast.success("Announcement sent");
     } catch (err) {
-      setStatus(apiError(err));
+      toast.error(apiError(err));
     }
   }
 
@@ -445,7 +453,6 @@ function AnnouncementComposer() {
         Send announcement
       </h3>
       <form onSubmit={submit} className="space-y-3">
-        {status && <p className="text-sm text-[#346538]">{status}</p>}
         <Input label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
         <Textarea label="Message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} required />
         <Select label="Audience" value={form.recipientRole} onChange={(e) => setForm({ ...form, recipientRole: e.target.value })}>

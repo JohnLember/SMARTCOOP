@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api, { apiError } from "../lib/api";
+import { toast } from "react-toastify";
 import { Button, Card, RiskBadge, Modal } from "./ui";
 import ShowComputation from "./ShowComputation";
 import { formatDate } from "../lib/format";
@@ -37,6 +38,7 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
     try {
       await api.post(`/finance/credit-scores/${memberId}/compute`);
       await load();
+      toast.success("Credit score computed");
       onComputed?.();
     } catch (err) {
       setError(apiError(err));

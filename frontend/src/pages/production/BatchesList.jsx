@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import { Button, Card, Select, Input, Spinner, PageHeader, Badge } from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { Plus } from "lucide-react";
@@ -42,6 +43,7 @@ export default function BatchesList() {
       setForm({ barangayId: "", periodType: "KINSINA", startDate: "", endDate: "" });
       setShow(false);
       await load();
+      toast.success("Loading batch created");
     } catch (err) {
       setError(apiError(err));
     }

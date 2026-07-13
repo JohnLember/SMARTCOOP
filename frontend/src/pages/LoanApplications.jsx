@@ -15,6 +15,7 @@ import {
 import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
 import { Check, X, Search } from "lucide-react";
+import { toast } from "react-toastify";
 
 const STATUS_COLOR = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
 const STATUSES = ["PENDING", "APPROVED", "REJECTED"];
@@ -231,6 +232,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
         termMonths: terms.termMonths ? parseInt(terms.termMonths, 10) : undefined,
         dateIssued: terms.dateIssued || undefined,
       });
+      toast.success("Loan application approved — loan issued");
       onReviewed();
     } catch (err) {
       setError(apiError(err));
@@ -244,6 +246,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
     setError("");
     try {
       await api.post(`/loan-applications/${application.id}/reject`, { note: note || undefined });
+      toast.success("Loan application rejected");
       onReviewed();
     } catch (err) {
       setError(apiError(err));

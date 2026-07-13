@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import api, { apiError } from "../../lib/api";
+import { toast } from "react-toastify";
 import {
   Button,
   Card,
@@ -74,6 +75,7 @@ export default function MemberDetail() {
     try {
       const res = await api.patch(`/members/${id}/status`, { status });
       setMember((m) => ({ ...m, ...res.data }));
+      toast.success(`Member status set to ${status.toLowerCase()}`);
     } catch (err) {
       setError(apiError(err));
     } finally {
@@ -87,6 +89,7 @@ export default function MemberDetail() {
     setError("");
     try {
       await api.post(`/members/${id}/account`, account);
+      toast.success("Login account created");
       setShowAccount(false);
       setAccount({ username: "", password: "" });
       await load();
