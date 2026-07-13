@@ -4,7 +4,8 @@ import Layout from "./components/Layout";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Apply from "./pages/Apply";
-import Applications from "./pages/Applications";
+import MembershipApplications from "./pages/MembershipApplications";
+import LoanApplications from "./pages/LoanApplications";
 import MembersList from "./pages/members/MembersList";
 import MemberForm from "./pages/members/MemberForm";
 import MemberDetail from "./pages/members/MemberDetail";
@@ -51,7 +52,7 @@ function App() {
         <Route path="/users" element={<ProtectedRoute roles={ADMIN_ONLY}><UsersList /></ProtectedRoute>} />
 
         {/* Membership applications (staff) */}
-        <Route path="/applications" element={<ProtectedRoute roles={STAFF}><Applications /></ProtectedRoute>} />
+        <Route path="/applications" element={<ProtectedRoute roles={STAFF}><MembershipApplications /></ProtectedRoute>} />
 
         {/* Production (staff) */}
         <Route path="/batches" element={<ProtectedRoute roles={STAFF}><BatchesList /></ProtectedRoute>} />
@@ -60,6 +61,7 @@ function App() {
         {/* Finance (staff) */}
         <Route path="/loans" element={<ProtectedRoute roles={STAFF}><LoansList /></ProtectedRoute>} />
         <Route path="/loans/:id" element={<ProtectedRoute roles={STAFF}><LoanDetail /></ProtectedRoute>} />
+        <Route path="/loan-applications" element={<ProtectedRoute roles={STAFF}><LoanApplications /></ProtectedRoute>} />
         <Route path="/credit" element={<ProtectedRoute roles={STAFF}><CreditScoring /></ProtectedRoute>} />
 
         {/* MAO */}

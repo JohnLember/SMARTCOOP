@@ -273,3 +273,13 @@ export function CategoryBadge({ category }) {
   if (!category) return <Badge color="slate">Uncategorized</Badge>;
   return <Badge color={CATEGORY_COLOR[category] ?? "slate"}>{CATEGORY_LABEL[category] ?? category}</Badge>;
 }
+
+// Label/value pair used in review-modal detail grids.
+export function Field({ label, value }) {
+  return (
+    <div>
+      <p className="text-xs text-[#B0AFAB]">{label}</p>
+      <p className="text-sm font-medium text-[#2F3437]">{value || "—"}</p>
+    </div>
+  );
+}

@@ -15,6 +15,7 @@ import {
   ReceiptText,
   UserCog,
   UserPlus,
+  FileCheck,
 } from "lucide-react";
 
 // Navigation items per role, grouped into sections so a long flat list
@@ -23,7 +24,7 @@ const NAV = {
   ADMIN: [
     { section: "Membership", items: [
       { to: "/members", label: "Members", icon: Users },
-      { to: "/applications", label: "Applications", icon: UserPlus },
+      { to: "/applications", label: "Membership Applications", icon: UserPlus },
       { to: "/barangays", label: "Barangays", icon: MapPin },
     ] },
     { section: "Production", items: [
@@ -31,6 +32,7 @@ const NAV = {
     ] },
     { section: "Finance", items: [
       { to: "/loans", label: "Loans", icon: Wallet },
+      { to: "/loan-applications", label: "Loan Applications", icon: FileCheck },
       { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
     ] },
     { section: "System", items: [
@@ -41,7 +43,7 @@ const NAV = {
   STAFF: [
     { section: "Membership", items: [
       { to: "/members", label: "Members", icon: Users },
-      { to: "/applications", label: "Applications", icon: UserPlus },
+      { to: "/applications", label: "Membership Applications", icon: UserPlus },
       { to: "/barangays", label: "Barangays", icon: MapPin },
     ] },
     { section: "Production", items: [
@@ -49,6 +51,7 @@ const NAV = {
     ] },
     { section: "Finance", items: [
       { to: "/loans", label: "Loans", icon: Wallet },
+      { to: "/loan-applications", label: "Loan Applications", icon: FileCheck },
       { to: "/credit", label: "Credit Scoring", icon: ShieldCheck },
     ] },
     { section: "System", items: [
