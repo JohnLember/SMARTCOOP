@@ -158,3 +158,103 @@ body {
     display: none !important;
   }
 }
+
+/* --- Toast notifications (react-toastify), tuned to the app shell --- */
+:root {
+  --toastify-toast-width: 356px;
+  --toastify-toast-min-height: 52px;
+  --toastify-toast-bd-radius: 12px;
+  --toastify-toast-padding: 13px 15px;
+  --toastify-font-family: var(--font-sans);
+  --toastify-text-color-light: #2f3437;
+  /* Hairline ring + soft elevation, in one — same language as the modal. */
+  --toastify-toast-shadow:
+    0 1px 2px rgba(17, 17, 17, 0.04),
+    0 10px 28px -8px rgba(17, 17, 17, 0.13),
+    0 0 0 1px #eaeaea;
+  /* Toasts sit above the app's modals (z-50). */
+  --toastify-z-index: 70;
+
+  /* Accent + icon + progress colours = the app's own palette. */
+  --toastify-color-success: #346538;
+  --toastify-color-error: #9f2f2d;
+  --toastify-color-warning: #b9701f;
+  --toastify-color-info: #1f6c9f;
+  --toastify-icon-color-success: #346538;
+  --toastify-icon-color-error: #9f2f2d;
+  --toastify-icon-color-warning: #b9701f;
+  --toastify-icon-color-info: #1f6c9f;
+  --toastify-color-progress-success: #346538;
+  --toastify-color-progress-error: #9f2f2d;
+  --toastify-color-progress-warning: #b9701f;
+  --toastify-color-progress-info: #1f6c9f;
+  /* Untyped toasts get a neutral rail, not the library's rainbow default. */
+  --toastify-color-progress-light: #b0afab;
+  --toastify-spinner-color: #346538;
+}
+
+.Toastify__toast {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.Toastify__toast-body {
+  font-weight: 500;
+  color: #2f3437;
+  padding: 2px 0;
+}
+.Toastify__toast-body b,
+.Toastify__toast-body strong {
+  font-weight: 650;
+  color: #111111;
+}
+.Toastify__toast-icon {
+  width: auto;
+  margin-inline-end: 11px;
+}
+
+/* Close affordance matches the modal's: muted, darkening on hover. */
+.Toastify__close-button,
+.Toastify__close-button--light {
+  color: #b0afab;
+  opacity: 1;
+  top: 9px;
+  right: 9px;
+  align-self: flex-start;
+  transition: color 160ms var(--ease-out);
+}
+.Toastify__close-button:hover,
+.Toastify__close-button:focus-visible {
+  color: #111111;
+  opacity: 1;
+}
+.Toastify__close-button > svg {
+  height: 15px;
+  width: 15px;
+}
+
+/* Thin single-hue progress rail. */
+.Toastify__progress-bar--wrp {
+  height: 3px;
+}
+
+/* Enter and settle, then a quicker exit — the app's --ease-out throughout.
+   var(--y) is react-toastify's stacking offset; keep it in the settled state so
+   stacked toasts don't jump. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translate3d(16px, var(--y, 0), 0) scale(0.98); }
+  to { opacity: 1; transform: translate3d(0, var(--y, 0), 0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translate3d(0, var(--y, 0), 0) scale(1); }
+  to { opacity: 0; transform: translate3d(16px, var(--y, 0), 0) scale(0.985); }
+}
+.toast-in { animation: toast-in 260ms var(--ease-out) both; }
+.toast-out { animation: toast-out 170ms var(--ease-out) both; }
+
+/* Reduced motion: crossfade only, no travel. */
+@keyframes toast-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes toast-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .toast-in { animation: toast-fade-in 200ms var(--ease-out) both; }
+  .toast-out { animation: toast-fade-out 150ms var(--ease-out) both; }
+}
