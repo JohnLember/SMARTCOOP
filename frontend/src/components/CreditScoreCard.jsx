@@ -88,7 +88,10 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
             </div>
           )}
           <div className="space-y-1 rounded-lg bg-[#F7F6F3] p-3 text-xs text-[#787774]">
-            <Row label="Repayment history" value={f?.repaymentScore} />
+            <Row
+              label={f?.hasLoanHistory === false ? "Repayment history (no loans yet)" : "Repayment history"}
+              value={f?.repaymentScore}
+            />
             <Row label="Production consistency" value={f?.productionScore} />
             <Row label="Cooperative standing" value={f?.farmScore} />
             <div className="my-1 border-t border-[#EAEAEA]" />

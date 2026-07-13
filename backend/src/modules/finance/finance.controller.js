@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as loans from "./loans.service.js";
 import * as credit from "./credit.service.js";
-import { forbidden, notFound } from "../../utils/httpError.js";
+import { forbidden, notFound, badRequest } from "../../utils/httpError.js";
 
 const isStaff = (user) => user.role === "ADMIN" || user.role === "STAFF";
 
@@ -84,6 +84,11 @@ export async function computeCreditScore(req, res, next) {
     if (!isStaff(req.user)) throw forbidden("Only staff can compute credit scores");
     const result = await credit.evaluateAndSave(Number(req.params.memberId), req.user.id);
     if (!result) throw notFound("Member not found");
+    if (result.insufficientActivity) {
+      throw badRequest(
+        "Not enough activity to assess yet — this member has no deliveries or loans on record."
+      );
+    }
     res.status(201).json(result);
   } catch (err) {
     next(err);

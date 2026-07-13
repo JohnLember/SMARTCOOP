@@ -116,11 +116,21 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
   const farmScore = round2(0.4 * normShare + 0.3 * normTenure + 0.3 * classPoints);
 
   // --- Composite ---
-  const score = round2(
-    config.weights.repayment * repaymentScore +
-      config.weights.production * productionScore +
-      config.weights.farm * farmScore
-  );
+  // Pillar 1 only means something with actual loan history. With none, its
+  // weight is redistributed proportionally across Pillars 2 & 3 rather than
+  // seeded with a flat baseline — otherwise every member who has never borrowed
+  // carries the same padded repayment score.
+  const hasLoanHistory = loans.length > 0;
+  let wRepay = config.weights.repayment;
+  let wProd = config.weights.production;
+  let wFarm = config.weights.farm;
+  if (!hasLoanHistory) {
+    const denom = wProd + wFarm;
+    wProd = denom > 0 ? wProd / denom : 0;
+    wFarm = denom > 0 ? wFarm / denom : 0;
+    wRepay = 0;
+  }
+  const score = round2(wRepay * repaymentScore + wProd * productionScore + wFarm * farmScore);
   const riskBand = bandFor(score, config.bands);
 
   const capacity = shareCapital * config.limit.scMult + annualDeliveryValue * config.limit.deliveryMult;
@@ -132,7 +142,8 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
     recommendation: RECOMMENDATION[riskBand],
     suggestedCreditLimit,
     factors: {
-      repaymentScore,
+      repaymentScore: hasLoanHistory ? repaymentScore : null,
+      hasLoanHistory,
       productionScore,
       farmScore,
       onTimeRatio: onTimeRatio != null ? round2(onTimeRatio) : null,
@@ -169,6 +180,11 @@ async function gather(memberId) {
 export async function evaluateAndSave(memberId, actorId) {
   const data = await gather(memberId);
   if (!data) return null;
+  // No deliveries and no loans → no track record worth scoring. Skip so a
+  // brand-new member never shows a score built only on cooperative standing.
+  if (data.deliveries.length === 0 && data.loans.length === 0) {
+    return { memberId, insufficientActivity: true };
+  }
   const config = await getConfig();
   const result = scoreMember(data, config);
 
@@ -200,11 +216,15 @@ export async function evaluateAll(actorId) {
     select: { id: true },
   });
   const bands = { LOW: 0, MEDIUM: 0, HIGH: 0 };
+  let scored = 0;
   for (const m of members) {
     const res = await evaluateAndSave(m.id, actorId);
-    if (res) bands[res.riskBand] += 1;
+    if (res?.riskBand) {
+      bands[res.riskBand] += 1;
+      scored += 1;
+    }
   }
-  return { evaluated: members.length, ...bands };
+  return { evaluated: scored, skipped: members.length - scored, ...bands };
 }
 
 export async function latestForMember(memberId) {
@@ -242,21 +262,42 @@ export async function explain(memberId) {
   const normTenure = norm(f.tenureMonths, caps.tenureMonths);
   const classPoints = f.membershipType === "REGULAR" ? 100 : 60;
 
+  // Mirror the reweighting from scoreMember: with no loan history, Pillar 1's
+  // weight is redistributed across Pillars 2 & 3. (Older score rows predate the
+  // flag, so fall back to whether a repayment score was recorded.)
+  const hasLoanHistory = f.hasLoanHistory ?? f.repaymentScore != null;
+  let wRepay = w.repayment;
+  let wProd = w.production;
+  let wFarm = w.farm;
+  if (!hasLoanHistory) {
+    const denom = wProd + wFarm;
+    wProd = denom > 0 ? round2(wProd / denom) : 0;
+    wFarm = denom > 0 ? round2(wFarm / denom) : 0;
+    wRepay = 0;
+  }
+
   const steps = [
+    hasLoanHistory
+      ? {
+          label: `Pillar 1 — Repayment history (weight ${wRepay})`,
+          formula:
+            f.dueInstallments > 0
+              ? "100 × (paidOnTime ÷ dueInstallments) + 5 × loansFullyRepaid"
+              : "baseline (loan open, no installments due yet)",
+          substitution:
+            f.dueInstallments > 0
+              ? `100 × (${f.paidOnTime} ÷ ${f.dueInstallments}) + 5 × ${f.fullyRepaidLoans}`
+              : `outstanding balance ₱${fmt(f.outstandingBalance)}`,
+          result: fmt(f.repaymentScore),
+        }
+      : {
+          label: "Pillar 1 — Repayment history (not counted)",
+          formula: "no loan history yet — its weight is shared across Pillars 2 & 3",
+          substitution: `Production weight → ${wProd}, Cooperative standing weight → ${wFarm}`,
+          result: "—",
+        },
     {
-      label: `Pillar 1 — Repayment history (weight ${w.repayment})`,
-      formula:
-        f.dueInstallments > 0
-          ? "100 × (paidOnTime ÷ dueInstallments) + 5 × loansFullyRepaid"
-          : "baseline (no installments due yet)",
-      substitution:
-        f.dueInstallments > 0
-          ? `100 × (${f.paidOnTime} ÷ ${f.dueInstallments}) + 5 × ${f.fullyRepaidLoans}`
-          : `outstanding balance ₱${fmt(f.outstandingBalance)}`,
-      result: fmt(f.repaymentScore),
-    },
-    {
-      label: `Pillar 2 — Production consistency (weight ${w.production})`,
+      label: `Pillar 2 — Production consistency (weight ${wProd})`,
       formula: "0.6 × normVolume + 0.4 × normMonths",
       substitution: `0.6 × ${fmt(normVolume)} + 0.4 × ${fmt(normConsistency)}  [vol ${fmt(
         f.totalVolumeKg
@@ -264,7 +305,7 @@ export async function explain(memberId) {
       result: fmt(f.productionScore),
     },
     {
-      label: `Pillar 3 — Cooperative standing (weight ${w.farm})`,
+      label: `Pillar 3 — Cooperative standing (weight ${wFarm})`,
       formula: "0.4 × normShareCapital + 0.3 × normTenure + 0.3 × classPoints",
       substitution: `0.4 × ${fmt(normShare)} + 0.3 × ${fmt(normTenure)} + 0.3 × ${classPoints} [${
         f.membershipType
@@ -273,10 +314,12 @@ export async function explain(memberId) {
     },
     {
       label: "Composite credit score",
-      formula: "wRepay·P1 + wProd·P2 + wFarm·P3",
-      substitution: `${w.repayment}×${fmt(f.repaymentScore)} + ${w.production}×${fmt(
-        f.productionScore
-      )} + ${w.farm}×${fmt(f.farmScore)}`,
+      formula: hasLoanHistory
+        ? "wRepay·P1 + wProd·P2 + wFarm·P3"
+        : "wProd·P2 + wFarm·P3  (Pillar 1 not counted)",
+      substitution: hasLoanHistory
+        ? `${wRepay}×${fmt(f.repaymentScore)} + ${wProd}×${fmt(f.productionScore)} + ${wFarm}×${fmt(f.farmScore)}`
+        : `${wProd}×${fmt(f.productionScore)} + ${wFarm}×${fmt(f.farmScore)}`,
       result: fmt(latest.score),
     },
     {

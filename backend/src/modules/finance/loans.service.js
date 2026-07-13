@@ -2,6 +2,7 @@ import prisma from "../../config/db.js";
 import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
+import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD } from "../members/members.service.js";
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -83,11 +84,15 @@ export async function getById(id) {
 }
 
 export async function create(data, actorId) {
-  const member = await prisma.member.findUnique({ where: { id: data.memberId } });
+  // Loan eligibility = Regular membership, which a member reaches once CBU or
+  // savings hit the threshold. Re-check promotion first so anyone who has met
+  // the threshold qualifies even if an earlier trigger didn't fire.
+  const member = await promoteIfEligible(data.memberId);
   if (!member) throw badRequest("Member does not exist");
-  // Business rule: only Regular members may be issued a loan.
   if (member.membershipType !== "REGULAR") {
-    throw badRequest("Only Regular members can be issued a loan");
+    throw badRequest(
+      `Member is not eligible for a loan yet. Members qualify once CBU or savings reach ₱${REGULAR_PROMOTION_THRESHOLD.toLocaleString()}.`
+    );
   }
   if (data.termMonths < 1) throw badRequest("Term must be at least 1 month");
 

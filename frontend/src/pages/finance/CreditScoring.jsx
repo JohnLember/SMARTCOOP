@@ -58,7 +58,7 @@ export default function CreditScoring() {
     <div>
       <PageHeader
         title="Agricultural Credit Scoring"
-        subtitle="Algorithmic creditworthiness from repayment history, production consistency, and farm characteristics"
+        subtitle="Algorithmic creditworthiness from repayment history, production consistency, and cooperative standing"
         actions={
           <Button onClick={computeAll} disabled={busy}>
             <RefreshCw size={16} className={busy ? "animate-spin" : ""} />

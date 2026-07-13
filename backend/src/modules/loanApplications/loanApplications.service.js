@@ -2,6 +2,7 @@ import prisma from "../../config/db.js";
 import { badRequest, conflict, notFound } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import * as loans from "../finance/loans.service.js";
+import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD } from "../members/members.service.js";
 
 // Standard cooperative loan interest (%/month) if the applicant doesn't set one.
 const DEFAULT_INTEREST = 5;
@@ -36,10 +37,14 @@ async function nextApplicationNo() {
 // A member applies for a loan. Only Regular members qualify, and only one
 // application may be pending at a time.
 export async function create(memberId, data) {
-  const member = await prisma.member.findUnique({ where: { id: memberId } });
+  // Eligibility = Regular membership; re-check promotion so a member who has hit
+  // the CBU/savings threshold can apply even if promotion hadn't fired yet.
+  const member = await promoteIfEligible(memberId);
   if (!member) throw badRequest("Member not found");
   if (member.membershipType !== "REGULAR") {
-    throw badRequest("Only Regular members can apply for a loan");
+    throw badRequest(
+      `You are not eligible for a loan yet. Members qualify once CBU or savings reach ₱${REGULAR_PROMOTION_THRESHOLD.toLocaleString()}.`
+    );
   }
 
   const pending = await prisma.loanApplication.findFirst({
