@@ -90,7 +90,7 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
           <div className="space-y-1 rounded-lg bg-[#F7F6F3] p-3 text-xs text-[#787774]">
             <Row label="Repayment history" value={f?.repaymentScore} />
             <Row label="Production consistency" value={f?.productionScore} />
-            <Row label="Farm characteristics" value={f?.farmScore} />
+            <Row label="Cooperative standing" value={f?.farmScore} />
             <div className="my-1 border-t border-[#EAEAEA]" />
             <p>On-time installments: {f?.paidOnTime}/{f?.dueInstallments}{f?.overdueInstallments ? ` (${f.overdueInstallments} overdue)` : ""}</p>
             <p>12-mo volume: {f?.totalVolumeKg} kg across {f?.activeMonths} month(s)</p>
@@ -141,7 +141,7 @@ const GUIDE = [
     ],
   },
   {
-    title: "Farm characteristics & standing",
+    title: "Cooperative standing",
     tips: [
       "Grow your share capital and let your CBU (Capital Build-Up) accumulate.",
       "Stay an active member — longer membership tenure improves your standing.",

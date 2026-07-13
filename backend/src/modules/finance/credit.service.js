@@ -12,7 +12,7 @@ import { logActivity } from "../../utils/activityLog.js";
 //                                loans fully repaid (historical financial interactions)
 //   2. Production consistency  — delivery volume + how regularly the member
 //                                delivers over the last 12 months
-//   3. Farm characteristics    — share capital, membership tenure, and class
+//   3. Cooperative standing    — share capital, membership tenure, and class
 //                                (standing within the cooperative)
 //
 // The score maps to a risk band + lending recommendation + a suggested credit
@@ -107,7 +107,7 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
   const normConsistency = norm(activeMonths, config.caps.consistencyMonths);
   const productionScore = round2(0.6 * normVolume + 0.4 * normConsistency);
 
-  // --- 3. Farm characteristics / cooperative standing ---
+  // --- 3. Cooperative standing ---
   const shareCapital = Number(member.shareCapital);
   const tenureMonths = monthsBetween(member.dateJoined);
   const normShare = norm(shareCapital, config.caps.shareCapital);
@@ -264,7 +264,7 @@ export async function explain(memberId) {
       result: fmt(f.productionScore),
     },
     {
-      label: `Pillar 3 — Farm characteristics (weight ${w.farm})`,
+      label: `Pillar 3 — Cooperative standing (weight ${w.farm})`,
       formula: "0.4 × normShareCapital + 0.3 × normTenure + 0.3 × classPoints",
       substitution: `0.4 × ${fmt(normShare)} + 0.3 × ${fmt(normTenure)} + 0.3 × ${classPoints} [${
         f.membershipType
