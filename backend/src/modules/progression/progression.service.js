@@ -7,8 +7,9 @@ import prisma from "../../config/db.js";
 // indicators:
 //   • Delivery Score (DS) — from rubber kilos delivered in the evaluation period
 //   • Loan Score (LS)     — from loan repayment rate (RR = paid ÷ due × 100)
-// Activity Score AS = DS + LS. Members with NO loan are Not Applicable (their
-// repayment rate is undefined, so they are excluded from scoring).
+// Activity Score AS = DS + LS. Members with NO loan (e.g. associates, who can't
+// borrow) are judged on delivery alone, with DS rescaled to the full 0–100
+// range; those with no deliveries this period are Not Applicable.
 // Thresholds are configurable via app_settings key "categorization".
 // ---------------------------------------------------------------------------
 
@@ -48,15 +49,35 @@ function loanScore(rr, c) {
 // Pure evaluation over gathered inputs.
 export function evaluate({ rk, totalLoanPaid, totalLoanDue, hasLoan }, config = DEFAULT_CONFIG) {
   const ds = deliveryScore(Number(rk), config);
+  const categoryFor = (as) =>
+    as >= config.category.active ? "ACTIVE" : as >= config.category.moderate ? "MODERATE" : "INACTIVE";
 
-  // No loan → repayment rate is undefined → excluded (Not Applicable).
+  // No loan (e.g. associates, who can't borrow) → no repayment signal. Judge on
+  // delivery alone, rescaling DS to the full 0–100 range so a strong deliverer
+  // can still reach Active. With no deliveries this period either, there's
+  // nothing to judge → Not Applicable.
   if (!hasLoan) {
+    if (Number(rk) <= 0) {
+      return {
+        deliveryScore: ds,
+        loanScore: null,
+        activityScore: null,
+        repaymentRate: null,
+        category: "NOT_APPLICABLE",
+        hasLoan: false,
+        rk: Number(rk),
+        totalLoanPaid: 0,
+        totalLoanDue: 0,
+      };
+    }
+    const maxDs = config.delivery.highPts;
+    const as = maxDs > 0 ? round2((ds / maxDs) * 100) : 0;
     return {
       deliveryScore: ds,
       loanScore: null,
-      activityScore: null,
+      activityScore: as,
       repaymentRate: null,
-      category: "NOT_APPLICABLE",
+      category: categoryFor(as),
       hasLoan: false,
       rk: Number(rk),
       totalLoanPaid: 0,
@@ -67,15 +88,13 @@ export function evaluate({ rk, totalLoanPaid, totalLoanDue, hasLoan }, config = 
   const rr = totalLoanDue > 0 ? (Number(totalLoanPaid) / Number(totalLoanDue)) * 100 : 0;
   const ls = loanScore(rr, config);
   const as = ds + ls;
-  const category =
-    as >= config.category.active ? "ACTIVE" : as >= config.category.moderate ? "MODERATE" : "INACTIVE";
 
   return {
     deliveryScore: ds,
     loanScore: ls,
     activityScore: as,
     repaymentRate: round2(rr),
-    category,
+    category: categoryFor(as),
     hasLoan: true,
     rk: Number(rk),
     totalLoanPaid: round2(totalLoanPaid),
@@ -164,25 +183,18 @@ export async function explain(memberId) {
 
   const steps = [];
 
-  if (r.hasLoan) {
-    steps.push({
-      label: "Step 1 — Loan Repayment Rate (RR)",
-      formula: "RR = Total Loan Paid ÷ Total Loan Due × 100",
-      substitution: `${fmt(r.totalLoanPaid)} ÷ ${fmt(r.totalLoanDue)} × 100`,
-      result: `${fmt(r.repaymentRate)}%`,
-    });
-  } else {
-    steps.push({
-      label: "Step 1 — Loan Repayment Rate (RR)",
-      formula: "RR = Total Loan Paid ÷ Total Loan Due × 100",
-      substitution: "member has no loan → RR is undefined",
-      result: "N/A",
-    });
-  }
+  steps.push({
+    label: "Step 1 — Loan Repayment Rate (RR)",
+    formula: "RR = Total Loan Paid ÷ Total Loan Due × 100",
+    substitution: r.hasLoan
+      ? `${fmt(r.totalLoanPaid)} ÷ ${fmt(r.totalLoanDue)} × 100`
+      : "member has no loan → RR is undefined",
+    result: r.hasLoan ? `${fmt(r.repaymentRate)}%` : "N/A",
+  });
 
   steps.push({
     label: `Step 2 — Delivery Score (DS), RK over last ${c.evaluationDays} days`,
-    formula: `DS = 50 if RK ≥ ${c.delivery.highKg};  30 if ${c.delivery.midKg} ≤ RK < ${c.delivery.highKg};  10 if RK < ${c.delivery.midKg}`,
+    formula: `DS = ${c.delivery.highPts} if RK ≥ ${c.delivery.highKg};  ${c.delivery.midPts} if ${c.delivery.midKg} ≤ RK < ${c.delivery.highKg};  ${c.delivery.lowPts} if RK < ${c.delivery.midKg}`,
     substitution: `RK = ${fmt(r.rk)} kg`,
     result: `${r.deliveryScore}`,
   });
@@ -190,7 +202,7 @@ export async function explain(memberId) {
   if (r.hasLoan) {
     steps.push({
       label: "Step 3 — Loan Score (LS)",
-      formula: `LS = 50 if RR ≥ ${c.loan.highPct}%;  30 if ${c.loan.midPct}% ≤ RR < ${c.loan.highPct}%;  10 if RR < ${c.loan.midPct}%`,
+      formula: `LS = ${c.loan.highPts} if RR ≥ ${c.loan.highPct}%;  ${c.loan.midPts} if ${c.loan.midPct}% ≤ RR < ${c.loan.highPct}%;  ${c.loan.lowPts} if RR < ${c.loan.midPct}%`,
       substitution: `RR = ${fmt(r.repaymentRate)}%`,
       result: `${r.loanScore}`,
     });
@@ -206,23 +218,36 @@ export async function explain(memberId) {
       substitution: `AS = ${r.activityScore}`,
       result: r.category,
     });
-  } else {
+  } else if (r.category === "NOT_APPLICABLE") {
     steps.push({
       label: "Step 3 — Membership Category (MC)",
-      formula: "Requires a loan repayment rate to compute the Loan Score and Activity Score",
-      substitution: "no loan on record",
+      formula: "No loan and no deliveries this period — nothing to score",
+      substitution: `no loan on record, RK = ${fmt(r.rk)} kg`,
       result: "Not Applicable",
+    });
+  } else {
+    steps.push({
+      label: "Step 3 — Activity Score (AS), delivery-only",
+      formula: `No loan (associate) → judged on delivery alone: AS = DS ÷ ${c.delivery.highPts} × 100`,
+      substitution: `${r.deliveryScore} ÷ ${c.delivery.highPts} × 100`,
+      result: `${r.activityScore}`,
+    });
+    steps.push({
+      label: "Step 4 — Membership Category (MC)",
+      formula: `Active if AS ≥ ${c.category.active};  Moderate if ${c.category.moderate} ≤ AS < ${c.category.active};  Inactive if AS < ${c.category.moderate}`,
+      substitution: `AS = ${r.activityScore}`,
+      result: r.category,
     });
   }
 
   return {
     title: "Dynamic Member Categorization",
     description:
-      "Activity Score = Delivery Score + Loan Score (equal weights). Members with no loan are excluded (Not Applicable). Thresholds are configurable in system settings (app_settings → categorization).",
+      "Activity Score = Delivery Score + Loan Score (equal weights) for members with a loan. Members with no loan are judged on delivery alone (DS rescaled to 0–100); those with no deliveries this period are Not Applicable. Thresholds are configurable in system settings (app_settings → categorization).",
     steps,
     result: {
-      label: r.hasLoan ? "Category (Activity Score)" : "Category",
-      value: r.hasLoan ? `${r.category} (${r.activityScore})` : "Not Applicable",
+      label: r.category === "NOT_APPLICABLE" ? "Category" : "Category (Activity Score)",
+      value: r.category === "NOT_APPLICABLE" ? "Not Applicable" : `${r.category} (${r.activityScore})`,
     },
   };
 }

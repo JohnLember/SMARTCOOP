@@ -72,7 +72,7 @@ export default function MemberCategoryCard({ member, canRecategorize = false, on
               </p>
               <p className="mt-0.5 text-xs text-[#9F2F2D]">
                 {category === "NOT_APPLICABLE"
-                  ? "No loan on record yet, so a Loan Score can't be computed."
+                  ? "No deliveries in the last 30 days and no loan on record, so there's nothing to score this period."
                   : "Delivering more and staying current on loan payments can raise this to Active."}
               </p>
               <button
@@ -127,7 +127,7 @@ const GUIDE = [
     tips: [
       "Pay every loan installment on or before its due date.",
       "A repayment rate (paid ÷ due) of 90%+ earns the full 50 points; 70–89% earns 30.",
-      "No loan on record means this score can't be computed yet — you'll show as Not Applicable until you take one.",
+      "No loan yet? You're scored on delivery alone — deliver 300 kg+ in 30 days to reach Active without a loan.",
     ],
   },
   {
@@ -135,6 +135,7 @@ const GUIDE = [
     tips: [
       "≥300 kg delivered plus a repayment rate of 70%+ reaches Active.",
       "100–299 kg delivered plus a repayment rate of 90%+ also reaches Active.",
+      "No loan (associate)? 300 kg+ delivered alone reaches Active.",
       "The more you deliver and the more current your payments, the further above 80 your score climbs.",
     ],
   },
