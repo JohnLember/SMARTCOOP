@@ -258,3 +258,11 @@ body {
   .toast-in { animation: toast-fade-in 200ms var(--ease-out) both; }
   .toast-out { animation: toast-fade-out 150ms var(--ease-out) both; }
 }
+
+/* Blocking backdrop behind the sign-out confirmation — fades in with the toast. */
+.logout-scrim {
+  animation: toast-fade-in 200ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logout-scrim { animation: none; }
+}

@@ -1,6 +1,9 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, Outlet, useNavigate } from "react-router";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-import { HerringboneRule } from "./ui";
+import { HerringboneRule, Button } from "./ui";
 import {
   Users,
   MapPin,
@@ -81,8 +84,29 @@ export default function Layout() {
   const groups = NAV[user?.role] ?? [];
 
   function handleLogout() {
-    logout();
-    navigate("/login");
+    // Confirm first, and keep it to a single prompt — repeat presses reuse the
+    // same toast instead of stacking new ones.
+    if (toast.isActive("logout-confirm")) return;
+    toast(
+      ({ closeToast }) => (
+        <LogoutConfirm
+          onCancel={closeToast}
+          onConfirm={() => {
+            closeToast();
+            logout();
+            navigate("/login");
+          }}
+        />
+      ),
+      {
+        toastId: "logout-confirm",
+        icon: false,
+        autoClose: false,
+        closeOnClick: false,
+        closeButton: false,
+        draggable: false,
+      }
+    );
   }
 
   const displayName = user?.member
@@ -166,5 +190,53 @@ export default function Layout() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Confirmation shown inside the sign-out toast. Reuses the app's Button variants
+// so it reads as part of the same system; the action verb matches its trigger.
+// A portaled scrim makes it behave like a dialog: the app dims and stops
+// responding until a choice is made (clicking the scrim, or Escape, cancels).
+function LogoutConfirm({ onConfirm, onCancel }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && onCancel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onCancel]);
+
+  return (
+    <>
+      {/* Portaled to body so it escapes the toast's transformed box and covers
+          the whole viewport — below the toast (z-70), above everything else. */}
+      {createPortal(
+        <div
+          className="logout-scrim fixed inset-0 z-[65] bg-black/40 backdrop-blur-[2px]"
+          onClick={onCancel}
+          aria-hidden="true"
+        />,
+        document.body
+      )}
+      <div className="flex flex-col gap-3.5">
+        <div className="flex items-start gap-3">
+          <span className="mt-px flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#FDEBEC] text-[#9F2F2D]">
+            <LogOut size={16} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-[#111111]">Sign out?</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-[#787774]">
+              You&apos;ll need to sign in again to get back in.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={onConfirm}>
+            Sign out
+          </Button>
+        </div>
+      </div>
+    </>
   );
 }
