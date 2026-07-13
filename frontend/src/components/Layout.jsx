@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { toast } from "react-toastify";
@@ -198,24 +198,39 @@ export default function Layout() {
 // A portaled scrim makes it behave like a dialog: the app dims and stops
 // responding until a choice is made (clicking the scrim, or Escape, cancels).
 function LogoutConfirm({ onConfirm, onCancel }) {
+  // Once a choice is made, drop the scrim in the same render — before the toast
+  // plays its own exit — so the blur never lingers over the page behind it
+  // (notably the login screen the moment you sign out).
+  const [closed, setClosed] = useState(false);
+  const cancel = () => {
+    setClosed(true);
+    onCancel();
+  };
+  const confirm = () => {
+    setClosed(true);
+    onConfirm();
+  };
+
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onCancel();
+    const onKey = (e) => e.key === "Escape" && cancel();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
       {/* Portaled to body so it escapes the toast's transformed box and covers
           the whole viewport — below the toast (z-70), above everything else. */}
-      {createPortal(
-        <div
-          className="logout-scrim fixed inset-0 z-[65] bg-black/40 backdrop-blur-[2px]"
-          onClick={onCancel}
-          aria-hidden="true"
-        />,
-        document.body
-      )}
+      {!closed &&
+        createPortal(
+          <div
+            className="logout-scrim fixed inset-0 z-[65] bg-black/40 backdrop-blur-[2px]"
+            onClick={cancel}
+            aria-hidden="true"
+          />,
+          document.body
+        )}
       <div className="flex flex-col gap-3.5">
         <div className="flex items-start gap-3">
           <span className="mt-px flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-[#FDEBEC] text-[#9F2F2D]">
@@ -229,10 +244,10 @@ function LogoutConfirm({ onConfirm, onCancel }) {
           </div>
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={onCancel}>
+          <Button variant="secondary" onClick={cancel}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={onConfirm}>
+          <Button variant="danger" onClick={confirm}>
             Sign out
           </Button>
         </div>
