@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination } from "../../components/ui";
+import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination, Modal } from "../../components/ui";
 import { usePagination } from "../../lib/usePagination";
 import { Plus, AlertTriangle, Search, X } from "lucide-react";
 
@@ -108,17 +108,16 @@ export default function LoansList() {
         title="Loans"
         subtitle="Member loans using the diminishing-interest method"
         actions={
-          <Button onClick={() => setShow((s) => !s)}>
+          <Button onClick={() => setShow(true)}>
             <Plus size={16} />
             New loan
           </Button>
         }
       />
 
-      {show && (
-        <Card className="mb-4">
-          <form onSubmit={submit} className="grid grid-cols-5 items-end gap-3">
-            {error && <p className="col-span-5 text-sm text-[#9F2F2D]">{error}</p>}
+      <Modal open={show} onClose={() => setShow(false)} title="New loan" wide>
+        <form onSubmit={submit} className="grid grid-cols-5 items-end gap-3">
+          {error && <p className="col-span-5 text-sm text-[#9F2F2D]">{error}</p>}
             <Select
               label="Member"
               value={form.memberId}
@@ -174,12 +173,14 @@ export default function LoansList() {
               </div>
             )}
 
-            <div className="col-span-5 flex justify-end">
-              <Button type="submit">Issue loan</Button>
-            </div>
-          </form>
-        </Card>
-      )}
+          <div className="col-span-5 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setShow(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Issue loan</Button>
+          </div>
+        </form>
+      </Modal>
 
       <Card className="mb-4">
         <form
