@@ -8,6 +8,18 @@ import { Plus, Trash2 } from "lucide-react";
 
 const STATUS_COLOR = { OPEN: "green", CLOSED: "amber", SETTLED: "slate" };
 
+// End date implied by the period type: Kinsina = a 15-day (inclusive) window,
+// Katapusan = through the last day of the start date's month. Local-time parts
+// only, so no timezone drift off the YYYY-MM-DD input value.
+function computeEndDate(periodType, startDate) {
+  if (!startDate) return "";
+  const [y, m, d] = startDate.split("-").map(Number);
+  const end = periodType === "KATAPUSAN" ? new Date(y, m, 0) : new Date(y, m - 1, d + 14);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+}
+
+
 export default function BatchesList() {
   const [batches, setBatches] = useState(null);
   const [barangays, setBarangays] = useState([]);
@@ -91,7 +103,13 @@ export default function BatchesList() {
             <Select
               label="Period type"
               value={form.periodType}
-              onChange={(e) => setForm({ ...form, periodType: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  periodType: e.target.value,
+                  endDate: computeEndDate(e.target.value, form.startDate),
+                })
+              }
             >
               <option value="KINSINA">Kinsina (15-day)</option>
               <option value="KATAPUSAN">Katapusan (monthly)</option>
@@ -100,13 +118,20 @@ export default function BatchesList() {
               label="Start date"
               type="date"
               value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  startDate: e.target.value,
+                  endDate: computeEndDate(form.periodType, e.target.value),
+                })
+              }
               required
             />
             <Input
-              label="End date"
+              label="End date (auto-filled)"
               type="date"
               value={form.endDate}
+              min={computeEndDate(form.periodType, form.startDate)}
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
               required
             />
