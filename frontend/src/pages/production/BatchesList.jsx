@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Select, Input, Spinner, PageHeader, Badge } from "../../components/ui";
+import { Button, Card, Select, Input, Spinner, PageHeader, Badge, Modal } from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -67,17 +67,16 @@ export default function BatchesList() {
         title="Loading Batches"
         subtitle="Kinsina (15-day) and Katapusan (monthly) rubber collection periods"
         actions={
-          <Button onClick={() => setShow((s) => !s)}>
+          <Button onClick={() => setShow(true)}>
             <Plus size={16} />
             New batch
           </Button>
         }
       />
 
-      {show && (
-        <Card className="mb-4">
-          <form onSubmit={submit} className="grid grid-cols-4 items-end gap-3">
-            {error && <p className="col-span-4 text-sm text-[#9F2F2D]">{error}</p>}
+      <Modal open={show} onClose={() => setShow(false)} title="New loading batch">
+        <form onSubmit={submit} className="grid grid-cols-2 items-end gap-3">
+          {error && <p className="col-span-2 text-sm text-[#9F2F2D]">{error}</p>}
             <Select
               label="Barangay"
               value={form.barangayId}
@@ -111,12 +110,14 @@ export default function BatchesList() {
               onChange={(e) => setForm({ ...form, endDate: e.target.value })}
               required
             />
-            <div className="col-span-4 flex justify-end">
-              <Button type="submit">Create batch</Button>
-            </div>
-          </form>
-        </Card>
-      )}
+          <div className="col-span-2 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setShow(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Create batch</Button>
+          </div>
+        </form>
+      </Modal>
 
       {!batches ? (
         <Spinner />
