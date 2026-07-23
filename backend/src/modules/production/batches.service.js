@@ -64,6 +64,30 @@ export async function create(data, actorId) {
   return batch;
 }
 
+// Deletes a settled batch and everything hanging off its deliveries. No FK
+// cascade exists batch→delivery, so remove children first, inside one txn.
+// ponytail: does NOT reverse loan-installment payments, share capital, or CBU
+// that those deliveries applied — hard-delete only. Add reversal if settled
+// batches ever need to be truly "undone" rather than purged.
+export async function remove(id, actorId) {
+  const batch = await prisma.loadingBatch.findUnique({
+    where: { id },
+    include: { barangay: true, deliveries: { select: { id: true } } },
+  });
+  if (!batch) throw notFound("Loading batch not found");
+  if (batch.status !== "SETTLED") throw badRequest("Only settled batches can be deleted");
+
+  const deliveryIds = batch.deliveries.map((d) => d.id);
+  await prisma.$transaction([
+    prisma.loanPayment.deleteMany({ where: { deliveryId: { in: deliveryIds } } }),
+    prisma.receipt.deleteMany({ where: { deliveryId: { in: deliveryIds } } }),
+    prisma.rubberDelivery.deleteMany({ where: { batchId: id } }),
+    prisma.loadingBatch.delete({ where: { id } }),
+  ]);
+  await logActivity(actorId, `Deleted settled loading batch #${id} (${batch.barangay.name})`);
+  return { id };
+}
+
 export async function setStatus(id, status, actorId) {
   const existing = await prisma.loadingBatch.findUnique({ where: { id } });
   if (!existing) throw notFound("Loading batch not found");

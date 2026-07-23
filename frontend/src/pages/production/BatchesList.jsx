@@ -4,7 +4,7 @@ import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
 import { Button, Card, Select, Input, Spinner, PageHeader, Badge } from "../../components/ui";
 import { formatDate } from "../../lib/format";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 const STATUS_COLOR = { OPEN: "green", CLOSED: "amber", SETTLED: "slate" };
 
@@ -29,6 +29,18 @@ export default function BatchesList() {
     load();
     api.get("/barangays").then((res) => setBarangays(res.data));
   }, []);
+
+  async function remove(b) {
+    if (!confirm(`Delete settled batch for ${b.barangay.name}? This removes its ${b._count.deliveries} delivery record(s) and receipts. This cannot be undone.`))
+      return;
+    try {
+      await api.delete(`/production/batches/${b.id}`);
+      await load();
+      toast.success("Loading batch deleted");
+    } catch (err) {
+      toast.error(apiError(err));
+    }
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -118,6 +130,7 @@ export default function BatchesList() {
                 <th className="px-4 py-3 font-medium">Dates</th>
                 <th className="px-4 py-3 font-medium">Deliveries</th>
                 <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F1ED]">
@@ -138,11 +151,19 @@ export default function BatchesList() {
                   <td className="px-4 py-3">
                     <Badge color={STATUS_COLOR[b.status]}>{b.status}</Badge>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    {b.status === "SETTLED" && (
+                      <Button variant="danger" className="px-2 py-1 text-xs" onClick={() => remove(b)}>
+                        <Trash2 size={14} />
+                        Delete
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {batches.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">
                     No loading batches yet.
                   </td>
                 </tr>

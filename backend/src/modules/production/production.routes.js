@@ -13,6 +13,7 @@ router.get("/batches", staff, controller.listBatches);
 router.post("/batches", staff, controller.createBatch);
 router.get("/batches/:id", staff, controller.getBatch);
 router.patch("/batches/:id/status", staff, controller.setBatchStatus);
+router.delete("/batches/:id", staff, controller.deleteBatch);
 
 // --- Deliveries (staff record; members read their own) ---
 router.get("/deliveries", controller.listDeliveries);

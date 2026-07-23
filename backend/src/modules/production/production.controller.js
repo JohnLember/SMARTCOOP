@@ -39,6 +39,14 @@ export async function createBatch(req, res, next) {
   }
 }
 
+export async function deleteBatch(req, res, next) {
+  try {
+    res.json(await batches.remove(Number(req.params.id), req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function setBatchStatus(req, res, next) {
   try {
     const { status } = z
