@@ -315,8 +315,8 @@ export async function explain(memberId) {
     {
       label: "Composite credit score",
       formula: hasLoanHistory
-        ? "wRepay·P1 + wProd·P2 + wFarm·P3"
-        : "wProd·P2 + wFarm·P3  (Pillar 1 not counted)",
+        ? "Repayment Weight (wRepay)·Pillar 1 (P1) + Production Weight (wProd)·Pillar 2 (P2) + Standing Weight (wFarm)·Pillar 3 (P3)"
+        : "Production Weight (wProd)·Pillar 2 (P2) + Standing Weight (wFarm)·Pillar 3 (P3)  (Pillar 1 not counted)",
       substitution: hasLoanHistory
         ? `${wRepay}×${fmt(f.repaymentScore)} + ${wProd}×${fmt(f.productionScore)} + ${wFarm}×${fmt(f.farmScore)}`
         : `${wProd}×${fmt(f.productionScore)} + ${wFarm}×${fmt(f.farmScore)}`,

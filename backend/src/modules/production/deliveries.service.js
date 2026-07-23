@@ -191,9 +191,9 @@ export async function explainDelivery(id) {
 
   return {
     title: "Delivery Net Income Computation",
-    description: `Delivery on ${new Date(d.deliveryDate).toISOString().slice(0, 10)} (DRC ${
+    description: `Delivery on ${new Date(d.deliveryDate).toISOString().slice(0, 10)} (Dry Rubber Content (DRC) ${
       d.drc != null ? `${d.drc}%` : "—"
-    }, recorded as quality only). Gross = price × total kilos, less CBU, loan, membership, acid/tapping knife, and dayong = net income paid to the member.`,
+    }, recorded as quality only). Gross = price × total kilos, less CBU (Capital Build-Up), loan, membership, acid/tapping knife, and dayong = net income paid to the member.`,
     steps,
     result: { label: "Net income", value: `₱${fmt(net)}` },
   };
