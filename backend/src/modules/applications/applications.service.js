@@ -145,3 +145,18 @@ export async function reject(id, note, actorId) {
   await logActivity(actorId, `Rejected membership application #${id}`);
   return updated;
 }
+
+// Move a rejected application back to PENDING so staff can review it again.
+export async function reconsider(id, actorId) {
+  const app = await getById(id);
+  if (app.status !== "REJECTED") throw badRequest("Only rejected applications can be reconsidered");
+
+  const updated = await prisma.membershipApplication.update({
+    where: { id },
+    data: { status: "PENDING", reviewNote: null, reviewedByUserId: null, reviewedAt: null },
+    include: withBarangay,
+  });
+
+  await logActivity(actorId, `Reopened membership application #${id} for reconsideration`);
+  return updated;
+}

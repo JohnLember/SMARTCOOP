@@ -15,5 +15,6 @@ router.get("/", controller.list);
 router.get("/:id", controller.getById);
 router.post("/:id/approve", controller.approve);
 router.post("/:id/reject", controller.reject);
+router.post("/:id/reconsider", controller.reconsider);
 
 export default router;

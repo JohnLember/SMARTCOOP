@@ -70,3 +70,11 @@ export async function reject(req, res, next) {
     next(err);
   }
 }
+
+export async function reconsider(req, res, next) {
+  try {
+    res.json(await service.reconsider(Number(req.params.id), req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}

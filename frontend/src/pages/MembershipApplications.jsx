@@ -186,6 +186,7 @@ function MembershipTable({ rows, status, onOpen }) {
 
 function ReviewModal({ application, onClose, onReviewed }) {
   const [approve, setApprove] = useState({ memberNo: "" });
+  const [feePaid, setFeePaid] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -193,6 +194,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
   useEffect(() => {
     if (application) {
       setApprove({ memberNo: "" });
+      setFeePaid(false);
       setNote("");
       setError("");
     }
@@ -223,6 +225,20 @@ function ReviewModal({ application, onClose, onReviewed }) {
     try {
       await api.post(`/applications/${application.id}/reject`, { note: note || undefined });
       toast.success("Application rejected");
+      onReviewed();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doReconsider() {
+    setBusy(true);
+    setError("");
+    try {
+      await api.post(`/applications/${application.id}/reconsider`);
+      toast.success("Application moved back to pending");
       onReviewed();
     } catch (err) {
       setError(apiError(err));
@@ -272,7 +288,20 @@ function ReviewModal({ application, onClose, onReviewed }) {
                 Joins as <span className="font-medium text-[#2F3437]">Associate</span> and
                 auto-promotes to Regular once CBU or savings reach ₱10,000.
               </p>
-              <Button onClick={doApprove} disabled={busy} className="w-full">
+              <label className="flex items-start gap-2 rounded-lg bg-[#F7F6F3] px-3 py-2 text-xs leading-relaxed text-[#787774]">
+                <input
+                  type="checkbox"
+                  checked={feePaid}
+                  onChange={(e) => setFeePaid(e.target.checked)}
+                  className="mt-0.5 accent-[#346538]"
+                />
+                <span>
+                  Applicant has paid the{" "}
+                  <span className="font-medium text-[#2F3437]">₱300 membership fee</span> at the
+                  cooperative office.
+                </span>
+              </label>
+              <Button onClick={doApprove} disabled={busy || !feePaid} className="w-full">
                 <Check size={16} />
                 Approve &amp; create member
               </Button>
@@ -308,6 +337,12 @@ function ReviewModal({ application, onClose, onReviewed }) {
             </div>
             {application.reviewNote && (
               <p className="mt-3 text-sm text-[#787774]">Note: {application.reviewNote}</p>
+            )}
+            {application.status === "REJECTED" && (
+              <Button variant="secondary" onClick={doReconsider} disabled={busy} className="mt-4">
+                <Check size={16} />
+                Reconsider — move back to pending
+              </Button>
             )}
           </div>
         )}

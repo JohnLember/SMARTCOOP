@@ -161,6 +161,13 @@ export default function Apply() {
                   {applicationNo}
                 </p>
               </div>
+              <p
+                className="mx-auto mt-4 max-w-sm rounded-sm px-4 py-3 text-sm leading-[1.6]"
+                style={{ background: "rgba(185,112,31,0.1)", border: `1px solid ${BRAND.latexLine}`, color: BRAND.ink }}
+              >
+                <span className="font-medium">Note:</span> A ₱300 membership fee is required to become
+                a member. Please pay it at the cooperative office.
+              </p>
               <p className="mx-auto mt-3 max-w-sm text-[15px] leading-[1.6]" style={{ color: BRAND.inkMuted }}>
                 Thank you, {form.firstName}. Keep your application number for reference. The
                 cooperative office will review your application and contact you about the next
