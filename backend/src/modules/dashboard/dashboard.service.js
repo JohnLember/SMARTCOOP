@@ -15,6 +15,7 @@ export async function staffStats() {
     openBatches,
     recentApplications,
     recentLoanApplications,
+    monthly,
   ] = await Promise.all([
     prisma.member.count({ where: { status: "ACTIVE" } }),
     prisma.member.count({ where: { status: "ACTIVE", membershipType: "ASSOCIATE" } }),
@@ -50,6 +51,15 @@ export async function staffStats() {
         member: { select: { memberNo: true, firstName: true, lastName: true } },
       },
     }),
+    // Rubber delivered per month over the last 12 months, for the trend chart.
+    prisma.$queryRaw`
+      SELECT DATE_FORMAT(delivery_date, '%Y-%m') AS month,
+             COALESCE(SUM(weight_kg), 0) AS totalKg
+      FROM rubber_deliveries
+      WHERE delivery_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+      GROUP BY month
+      ORDER BY month ASC
+    `,
   ]);
 
   return {
@@ -59,5 +69,6 @@ export async function staffStats() {
     batches: { open: openBatches },
     recentApplications,
     recentLoanApplications,
+    monthlyProduction: monthly.map((r) => ({ month: r.month, totalKg: Number(r.totalKg ?? 0) })),
   };
 }

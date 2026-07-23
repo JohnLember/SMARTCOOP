@@ -5,8 +5,23 @@ import { useAuth } from "../context/AuthContext";
 import { Card, Spinner, PageHeader, StatCard, Badge } from "../components/ui";
 import { formatDate } from "../lib/format";
 import { Users, UserPlus, UserCheck, FileText, FileCheck, Wallet, Boxes, ChevronRight } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+const TOOLTIP_STYLE = { borderRadius: 8, borderColor: "#EAEAEA", fontSize: 13 };
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -39,6 +54,50 @@ export default function Dashboard() {
         <StatCard label="Associates" value={stats.members.associates} icon={UserPlus} />
         <StatCard label="Regular members" value={stats.members.regulars} icon={UserCheck} accent="emerald" />
         <StatCard label="Outstanding balance" value={peso(stats.loans.outstanding)} icon={Wallet} accent="blue" />
+      </div>
+
+      {/* Charts */}
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        <Card className="col-span-2">
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Trend</p>
+          <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Monthly rubber production (kg)</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={stats.monthlyProduction}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
+              <XAxis dataKey="month" fontSize={12} stroke="#B0AFAB" />
+              <YAxis fontSize={12} stroke="#B0AFAB" />
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
+            </LineChart>
+          </ResponsiveContainer>
+          {stats.monthlyProduction.length === 0 && (
+            <p className="mt-2 text-center text-sm text-[#B0AFAB]">No delivery data in the last 12 months.</p>
+          )}
+        </Card>
+        <Card>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Membership</p>
+          <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Associate vs Regular</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: "Associates", value: stats.members.associates },
+                  { name: "Regular", value: stats.members.regulars },
+                ]}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={2}
+              >
+                <Cell fill="#B9701F" />
+                <Cell fill="#346538" />
+              </Pie>
+              <Tooltip contentStyle={TOOLTIP_STYLE} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 13 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </Card>
       </div>
 
       {/* Actionable review queues */}
