@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
+import api from "../lib/api";
 import { HerringboneRule, Button } from "./ui";
 import {
   Users,
@@ -81,7 +82,30 @@ const NAV = {
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const groups = NAV[user?.role] ?? [];
+
+  // Unread-notification count for the sidebar badge. Refetched on route change
+  // and whenever a page fires "notifications:changed" (e.g. marking one read),
+  // so the badge clears immediately without a navigation.
+  // ponytail: no polling — a notice that arrives while idle shows on next nav.
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () =>
+      api
+        .get("/notifications")
+        .then((res) => {
+          if (!cancelled) setUnread(res.data.filter((n) => n.status === "UNREAD").length);
+        })
+        .catch(() => {});
+    refresh();
+    window.addEventListener("notifications:changed", refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("notifications:changed", refresh);
+    };
+  }, [location.pathname]);
 
   function handleLogout() {
     // Confirm first, and keep it to a single prompt — repeat presses reuse the
@@ -160,6 +184,11 @@ export default function Layout() {
                         )}
                         <item.icon size={18} />
                         {item.label}
+                        {item.to === "/notifications" && unread > 0 && (
+                          <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-[#9F2F2D] px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
                       </>
                     )}
                   </NavLink>

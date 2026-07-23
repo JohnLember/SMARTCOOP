@@ -1,8 +1,11 @@
 import prisma from "../../config/db.js";
 import { badRequest, conflict, notFound } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
+import { create as createNotification } from "../notifications/notifications.service.js";
 import * as loans from "../finance/loans.service.js";
 import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD } from "../members/members.service.js";
+
+const peso = (n) => `₱${Number(n).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
 // Standard cooperative loan interest (%/month) if the applicant doesn't set one.
 const DEFAULT_INTEREST = 5;
@@ -52,7 +55,7 @@ export async function create(memberId, data) {
   });
   if (pending) throw conflict("You already have a pending loan application");
 
-  return prisma.loanApplication.create({
+  const app = await prisma.loanApplication.create({
     data: {
       applicationNo: await nextApplicationNo(),
       memberId,
@@ -63,6 +66,15 @@ export async function create(memberId, data) {
     },
     select: { id: true, applicationNo: true, status: true, createdAt: true },
   });
+
+  // Notify staff/admin so they can review it. One row per role (notifications
+  // are addressed by a single role). Non-fatal if it fails.
+  const message = `${member.memberNo} applied for a ${peso(data.principalAmount)} loan over ${data.termMonths} month(s). Application ${app.applicationNo}.`;
+  for (const role of ["ADMIN", "STAFF"]) {
+    await createNotification({ title: "New loan application", message, recipientRole: role }, null).catch(() => {});
+  }
+
+  return app;
 }
 
 export function list({ status, search, barangayId }) {
@@ -119,6 +131,16 @@ export async function approve(id, overrides, actorId) {
   });
 
   await logActivity(actorId, `Approved loan application ${app.applicationNo} → loan #${loan.id}`);
+
+  await createNotification(
+    {
+      title: "Loan application approved",
+      message: `Your loan application ${app.applicationNo} has been approved. A loan of ${peso(loan.principalAmount)} over ${loan.termMonths} month(s) has been issued.`,
+      recipientMemberId: app.memberId,
+    },
+    actorId
+  ).catch(() => {});
+
   return loan;
 }
 
@@ -138,5 +160,15 @@ export async function reject(id, note, actorId) {
   });
 
   await logActivity(actorId, `Rejected loan application ${app.applicationNo}`);
+
+  await createNotification(
+    {
+      title: "Loan application rejected",
+      message: `Your loan application ${app.applicationNo} was not approved.${note ? ` Reason: ${note}` : ""}`,
+      recipientMemberId: app.memberId,
+    },
+    actorId
+  ).catch(() => {});
+
   return updated;
 }

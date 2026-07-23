@@ -19,6 +19,8 @@ export default function Notifications() {
   async function markRead(id) {
     await api.patch(`/notifications/${id}/read`);
     await load();
+    // Tell the sidebar badge to refresh its unread count right away.
+    window.dispatchEvent(new Event("notifications:changed"));
   }
 
   if (!list) return <Spinner />;
