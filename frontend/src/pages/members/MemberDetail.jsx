@@ -15,7 +15,7 @@ import {
   Modal,
   Avatar,
 } from "../../components/ui";
-import { Pencil, KeyRound, Eye, Printer } from "lucide-react";
+import { KeyRound, Eye, Printer } from "lucide-react";
 import CreditScoreCard from "../../components/CreditScoreCard";
 import MemberCategoryCard from "../../components/MemberCategoryCard";
 import ReceiptDocument from "../../components/ReceiptDocument";
@@ -121,12 +121,6 @@ export default function MemberDetail() {
               <option value="INACTIVE">Inactive</option>
               <option value="SUSPENDED">Suspended</option>
             </Select>
-            <Link to={`/members/${id}/edit`}>
-              <Button variant="secondary">
-                <Pencil size={16} />
-                Edit
-              </Button>
-            </Link>
           </div>
         }
       />
