@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Apply from "./pages/Apply";
+import Dashboard from "./pages/Dashboard";
 import MembershipApplications from "./pages/MembershipApplications";
 import LoanApplications from "./pages/LoanApplications";
 import MembersList from "./pages/members/MembersList";
@@ -41,6 +42,9 @@ function App() {
           </ProtectedRoute>
         }
       >
+        {/* Dashboard (staff) */}
+        <Route path="/dashboard" element={<ProtectedRoute roles={STAFF}><Dashboard /></ProtectedRoute>} />
+
         {/* Membership (staff) */}
         <Route path="/members" element={<ProtectedRoute roles={STAFF}><MembersList /></ProtectedRoute>} />
         <Route path="/members/new" element={<ProtectedRoute roles={STAFF}><MemberForm /></ProtectedRoute>} />

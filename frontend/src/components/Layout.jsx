@@ -26,6 +26,9 @@ import {
 // reads as an organized menu rather than nine equal-weight links.
 const NAV = {
   ADMIN: [
+    { section: null, items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ] },
     { section: "Membership", items: [
       { to: "/members", label: "Members", icon: Users },
       { to: "/applications", label: "Membership Applications", icon: UserPlus },
@@ -45,6 +48,9 @@ const NAV = {
     ] },
   ],
   STAFF: [
+    { section: null, items: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ] },
     { section: "Membership", items: [
       { to: "/members", label: "Members", icon: Users },
       { to: "/applications", label: "Membership Applications", icon: UserPlus },

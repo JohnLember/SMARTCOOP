@@ -13,6 +13,7 @@ import notificationsRoutes from "./modules/notifications/notifications.routes.js
 import productionRoutes from "./modules/production/production.routes.js";
 import financeRoutes from "./modules/finance/finance.routes.js";
 import maoRoutes from "./modules/mao/mao.routes.js";
+import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/production", productionRoutes);
 app.use("/api/finance", financeRoutes);
 app.use("/api/mao", maoRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
