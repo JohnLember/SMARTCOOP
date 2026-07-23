@@ -219,22 +219,45 @@ export function RiskBadge({ band }) {
   return <Badge color={RISK_COLOR[band] ?? "slate"}>{band} risk</Badge>;
 }
 
-// Prev/next table pager. Renders nothing when there's only one page.
+// Page numbers to show: always first & last, plus current ±1, with "…" gaps.
+function pageRange(page, pageCount) {
+  const pages = new Set([1, pageCount, page, page - 1, page + 1]);
+  const sorted = [...pages].filter((p) => p >= 1 && p <= pageCount).sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("…");
+    out.push(sorted[i]);
+  }
+  return out;
+}
+
+// Table pager with numbered pages between Previous / Next. Nothing when 1 page.
 export function Pagination({ page, pageCount, onPage }) {
   if (pageCount <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-end gap-3">
-      <span className="text-sm text-[#787774]">
-        Page {page} of {pageCount}
-      </span>
-      <div className="flex gap-2">
-        <Button variant="secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-          Previous
-        </Button>
-        <Button variant="secondary" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
-          Next
-        </Button>
-      </div>
+    <div className="mt-4 flex items-center justify-end gap-2">
+      <Button variant="secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+        Previous
+      </Button>
+      {pageRange(page, pageCount).map((p, i) =>
+        p === "…" ? (
+          <span key={`gap-${i}`} className="px-1 text-sm text-[#B0AFAB]">
+            …
+          </span>
+        ) : (
+          <Button
+            key={p}
+            variant={p === page ? "primary" : "secondary"}
+            onClick={() => onPage(p)}
+            className="min-w-9 px-3"
+          >
+            {p}
+          </Button>
+        )
+      )}
+      <Button variant="secondary" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
+        Next
+      </Button>
     </div>
   );
 }
