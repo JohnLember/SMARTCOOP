@@ -142,7 +142,7 @@ export default function MemberDetail() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <Field label="Membership" value={<MembershipBadge type={member.membershipType} />} />
-            <Field label="Status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
+            <Field label="Account status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
             <Field label="Sex" value={member.sex} />
             <Field label="Barangay" value={member.barangay?.name} />
             <Field label="Contact" value={member.contactNo} />

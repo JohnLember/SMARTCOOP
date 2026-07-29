@@ -166,7 +166,7 @@ export default function MembersList() {
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Category</th>
                 <th className="px-4 py-3 font-medium">Activity Score</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Account status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F1ED]">
