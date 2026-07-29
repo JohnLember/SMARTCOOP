@@ -142,12 +142,26 @@ export async function approve(id, { memberNo }, actorId) {
     data: { username, passwordHash: await hashPassword(password), role: "MEMBER", memberId: member.id },
   });
 
+  // Official receipt for the ₱300 membership fee they paid to join. No delivery,
+  // so deliveryId stays null (membership receipts are distinguished by that).
+  const membershipReceipt = await prisma.receipt.create({
+    data: { memberId: member.id, grossAmount: 300, membershipFee: 300, netAmount: 300 },
+    include: {
+      member: {
+        select: {
+          memberNo: true, firstName: true, middleName: true, lastName: true,
+          barangay: { select: { name: true } },
+        },
+      },
+    },
+  });
+
   await logActivity(actorId, `Approved membership application #${id} as ${finalMemberNo}, login "${username}"`);
 
   // If they were approved with >= threshold savings, promote immediately.
   await promoteIfEligible(member.id).catch(() => {});
   const saved = await prisma.member.findUnique({ where: { id: member.id } });
-  return { ...saved, credentials: { username, password } };
+  return { ...saved, credentials: { username, password }, membershipReceipt };
 }
 
 export async function reject(id, note, actorId) {

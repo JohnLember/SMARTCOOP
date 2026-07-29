@@ -14,7 +14,8 @@ import {
 } from "../components/ui";
 import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
-import { Check, X, Search } from "lucide-react";
+import ReceiptDocument from "../components/ReceiptDocument";
+import { Check, X, Search, Printer } from "lucide-react";
 import { toast } from "react-toastify";
 
 const STATUS_COLOR = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
@@ -191,6 +192,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [creds, setCreds] = useState(null);
+  const [approved, setApproved] = useState(null);
 
   useEffect(() => {
     if (application) {
@@ -199,6 +201,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
       setNote("");
       setError("");
       setCreds(null);
+      setApproved(null);
     }
   }, [application]);
 
@@ -214,6 +217,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
       });
       toast.success("Application approved — member created");
       setCreds(res.data.credentials);
+      setApproved(res.data);
     } catch (err) {
       setError(apiError(err));
     } finally {
@@ -313,6 +317,17 @@ function ReviewModal({ application, onClose, onReviewed }) {
                 </div>
               ))}
             </div>
+            <div className="mt-6 border-t border-[#EAEAEA] pt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[#111111]">Membership fee receipt</h3>
+                <Button variant="secondary" onClick={() => window.print()}>
+                  <Printer size={16} />
+                  Print
+                </Button>
+              </div>
+              {approved?.membershipReceipt && <ReceiptDocument receipt={approved.membershipReceipt} />}
+            </div>
+
             <Button onClick={onReviewed} className="mt-4">Done</Button>
           </div>
         ) : pending ? (

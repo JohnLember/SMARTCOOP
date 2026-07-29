@@ -19,6 +19,7 @@ function Row({ label, value, strong }) {
 // A printable official receipt. Wrapped in #printable-receipt so print CSS can
 // isolate it from the rest of the page.
 export default function ReceiptDocument({ receipt }) {
+  const isMembership = receipt.kind === "membership" || receipt.deliveryId == null;
   const d = receipt.delivery ?? {};
   const m = receipt.member ?? {};
   const deductions =
@@ -39,13 +40,15 @@ export default function ReceiptDocument({ receipt }) {
           <p className="text-base font-bold text-[#111111]">SMARTCOOP</p>
           <p className="text-xs text-[#787774]">San Luis Rubber Producer's Cooperative</p>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#346538]">
-            Official Delivery Receipt
+            {isMembership ? "Official Membership Receipt" : "Official Delivery Receipt"}
           </p>
         </div>
         <div className="ml-auto text-right text-xs text-[#787774]">
           <p>Receipt No.</p>
           <p className="font-bold text-[#111111]">
-            OR-{String(receipt.id).padStart(6, "0")}
+            {isMembership
+              ? `MR-${receipt.id ? String(receipt.id).padStart(6, "0") : m.memberNo ?? "—"}`
+              : `OR-${String(receipt.id).padStart(6, "0")}`}
           </p>
         </div>
       </div>
@@ -70,33 +73,44 @@ export default function ReceiptDocument({ receipt }) {
         </div>
       </div>
 
-      {/* Delivery details */}
-      <div className="mb-3 rounded-lg bg-[#F7F6F3] p-3 text-xs">
-        <Row label="Delivery date" value={formatDate(d.deliveryDate)} />
-        <Row label="Loading period" value={d.batch?.periodType ?? "—"} />
-        <Row label="Weight" value={`${Number(d.weightKg).toLocaleString()} kg`} />
-        <Row label="Dry Rubber Content" value={d.drc != null ? `${d.drc}%` : "—"} />
-        <Row label="Price per kg" value={peso(d.pricePerKg)} />
-      </div>
-
-      {/* Amounts */}
-      <div className="border-t border-[#EAEAEA] pt-2">
-        <Row label="Gross income" value={peso(receipt.grossAmount)} strong />
-        <div className="my-1 text-xs font-semibold uppercase text-[#B0AFAB]">Less deductions</div>
-        <Row label="CBU (Capital Build-Up)" value={peso(receipt.cbu)} />
-        <Row label="Loan payment" value={peso(receipt.loanDeduction)} />
-        <Row label="Membership" value={peso(receipt.membershipFee)} />
-        <Row label="Acid / Tapping Knife" value={peso(receipt.supplies)} />
-        <Row label="Dayong" value={peso(receipt.dayong)} />
-        <div className="mt-1 border-t border-dashed border-[#EAEAEA] pt-1">
-          <Row label="Total deductions" value={peso(deductions)} />
+      {isMembership ? (
+        /* Membership fee */
+        <div className="border-t border-[#EAEAEA] pt-2">
+          <Row label="Membership fee" value={peso(receipt.membershipFee)} strong />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Delivery details */}
+          <div className="mb-3 rounded-lg bg-[#F7F6F3] p-3 text-xs">
+            <Row label="Delivery date" value={formatDate(d.deliveryDate)} />
+            <Row label="Loading period" value={d.batch?.periodType ?? "—"} />
+            <Row label="Weight" value={`${Number(d.weightKg).toLocaleString()} kg`} />
+            <Row label="Dry Rubber Content" value={d.drc != null ? `${d.drc}%` : "—"} />
+            <Row label="Price per kg" value={peso(d.pricePerKg)} />
+          </div>
 
-      {/* Net */}
+          {/* Amounts */}
+          <div className="border-t border-[#EAEAEA] pt-2">
+            <Row label="Gross income" value={peso(receipt.grossAmount)} strong />
+            <div className="my-1 text-xs font-semibold uppercase text-[#B0AFAB]">Less deductions</div>
+            <Row label="CBU (Capital Build-Up)" value={peso(receipt.cbu)} />
+            <Row label="Loan payment" value={peso(receipt.loanDeduction)} />
+            <Row label="Membership" value={peso(receipt.membershipFee)} />
+            <Row label="Acid / Tapping Knife" value={peso(receipt.supplies)} />
+            <Row label="Dayong" value={peso(receipt.dayong)} />
+            <div className="mt-1 border-t border-dashed border-[#EAEAEA] pt-1">
+              <Row label="Total deductions" value={peso(deductions)} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Total */}
       <div className="mt-3 flex items-baseline justify-between rounded-lg bg-[#EDF3EC] px-3 py-2">
-        <span className="font-semibold text-[#2b5330]">NET INCOME</span>
-        <span className="text-lg font-bold text-[#346538]">{peso(receipt.netAmount)}</span>
+        <span className="font-semibold text-[#2b5330]">{isMembership ? "AMOUNT PAID" : "NET INCOME"}</span>
+        <span className="text-lg font-bold text-[#346538]">
+          {peso(isMembership ? receipt.membershipFee : receipt.netAmount)}
+        </span>
       </div>
 
       <p className="mt-4 text-center text-[10px] text-[#B0AFAB]">

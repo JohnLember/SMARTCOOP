@@ -234,8 +234,9 @@ model RubberDelivery {
 
 model Receipt {
   id            Int            @id @default(autoincrement())
-  deliveryId    Int            @unique @map("delivery_id")
-  delivery      RubberDelivery @relation(fields: [deliveryId], references: [id])
+  // Nullable: membership-fee receipts (issued on approval) have no delivery.
+  deliveryId    Int?            @unique @map("delivery_id")
+  delivery      RubberDelivery? @relation(fields: [deliveryId], references: [id])
   memberId      Int            @map("member_id")
   member        Member         @relation(fields: [memberId], references: [id])
   grossAmount   Decimal        @map("gross_amount") @db.Decimal(12, 2)

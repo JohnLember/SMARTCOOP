@@ -36,14 +36,22 @@ export default function MyReceipts() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F2F1ED]">
-            {receipts.map((r) => (
+            {receipts.map((r) => {
+              const membership = r.deliveryId == null;
+              return (
               <tr key={r.id} className="hover:bg-[#F7F6F3]">
-                <td className="px-4 py-3 font-medium text-[#2F3437]">OR-{String(r.id).padStart(6, "0")}</td>
+                <td className="px-4 py-3 font-medium text-[#2F3437]">
+                  {membership ? "MR-" : "OR-"}{String(r.id).padStart(6, "0")}
+                </td>
                 <td className="px-4 py-3 text-[#787774]">{formatDate(r.dateIssued)}</td>
                 <td className="px-4 py-3">
-                  <Badge color="blue">{r.delivery?.batch?.periodType ?? "—"}</Badge>
+                  <Badge color={membership ? "amber" : "blue"}>
+                    {membership ? "Membership" : r.delivery?.batch?.periodType ?? "—"}
+                  </Badge>
                 </td>
-                <td className="px-4 py-3 text-[#787774]">{Number(r.delivery?.weightKg ?? 0).toLocaleString()} kg</td>
+                <td className="px-4 py-3 text-[#787774]">
+                  {membership ? "—" : `${Number(r.delivery?.weightKg ?? 0).toLocaleString()} kg`}
+                </td>
                 <td className="px-4 py-3 text-[#787774]">{peso(r.grossAmount)}</td>
                 <td className="px-4 py-3 font-medium text-[#346538]">{peso(r.netAmount)}</td>
                 <td className="px-4 py-3 text-right">
@@ -53,7 +61,8 @@ export default function MyReceipts() {
                   </Button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {receipts.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-[#B0AFAB]">
