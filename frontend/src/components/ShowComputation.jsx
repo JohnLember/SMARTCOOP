@@ -1,11 +1,15 @@
 import { useState } from "react";
 import api, { apiError } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 import { Modal, Button, Spinner } from "./ui";
 import { Calculator } from "lucide-react";
 
 // A button that opens a modal explaining a computation step-by-step.
 // `url` is a backend explain endpoint returning { title, description, steps[], result }.
+// Members never see computations — staff/admin only. Single gate here covers
+// every call site (self-view, deliveries, score/category cards).
 export default function ShowComputation({ url, label = "Show computation", variant = "ghost", className = "" }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -24,6 +28,8 @@ export default function ShowComputation({ url, label = "Show computation", varia
       setLoading(false);
     }
   }
+
+  if (user?.role === "MEMBER") return null;
 
   return (
     <>
