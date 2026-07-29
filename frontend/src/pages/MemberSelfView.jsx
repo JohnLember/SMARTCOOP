@@ -95,9 +95,10 @@ export default function MemberSelfView() {
     (acc, d) => {
       acc.kg += Number(d.weightKg);
       acc.net += d.receipt ? Number(d.receipt.netAmount) : 0;
+      acc.cbu += d.receipt ? Number(d.receipt.cbu) : 0;
       return acc;
     },
-    { kg: 0, net: 0 }
+    { kg: 0, net: 0, cbu: 0 }
   );
 
   const activeLoan = loans.find((l) => l.status === "ACTIVE");
@@ -140,8 +141,15 @@ export default function MemberSelfView() {
             <Field label="Barangay" value={member.barangay?.name} />
             <Field label="Contact" value={member.contactNo} />
             <Field label="Share capital" value={`₱${Number(member.shareCapital).toLocaleString()}`} />
+            <Field label="CBU (Capital Build-Up) total" value={peso(deliverySummary.cbu)} />
             <Field label="Date joined" value={formatDate(member.dateJoined)} />
           </div>
+          {member.membershipType === "ASSOCIATE" && (
+            <p className="mt-3 text-xs text-[#787774]">
+              You become a <span className="font-medium text-[#2F3437]">Regular</span> member once your CBU
+              reaches ₱10,000 — {peso(Math.max(0, 10000 - deliverySummary.cbu))} to go.
+            </p>
+          )}
         </Card>
 
         <div className="space-y-4">
