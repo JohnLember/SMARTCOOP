@@ -84,14 +84,14 @@ export async function getById(id) {
 }
 
 export async function create(data, actorId) {
-  // Loan eligibility = Regular membership, which a member reaches once CBU or
-  // savings hit the threshold. Re-check promotion first so anyone who has met
-  // the threshold qualifies even if an earlier trigger didn't fire.
+  // Loan eligibility = Regular membership, which a member reaches once CBU hits
+  // the threshold. Re-check promotion first so anyone who has met the threshold
+  // qualifies even if an earlier trigger didn't fire.
   const member = await promoteIfEligible(data.memberId);
   if (!member) throw badRequest("Member does not exist");
   if (member.membershipType !== "REGULAR") {
     throw badRequest(
-      `Member is not eligible for a loan yet. Members qualify once CBU or savings reach ₱${REGULAR_PROMOTION_THRESHOLD.toLocaleString()}.`
+      `Member is not eligible for a loan yet. Members qualify once their CBU reaches ₱${REGULAR_PROMOTION_THRESHOLD.toLocaleString()}.`
     );
   }
   if (data.termMonths < 1) throw badRequest("Term must be at least 1 month");

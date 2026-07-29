@@ -343,7 +343,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
               />
               <p className="text-xs leading-relaxed text-[#787774]">
                 Joins as <span className="font-medium text-[#2F3437]">Associate</span> and
-                auto-promotes to Regular once CBU or savings reach ₱10,000.
+                auto-promotes to Regular once CBU reaches ₱10,000.
               </p>
               <label className="flex items-start gap-2 rounded-lg bg-[#F7F6F3] px-3 py-2 text-xs leading-relaxed text-[#787774]">
                 <input

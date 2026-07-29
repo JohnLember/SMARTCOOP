@@ -225,8 +225,8 @@ export default function Apply() {
                 style={{ background: BRAND.cured, color: BRAND.inkMuted }}
               >
                 New members join as <span className="font-medium" style={{ color: BRAND.ink }}>Associate</span> and
-                become <span className="font-medium" style={{ color: BRAND.ink }}>Regular</span> once their CBU or
-                savings reach ₱10,000.
+                become <span className="font-medium" style={{ color: BRAND.ink }}>Regular</span> once their CBU
+                reaches ₱10,000.
               </p>
 
               <div className="mt-6 flex items-center justify-between gap-4">

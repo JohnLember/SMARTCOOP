@@ -18,7 +18,7 @@ export default function MemberForm() {
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
-    defaultValues: { membershipType: "ASSOCIATE", shareCapital: 0 },
+    defaultValues: { membershipType: "ASSOCIATE" },
   });
 
   useEffect(() => {
@@ -39,7 +39,6 @@ export default function MemberForm() {
             barangayId: m.barangayId ?? "",
             contactNo: m.contactNo ?? "",
             membershipType: m.membershipType,
-            shareCapital: Number(m.shareCapital),
             dateJoined: m.dateJoined ? m.dateJoined.slice(0, 10) : "",
           });
         })
@@ -53,7 +52,6 @@ export default function MemberForm() {
     // Normalize types for the API.
     const payload = {
       ...values,
-      shareCapital: Number(values.shareCapital) || 0,
       barangayId: values.barangayId ? Number(values.barangayId) : null,
       middleName: values.middleName || null,
       birthdate: values.birthdate || null,
@@ -119,12 +117,6 @@ export default function MemberForm() {
                 </option>
               ))}
             </Select>
-            <Input
-              label="Share capital (₱)"
-              type="number"
-              step="0.01"
-              {...register("shareCapital")}
-            />
             <Input label="Date joined" type="date" {...register("dateJoined")} />
           </div>
           <Input label="Address" {...register("address")} />

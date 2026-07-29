@@ -121,22 +121,19 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
         </Button>
       )}
 
-      <CreditGuideModal open={showGuide} onClose={() => setShowGuide(false)} />
+      <CreditGuideModal
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        hasLoanHistory={f?.hasLoanHistory}
+      />
     </Card>
   );
 }
 
-// Actionable guide mapping each scoring pillar to what a member can do to raise it.
-const GUIDE = [
-  {
-    title: "Repayment history",
-    weight: "Biggest factor",
-    tips: [
-      "Pay every loan installment on or before its due date.",
-      "Clear any overdue balances as soon as you can.",
-      "Fully repay active loans — each loan closed in good standing raises your score.",
-    ],
-  },
+// Actionable guide mapping each scoring pillar to what a member can do to raise
+// it. Associates (no loan yet) don't have a Repayment history score, so that
+// section is flagged "Not available yet" instead of promising an unusable path.
+const OTHER_SECTIONS = [
   {
     title: "Production consistency",
     tips: [
@@ -148,14 +145,33 @@ const GUIDE = [
   {
     title: "Cooperative standing",
     tips: [
-      "Grow your share capital and let your CBU (Capital Build-Up) accumulate.",
       "Stay an active member — longer membership tenure improves your standing.",
-      "Reach Regular membership (CBU or savings of ₱10,000) for the highest standing.",
+      "Reach Regular membership (CBU of ₱10,000) for the highest standing.",
     ],
   },
 ];
 
-function CreditGuideModal({ open, onClose }) {
+function buildGuide(hasLoanHistory) {
+  const notAvailable = hasLoanHistory === false;
+  return [
+    {
+      title: "Repayment history",
+      weight: notAvailable ? "Not available yet" : "Biggest factor",
+      muted: notAvailable,
+      note: notAvailable
+        ? "You don't have a loan yet, so this part isn't scored — your credit score currently uses Production consistency and Cooperative standing only. Repayment history starts counting once you become a Regular member and take a loan."
+        : null,
+      tips: [
+        "Pay every loan installment on or before its due date.",
+        "Clear any overdue balances as soon as you can.",
+        "Fully repay active loans — each loan closed in good standing raises your score.",
+      ],
+    },
+    ...OTHER_SECTIONS,
+  ];
+}
+
+function CreditGuideModal({ open, onClose, hasLoanHistory }) {
   return (
     <Modal open={open} onClose={onClose} title="How to improve your credit score">
       <div className="space-y-4">
@@ -163,16 +179,25 @@ function CreditGuideModal({ open, onClose }) {
           Your credit score is built from three parts. Improving any of them raises your score and
           your suggested credit limit over time.
         </p>
-        {GUIDE.map((section) => (
+        {buildGuide(hasLoanHistory).map((section) => (
           <div key={section.title} className="rounded-lg border border-[#EAEAEA] p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="font-semibold text-[#2F3437]">{section.title}</h4>
               {section.weight && (
-                <span className="rounded-full bg-[#EDF3EC] px-2.5 py-0.5 text-xs font-medium text-[#346538]">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    section.muted ? "bg-[#F2F1ED] text-[#787774]" : "bg-[#EDF3EC] text-[#346538]"
+                  }`}
+                >
                   {section.weight}
                 </span>
               )}
             </div>
+            {section.note && (
+              <p className="mb-2 rounded-lg bg-[#F7F6F3] px-3 py-2 text-xs text-[#787774]">
+                {section.note}
+              </p>
+            )}
             <ul className="space-y-1.5">
               {section.tips.map((tip) => (
                 <li key={tip} className="flex items-start gap-2 text-sm text-[#787774]">

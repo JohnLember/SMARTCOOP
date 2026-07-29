@@ -140,7 +140,6 @@ export default function MemberSelfView() {
             <Field label="Account status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
             <Field label="Barangay" value={member.barangay?.name} />
             <Field label="Contact" value={member.contactNo} />
-            <Field label="Share capital" value={`₱${Number(member.shareCapital).toLocaleString()}`} />
             <Field label="CBU (Capital Build-Up) total" value={peso(deliverySummary.cbu)} />
             <Field label="Date joined" value={formatDate(member.dateJoined)} />
           </div>

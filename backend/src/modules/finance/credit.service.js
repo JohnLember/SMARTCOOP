@@ -12,7 +12,7 @@ import { logActivity } from "../../utils/activityLog.js";
 //                                loans fully repaid (historical financial interactions)
 //   2. Production consistency  — delivery volume + how regularly the member
 //                                delivers over the last 12 months
-//   3. Cooperative standing    — share capital, membership tenure, and class
+//   3. Cooperative standing    — membership tenure and class
 //                                (standing within the cooperative)
 //
 // The score maps to a risk band + lending recommendation + a suggested credit
@@ -23,10 +23,10 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 const DEFAULT_CONFIG = {
   weights: { repayment: 0.35, production: 0.3, farm: 0.35 },
-  caps: { volumeKg: 5000, consistencyMonths: 12, shareCapital: 20000, tenureMonths: 60 },
+  caps: { volumeKg: 5000, consistencyMonths: 12, tenureMonths: 60 },
   bands: { low: 75, medium: 50 }, // >=low LOW risk; >=medium MEDIUM; else HIGH
-  // Suggested credit limit = (shareCapital*scMult + annualDeliveryValue*deliveryMult) * score%
-  limit: { scMult: 2, deliveryMult: 0.5 },
+  // Suggested credit limit = annualDeliveryValue * deliveryMult * score%
+  limit: { deliveryMult: 0.5 },
 };
 
 export async function getConfig() {
@@ -107,13 +107,11 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
   const normConsistency = norm(activeMonths, config.caps.consistencyMonths);
   const productionScore = round2(0.6 * normVolume + 0.4 * normConsistency);
 
-  // --- 3. Cooperative standing ---
-  const shareCapital = Number(member.shareCapital);
+  // --- 3. Cooperative standing (membership tenure + class) ---
   const tenureMonths = monthsBetween(member.dateJoined);
-  const normShare = norm(shareCapital, config.caps.shareCapital);
   const normTenure = norm(tenureMonths, config.caps.tenureMonths);
   const classPoints = member.membershipType === "REGULAR" ? 100 : 60;
-  const farmScore = round2(0.4 * normShare + 0.3 * normTenure + 0.3 * classPoints);
+  const farmScore = round2(0.5 * normTenure + 0.5 * classPoints);
 
   // --- Composite ---
   // Pillar 1 only means something with actual loan history. With none, its
@@ -133,7 +131,7 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
   const score = round2(wRepay * repaymentScore + wProd * productionScore + wFarm * farmScore);
   const riskBand = bandFor(score, config.bands);
 
-  const capacity = shareCapital * config.limit.scMult + annualDeliveryValue * config.limit.deliveryMult;
+  const capacity = annualDeliveryValue * config.limit.deliveryMult;
   const suggestedCreditLimit = Math.round((capacity * score) / 100 / 100) * 100;
 
   return {
@@ -155,7 +153,6 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
       totalVolumeKg: round2(totalVolume),
       activeMonths,
       annualDeliveryValue: round2(annualDeliveryValue),
-      shareCapital,
       tenureMonths: round2(tenureMonths),
       membershipType: member.membershipType,
     },
@@ -258,7 +255,6 @@ export async function explain(memberId) {
 
   const normVolume = norm(f.totalVolumeKg, caps.volumeKg);
   const normConsistency = norm(f.activeMonths, caps.consistencyMonths);
-  const normShare = norm(f.shareCapital, caps.shareCapital);
   const normTenure = norm(f.tenureMonths, caps.tenureMonths);
   const classPoints = f.membershipType === "REGULAR" ? 100 : 60;
 
@@ -306,10 +302,8 @@ export async function explain(memberId) {
     },
     {
       label: `Pillar 3 — Cooperative standing (weight ${wFarm})`,
-      formula: "0.4 × normShareCapital + 0.3 × normTenure + 0.3 × classPoints",
-      substitution: `0.4 × ${fmt(normShare)} + 0.3 × ${fmt(normTenure)} + 0.3 × ${classPoints} [${
-        f.membershipType
-      }]`,
+      formula: "0.5 × normTenure + 0.5 × classPoints",
+      substitution: `0.5 × ${fmt(normTenure)} + 0.5 × ${classPoints} [${f.membershipType}]`,
       result: fmt(f.farmScore),
     },
     {
@@ -330,10 +324,8 @@ export async function explain(memberId) {
     },
     {
       label: "Suggested credit limit",
-      formula: "(shareCapital × scMult + annualDeliveryValue × deliveryMult) × score%  → nearest ₱100",
-      substitution: `(₱${fmt(f.shareCapital)} × ${config.limit.scMult} + ₱${fmt(
-        f.annualDeliveryValue
-      )} × ${config.limit.deliveryMult}) × ${fmt(latest.score)}%`,
+      formula: "annualDeliveryValue × deliveryMult × score%  → nearest ₱100",
+      substitution: `₱${fmt(f.annualDeliveryValue)} × ${config.limit.deliveryMult} × ${fmt(latest.score)}%`,
       result: `₱${fmt(f.suggestedCreditLimit)}`,
     },
   ];

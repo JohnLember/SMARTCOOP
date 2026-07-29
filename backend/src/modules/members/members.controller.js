@@ -15,7 +15,6 @@ const memberSchema = z.object({
   contactNo: z.string().optional().nullable(),
   profilePhoto: z.string().optional().nullable(),
   membershipType: z.enum(["REGULAR", "ASSOCIATE"]).optional(),
-  shareCapital: z.number().nonnegative().optional(),
   dateJoined: z.string().optional().nullable(),
 });
 

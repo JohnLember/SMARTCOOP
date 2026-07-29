@@ -147,7 +147,6 @@ export default function MemberDetail() {
             <Field label="Barangay" value={member.barangay?.name} />
             <Field label="Contact" value={member.contactNo} />
             <Field label="Birthdate" value={formatDate(member.birthdate)} />
-            <Field label="Share capital" value={`₱${Number(member.shareCapital).toLocaleString()}`} />
             <Field label="Date joined" value={formatDate(member.dateJoined)} />
             <Field label="Address" value={member.address} />
           </div>

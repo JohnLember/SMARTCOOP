@@ -41,12 +41,12 @@ async function nextApplicationNo() {
 // application may be pending at a time.
 export async function create(memberId, data) {
   // Eligibility = Regular membership; re-check promotion so a member who has hit
-  // the CBU/savings threshold can apply even if promotion hadn't fired yet.
+  // the CBU threshold can apply even if promotion hadn't fired yet.
   const member = await promoteIfEligible(memberId);
   if (!member) throw badRequest("Member not found");
   if (member.membershipType !== "REGULAR") {
     throw badRequest(
-      `You are not eligible for a loan yet. Members qualify once CBU or savings reach ₱${REGULAR_PROMOTION_THRESHOLD.toLocaleString()}.`
+      `You are not eligible for a loan yet. Members qualify once their CBU reaches ₱${REGULAR_PROMOTION_THRESHOLD.toLocaleString()}.`
     );
   }
 

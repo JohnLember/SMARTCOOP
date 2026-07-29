@@ -97,7 +97,7 @@ async function nextMemberNo() {
 
 // Approve: create a real Member from the application, then mark it approved.
 // New members always start as ASSOCIATE; they are auto-promoted to REGULAR once
-// their CBU or savings reach the threshold (see promoteIfEligible).
+// their CBU reaches the threshold (see promoteIfEligible).
 export async function approve(id, { memberNo }, actorId) {
   const app = await getById(id);
   if (app.status !== "PENDING") throw badRequest("This application has already been reviewed");
@@ -158,7 +158,7 @@ export async function approve(id, { memberNo }, actorId) {
 
   await logActivity(actorId, `Approved membership application #${id} as ${finalMemberNo}, login "${username}"`);
 
-  // If they were approved with >= threshold savings, promote immediately.
+  // If their CBU already meets the threshold, promote immediately.
   await promoteIfEligible(member.id).catch(() => {});
   const saved = await prisma.member.findUnique({ where: { id: member.id } });
   return { ...saved, credentials: { username, password }, membershipReceipt };

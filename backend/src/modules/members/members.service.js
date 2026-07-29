@@ -6,15 +6,15 @@ import { logActivity } from "../../utils/activityLog.js";
 const memberInclude = { barangay: true, user: { select: { id: true, username: true, status: true } } };
 
 // A member is auto-promoted from Associate to Regular once accumulated CBU
-// (Capital Build-Up) or share-capital savings reach this amount.
+// (Capital Build-Up) reaches this amount.
 export const REGULAR_PROMOTION_THRESHOLD = 10000;
 
-// Promotes ASSOCIATE -> REGULAR when CBU total or savings reach the threshold.
-// Never demotes. Safe to call after a delivery (CBU changes) or capital change.
+// Promotes ASSOCIATE -> REGULAR when CBU total reaches the threshold.
+// Never demotes. Safe to call after a delivery (CBU changes).
 export async function promoteIfEligible(memberId) {
   const member = await prisma.member.findUnique({
     where: { id: memberId },
-    select: { id: true, memberNo: true, membershipType: true, shareCapital: true },
+    select: { id: true, memberNo: true, membershipType: true },
   });
   if (!member || member.membershipType === "REGULAR") return member;
 
@@ -23,17 +23,13 @@ export async function promoteIfEligible(memberId) {
     _sum: { cbu: true },
   });
   const cbuTotal = Number(agg._sum.cbu ?? 0);
-  const savings = Number(member.shareCapital ?? 0);
 
-  if (cbuTotal >= REGULAR_PROMOTION_THRESHOLD || savings >= REGULAR_PROMOTION_THRESHOLD) {
+  if (cbuTotal >= REGULAR_PROMOTION_THRESHOLD) {
     const updated = await prisma.member.update({
       where: { id: memberId },
       data: { membershipType: "REGULAR" },
     });
-    await logActivity(
-      null,
-      `Auto-promoted ${member.memberNo} to REGULAR (CBU ₱${cbuTotal.toFixed(2)}, savings ₱${savings.toFixed(2)})`
-    );
+    await logActivity(null, `Auto-promoted ${member.memberNo} to REGULAR (CBU ₱${cbuTotal.toFixed(2)})`);
     return updated;
   }
   return member;
@@ -109,7 +105,7 @@ export async function update(id, data, actorId) {
     include: memberInclude,
   });
   await logActivity(actorId, `Updated member ${member.memberNo}`);
-  // Share capital may have changed — re-check auto-promotion.
+  // Re-check auto-promotion in case the member already crossed the CBU threshold.
   await promoteIfEligible(id).catch(() => {});
   return getById(id);
 }
