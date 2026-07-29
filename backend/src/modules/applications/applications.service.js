@@ -160,3 +160,38 @@ export async function reconsider(id, actorId) {
   await logActivity(actorId, `Reopened membership application #${id} for reconsideration`);
   return updated;
 }
+
+// Undo an approval: hard-delete the Member the approval created, then flip the
+// application back to PENDING (unlinked). No FK cascade member→children exists,
+// so children are removed first, in dependency order, inside one txn.
+// ponytail: destructive — wipes the member's deliveries, receipts, loans,
+// payments, credit scores and program grants. A linked user login and past
+// notifications are SetNull'd by the DB (orphaned, not deleted). Use the
+// "delete only if untouched" guard instead if that data loss ever bites.
+export async function unapprove(id, actorId) {
+  const app = await getById(id);
+  if (app.status !== "APPROVED") throw badRequest("Only approved applications can be reverted");
+
+  const memberId = app.memberId;
+  await prisma.$transaction([
+    ...(memberId
+      ? [
+          prisma.loanPayment.deleteMany({ where: { OR: [{ loan: { memberId } }, { delivery: { memberId } }] } }),
+          prisma.receipt.deleteMany({ where: { memberId } }),
+          prisma.rubberDelivery.deleteMany({ where: { memberId } }),
+          prisma.loanApplication.deleteMany({ where: { memberId } }),
+          prisma.loan.deleteMany({ where: { memberId } }),
+          prisma.creditScore.deleteMany({ where: { memberId } }),
+          prisma.supportProgramRecipient.deleteMany({ where: { memberId } }),
+        ]
+      : []),
+    prisma.membershipApplication.update({
+      where: { id },
+      data: { status: "PENDING", memberId: null, reviewedByUserId: null, reviewedAt: null },
+    }),
+    ...(memberId ? [prisma.member.delete({ where: { id: memberId } })] : []),
+  ]);
+
+  await logActivity(actorId, `Reverted approved membership application #${id} — deleted member #${memberId}`);
+  return getById(id);
+}

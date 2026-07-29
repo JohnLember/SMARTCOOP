@@ -247,6 +247,22 @@ function ReviewModal({ application, onClose, onReviewed }) {
     }
   }
 
+  async function doUnapprove() {
+    if (!confirm("Revert this approval? The member record and all their deliveries, receipts, loans and payments will be permanently deleted. This cannot be undone."))
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.post(`/applications/${application.id}/unapprove`);
+      toast.success("Approval reverted — member deleted, application back to pending");
+      onReviewed();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Modal open={!!application} onClose={onClose} title={`${application.firstName} ${application.lastName}`} wide>
       <div className="space-y-6">
@@ -342,6 +358,12 @@ function ReviewModal({ application, onClose, onReviewed }) {
               <Button variant="secondary" onClick={doReconsider} disabled={busy} className="mt-4">
                 <Check size={16} />
                 Reconsider — move back to pending
+              </Button>
+            )}
+            {application.status === "APPROVED" && (
+              <Button variant="danger" onClick={doUnapprove} disabled={busy} className="mt-4">
+                <X size={16} />
+                Revert approval — delete member, back to pending
               </Button>
             )}
           </div>

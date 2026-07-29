@@ -78,3 +78,11 @@ export async function reconsider(req, res, next) {
     next(err);
   }
 }
+
+export async function unapprove(req, res, next) {
+  try {
+    res.json(await service.unapprove(Number(req.params.id), req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
