@@ -190,6 +190,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [creds, setCreds] = useState(null);
 
   useEffect(() => {
     if (application) {
@@ -197,6 +198,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
       setFeePaid(false);
       setNote("");
       setError("");
+      setCreds(null);
     }
   }, [application]);
 
@@ -207,11 +209,11 @@ function ReviewModal({ application, onClose, onReviewed }) {
     setBusy(true);
     setError("");
     try {
-      await api.post(`/applications/${application.id}/approve`, {
+      const res = await api.post(`/applications/${application.id}/approve`, {
         memberNo: approve.memberNo || undefined,
       });
       toast.success("Application approved — member created");
-      onReviewed();
+      setCreds(res.data.credentials);
     } catch (err) {
       setError(apiError(err));
     } finally {
@@ -289,7 +291,31 @@ function ReviewModal({ application, onClose, onReviewed }) {
           )}
         </div>
 
-        {pending ? (
+        {creds ? (
+          <div className="border-t border-[#EAEAEA] pt-6">
+            <h3 className="text-sm font-semibold text-[#111111]">Member login created</h3>
+            <p className="mt-1 text-xs text-[#787774]">
+              Give these to the member. The password is shown only now.
+            </p>
+            <div className="mt-3 space-y-2">
+              {[
+                ["Username", creds.username],
+                ["Password", creds.password],
+              ].map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between rounded-lg bg-[#F7F6F3] px-3 py-2">
+                  <div>
+                    <p className="text-xs text-[#787774]">{label}</p>
+                    <p className="font-mono text-sm text-[#2F3437]">{value}</p>
+                  </div>
+                  <Button variant="ghost" onClick={() => navigator.clipboard?.writeText(value)}>
+                    Copy
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Button onClick={onReviewed} className="mt-4">Done</Button>
+          </div>
+        ) : pending ? (
           <div className="grid gap-6 border-t border-[#EAEAEA] pt-6 sm:grid-cols-2">
             {/* Approve */}
             <div className="space-y-3">

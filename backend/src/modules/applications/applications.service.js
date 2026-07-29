@@ -1,7 +1,20 @@
 import prisma from "../../config/db.js";
 import { badRequest, conflict, notFound } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
+import { hashPassword } from "../../utils/password.js";
 import { promoteIfEligible } from "../members/members.service.js";
+
+// firstName+lastName with whitespace stripped, plus a numeric suffix if taken.
+async function uniqueUsername(first, last) {
+  const base = `${first}${last}`.replace(/\s+/g, "");
+  let username = base;
+  let n = 1;
+  while (await prisma.user.findUnique({ where: { username } })) {
+    n += 1;
+    username = `${base}${n}`;
+  }
+  return username;
+}
 
 const withBarangay = { barangay: { select: { id: true, name: true } } };
 
@@ -120,11 +133,21 @@ export async function approve(id, { memberNo }, actorId) {
     },
   });
 
-  await logActivity(actorId, `Approved membership application #${id} as ${finalMemberNo}`);
+  // Create their MEMBER login. Username = firstName+lastName; password =
+  // lastName+currentYear+"pass". Plaintext is returned once so staff can hand
+  // it over — it is not stored anywhere in readable form.
+  const username = await uniqueUsername(app.firstName, app.lastName);
+  const password = `${app.lastName}${new Date().getFullYear()}pass`.replace(/\s+/g, "");
+  await prisma.user.create({
+    data: { username, passwordHash: await hashPassword(password), role: "MEMBER", memberId: member.id },
+  });
+
+  await logActivity(actorId, `Approved membership application #${id} as ${finalMemberNo}, login "${username}"`);
 
   // If they were approved with >= threshold savings, promote immediately.
   await promoteIfEligible(member.id).catch(() => {});
-  return prisma.member.findUnique({ where: { id: member.id } });
+  const saved = await prisma.member.findUnique({ where: { id: member.id } });
+  return { ...saved, credentials: { username, password } };
 }
 
 export async function reject(id, note, actorId) {
@@ -165,9 +188,9 @@ export async function reconsider(id, actorId) {
 // application back to PENDING (unlinked). No FK cascade member→children exists,
 // so children are removed first, in dependency order, inside one txn.
 // ponytail: destructive — wipes the member's deliveries, receipts, loans,
-// payments, credit scores and program grants. A linked user login and past
-// notifications are SetNull'd by the DB (orphaned, not deleted). Use the
-// "delete only if untouched" guard instead if that data loss ever bites.
+// payments, credit scores, program grants and their login. Past notifications
+// are SetNull'd by the DB (orphaned, not deleted). Use the "delete only if
+// untouched" guard instead if that data loss ever bites.
 export async function unapprove(id, actorId) {
   const app = await getById(id);
   if (app.status !== "APPROVED") throw badRequest("Only approved applications can be reverted");
@@ -183,6 +206,7 @@ export async function unapprove(id, actorId) {
           prisma.loan.deleteMany({ where: { memberId } }),
           prisma.creditScore.deleteMany({ where: { memberId } }),
           prisma.supportProgramRecipient.deleteMany({ where: { memberId } }),
+          prisma.user.deleteMany({ where: { memberId } }),
         ]
       : []),
     prisma.membershipApplication.update({
