@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
@@ -6,14 +6,13 @@ import {
   Button,
   Card,
   Input,
-  Select,
   Spinner,
   PageHeader,
   Badge,
   StatCard,
   BackButton,
 } from "../../components/ui";
-import { Scale, Wallet, Boxes, Plus } from "lucide-react";
+import { Scale, Wallet, Boxes, Plus, Search, ChevronDown } from "lucide-react";
 import ShowComputation from "../../components/ShowComputation";
 import { formatDate } from "../../lib/format";
 
@@ -83,6 +82,10 @@ export default function BatchDetail() {
 
   async function recordDelivery(e) {
     e.preventDefault();
+    if (!form.memberId) {
+      setError("Select a member");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -167,19 +170,12 @@ export default function BatchDetail() {
           <h3 className="mb-3 font-semibold text-[#2F3437]">Record delivery</h3>
           <form onSubmit={recordDelivery} className="grid grid-cols-5 items-end gap-3">
             {error && <p className="col-span-5 text-sm text-[#9F2F2D]">{error}</p>}
-            <Select
+            <MemberCombobox
               label="Member"
+              members={members}
               value={form.memberId}
-              onChange={(e) => setForm({ ...form, memberId: e.target.value })}
-              required
-            >
-              <option value="">Select…</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.memberNo} — {m.firstName} {m.lastName}
-                </option>
-              ))}
-            </Select>
+              onChange={(id) => setForm({ ...form, memberId: id })}
+            />
             <Input
               label="Weight (kg)"
               type="number"
@@ -302,6 +298,96 @@ export default function BatchDetail() {
           </tbody>
         </table>
       </Card>
+    </div>
+  );
+}
+
+// Searchable member dropdown: click to open a panel with a search box inside
+// that filters by member ID or name, then click a result to select it.
+function MemberCombobox({ label, members, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const selected = members.find((m) => String(m.id) === String(value));
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? members.filter(
+        (m) =>
+          m.memberNo.toLowerCase().includes(q) ||
+          `${m.firstName} ${m.lastName}`.toLowerCase().includes(q)
+      )
+    : members;
+
+  function pick(m) {
+    onChange(String(m.id));
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <span className="mb-1 block text-sm font-medium text-[#2F3437]">{label}</span>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-lg border border-[#EAEAEA] bg-white px-3 py-2 text-left text-sm outline-none transition-colors focus:border-[#346538] focus:ring-1 focus:ring-[#346538]"
+      >
+        <span className={`truncate ${selected ? "text-[#2F3437]" : "text-[#B0AFAB]"}`}>
+          {selected ? `${selected.memberNo} — ${selected.firstName} ${selected.lastName}` : "Select…"}
+        </span>
+        <ChevronDown size={16} className="ml-2 flex-none text-[#B0AFAB]" />
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-full min-w-64 rounded-lg border border-[#EAEAEA] bg-white shadow-lg">
+          <div className="flex items-center gap-2 border-b border-[#F2F1ED] px-3 py-2">
+            <Search size={15} className="flex-none text-[#B0AFAB]" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+              placeholder="Search by ID or name…"
+              className="w-full text-sm outline-none placeholder:text-[#B0AFAB]"
+            />
+          </div>
+          <ul className="max-h-60 overflow-y-auto py-1">
+            {filtered.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => pick(m)}
+                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-[#EDF3EC] ${
+                    String(m.id) === String(value)
+                      ? "bg-[#EDF3EC] font-medium text-[#346538]"
+                      : "text-[#2F3437]"
+                  }`}
+                >
+                  {m.memberNo} — {m.firstName} {m.lastName}
+                </button>
+              </li>
+            ))}
+            {filtered.length === 0 && (
+              <li className="px-3 py-3 text-center text-sm text-[#B0AFAB]">No members found.</li>
+            )}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
