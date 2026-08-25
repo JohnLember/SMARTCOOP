@@ -20,6 +20,7 @@ import CreditScoring from "./pages/finance/CreditScoring";
 import MemberSelfView from "./pages/MemberSelfView";
 import MyDeliveries from "./pages/MyDeliveries";
 import MyReceipts from "./pages/MyReceipts";
+import MyLoans from "./pages/MyLoans";
 import Notifications from "./pages/Notifications";
 import MaoDashboard from "./pages/mao/MaoDashboard";
 import MembersByBarangay from "./pages/mao/MembersByBarangay";
@@ -76,6 +77,7 @@ function App() {
         <Route path="/me" element={<ProtectedRoute roles={["MEMBER"]}><MemberSelfView /></ProtectedRoute>} />
         <Route path="/my-deliveries" element={<ProtectedRoute roles={["MEMBER"]}><MyDeliveries /></ProtectedRoute>} />
         <Route path="/my-receipts" element={<ProtectedRoute roles={["MEMBER"]}><MyReceipts /></ProtectedRoute>} />
+        <Route path="/my-loans" element={<ProtectedRoute roles={["MEMBER"]}><MyLoans /></ProtectedRoute>} />
 
         {/* Shared */}
         <Route path="/notifications" element={<Notifications />} />

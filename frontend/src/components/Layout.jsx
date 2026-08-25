@@ -80,6 +80,7 @@ const NAV = {
       { to: "/me", label: "My Profile", icon: UserCircle },
       { to: "/my-deliveries", label: "My Deliveries", icon: Truck },
       { to: "/my-receipts", label: "My Receipts", icon: ReceiptText },
+      { to: "/my-loans", label: "My Loans", icon: Wallet },
       { to: "/notifications", label: "Notifications", icon: Bell },
     ] },
   ],
