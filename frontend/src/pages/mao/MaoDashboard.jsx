@@ -122,18 +122,23 @@ export default function MaoDashboard() {
   );
 }
 
+// Every field starts empty. "Type" used to be pre-filled with "Fertilizer
+// Distribution", which quietly became the value on any program the user didn't
+// think to change — a default is a decision made on the user's behalf, and this
+// one is wrong as often as it is right. The placeholder suggests the format
+// without committing to an answer.
+const EMPTY_PROGRAM_FORM = { name: "", type: "", targetBarangayId: "", budget: "" };
+
 function SupportPrograms({ programs, barangays, members, onChange }) {
   const [show, setShow] = useState(false);
   const [openId, setOpenId] = useState(null);
-  const [form, setForm] = useState({ name: "", type: "Fertilizer Distribution", targetBarangayId: "", budget: "" });
+  const [form, setForm] = useState(EMPTY_PROGRAM_FORM);
   const [error, setError] = useState("");
-
-  const EMPTY_FORM = { name: "", type: "Fertilizer Distribution", targetBarangayId: "", budget: "" };
 
   // Opening always starts from a clean form, so a cancelled attempt doesn't
   // leave its half-typed values sitting in the next one.
   function openForm() {
-    setForm(EMPTY_FORM);
+    setForm(EMPTY_PROGRAM_FORM);
     setError("");
     setShow(true);
   }
@@ -153,7 +158,7 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
         targetBarangayId: form.targetBarangayId ? Number(form.targetBarangayId) : null,
         budget: form.budget ? Number(form.budget) : null,
       });
-      setForm({ name: "", type: "Fertilizer Distribution", targetBarangayId: "", budget: "" });
+      setForm(EMPTY_PROGRAM_FORM);
       setShow(false);
       toast.success("Support program created");
       onChange();
@@ -191,12 +196,14 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
           )}
           <Input
             label="Program name"
+            placeholder="e.g. 2026 Fertilizer Distribution"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             required
           />
           <Input
             label="Type"
+            placeholder="e.g. Fertilizer Distribution, Seedling Dispersal"
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
             required
@@ -216,6 +223,7 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
             <Input
               label="Budget (₱)"
               type="number"
+              placeholder="e.g. 250000"
               value={form.budget}
               onChange={(e) => setForm({ ...form, budget: e.target.value })}
             />
