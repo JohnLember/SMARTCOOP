@@ -8,6 +8,7 @@ router.use(authenticate);
 
 router.get("/", controller.list);
 router.patch("/:id/read", controller.markRead);
+router.post("/delete", controller.remove);
 // Staff and MAO can broadcast announcements.
 router.post("/", requireRole("ADMIN", "STAFF", "MAO"), controller.create);
 
