@@ -11,9 +11,11 @@ import {
   Badge,
   StatCard,
   BackButton,
+  Modal,
 } from "../../components/ui";
-import { Scale, Wallet, Boxes, Plus, Search, ChevronDown } from "lucide-react";
+import { Scale, Wallet, Boxes, Plus, Search, ChevronDown, ReceiptText, Printer } from "lucide-react";
 import ShowComputation from "../../components/ShowComputation";
+import ReceiptDocument from "../../components/ReceiptDocument";
 import { formatDate } from "../../lib/format";
 
 const STATUS_COLOR = { OPEN: "green", CLOSED: "amber", SETTLED: "slate" };
@@ -285,7 +287,10 @@ export default function BatchDetail() {
                 <td className="px-4 py-3 text-[#346538]">{d.receipt ? peso(d.receipt.netAmount) : "—"}</td>
                 <td className="px-4 py-3 text-[#787774]">{formatDate(d.deliveryDate)}</td>
                 <td className="px-4 py-3">
-                  <ShowComputation url={`/production/deliveries/${d.id}/explain`} label="Show computation" />
+                  <div className="flex items-center justify-end gap-1">
+                    <ShowReceipt delivery={d} batch={batch} />
+                    <ShowComputation url={`/production/deliveries/${d.id}/explain`} label="Show computation" />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -300,6 +305,39 @@ export default function BatchDetail() {
         </table>
       </Card>
     </div>
+  );
+}
+
+// The delivery's receipt, printable. Everything ReceiptDocument needs is already
+// loaded with the batch, so the shape is assembled here instead of refetching:
+// the receipt row carries the amounts, the delivery and member carry the rest.
+function ShowReceipt({ delivery, batch }) {
+  const [open, setOpen] = useState(false);
+  if (!delivery.receipt) return null;
+
+  const receipt = {
+    ...delivery.receipt,
+    member: delivery.member,
+    delivery: { ...delivery, batch },
+  };
+
+  return (
+    <>
+      <Button type="button" variant="ghost" onClick={() => setOpen(true)}>
+        <ReceiptText size={16} />
+        Show Receipt
+      </Button>
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Delivery receipt">
+        <ReceiptDocument receipt={receipt} />
+        <div className="no-print mt-4 flex justify-end">
+          <Button variant="secondary" onClick={() => window.print()}>
+            <Printer size={16} />
+            Print
+          </Button>
+        </div>
+      </Modal>
+    </>
   );
 }
 

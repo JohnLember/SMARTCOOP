@@ -26,7 +26,17 @@ export async function getById(id) {
       deliveries: {
         orderBy: { deliveryDate: "desc" },
         include: {
-          member: { select: { id: true, memberNo: true, firstName: true, lastName: true } },
+          // middleName + barangay are what the printable receipt shows.
+          member: {
+            select: {
+              id: true,
+              memberNo: true,
+              firstName: true,
+              middleName: true,
+              lastName: true,
+              barangay: { select: { name: true } },
+            },
+          },
           receipt: true,
         },
       },
