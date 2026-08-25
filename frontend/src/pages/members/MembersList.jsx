@@ -117,7 +117,12 @@ export default function MembersList() {
               label="Search"
               placeholder="Name or member no."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              // Emptying the box is a filter change too: without this the list
+              // stays filtered while "Clear filter" vanishes along with the text,
+              // leaving no way back to the full list.
+              onChange={(e) =>
+                e.target.value ? setSearch(e.target.value) : applyFilters({ search: "" })
+              }
             />
           </div>
           <div className="w-44">

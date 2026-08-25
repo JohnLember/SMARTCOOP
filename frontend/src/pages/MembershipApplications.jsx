@@ -89,7 +89,12 @@ export default function MembershipApplications() {
               label="Search"
               placeholder="Application No."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              // Emptying the box is a filter change too: without this the list
+              // stays filtered while "Clear filter" vanishes along with the text.
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (!e.target.value) load({ search: "" });
+              }}
             />
           </div>
           <div className="w-48">
