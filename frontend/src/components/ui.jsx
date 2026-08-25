@@ -42,26 +42,34 @@ export function BackButton({ to, label = "Back", className = "" }) {
 }
 
 // On phones this is a bottom sheet (thumb-reachable, full width); from `sm` up
-// it is a centred dialog. Escape closes it and the page behind it stops
-// scrolling, so the modal is the only thing the user can move.
-export function Modal({ open, onClose, title, children, wide = false }) {
+// it is a centred dialog. The page behind it stops scrolling, so the modal is
+// the only thing the user can move.
+//
+// `dismissible={false}` is for modals holding a form the user has typed into:
+// it removes the two accidental exits — clicking the backdrop and pressing
+// Escape — leaving the explicit Cancel and ✕ controls as the only ways out, so
+// a stray click outside cannot discard half-entered data.
+export function Modal({ open, onClose, title, children, wide = false, dismissible = true }) {
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => e.key === "Escape" && onClose?.();
+    // The scroll lock applies either way; only the Escape key is conditional.
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
+
+    const onKey = (e) => e.key === "Escape" && onClose?.();
+    if (dismissible) window.addEventListener("keydown", onKey);
+
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open, onClose, dismissible]);
 
   if (!open) return null;
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
-      onClick={onClose}
+      onClick={dismissible ? onClose : undefined}
       role="presentation"
     >
       <div

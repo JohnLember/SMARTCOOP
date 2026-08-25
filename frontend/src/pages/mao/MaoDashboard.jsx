@@ -128,6 +128,21 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
   const [form, setForm] = useState({ name: "", type: "Fertilizer Distribution", targetBarangayId: "", budget: "" });
   const [error, setError] = useState("");
 
+  const EMPTY_FORM = { name: "", type: "Fertilizer Distribution", targetBarangayId: "", budget: "" };
+
+  // Opening always starts from a clean form, so a cancelled attempt doesn't
+  // leave its half-typed values sitting in the next one.
+  function openForm() {
+    setForm(EMPTY_FORM);
+    setError("");
+    setShow(true);
+  }
+
+  function closeForm() {
+    setShow(false);
+    setError("");
+  }
+
   async function submit(e) {
     e.preventDefault();
     setError("");
@@ -154,29 +169,65 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
           <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Assistance</p>
           <h3 className="mt-1 font-semibold text-[#2F3437]">Support programs</h3>
         </div>
-        <Button variant="secondary" onClick={() => setShow((s) => !s)}>
+        <Button variant="secondary" onClick={openForm}>
           <Plus size={16} />
           New
         </Button>
       </div>
 
-      {show && (
-        <form onSubmit={submit} className="mb-4 space-y-3 rounded-lg bg-[#F7F6F3] p-3">
-          {error && <p className="text-sm text-[#9F2F2D]">{error}</p>}
-          <Input label="Program name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <Input label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} required />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Select label="Target barangay" value={form.targetBarangayId} onChange={(e) => setForm({ ...form, targetBarangayId: e.target.value })}>
+      {/* dismissible={false}: this holds typed-in form data, so a stray click on
+          the backdrop must not throw it away. Cancel and ✕ are the way out. */}
+      <Modal
+        open={show}
+        onClose={closeForm}
+        title="New support program"
+        dismissible={false}
+      >
+        <form onSubmit={submit} className="space-y-4">
+          {error && (
+            <p className="rounded-[var(--radius-control)] bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">
+              {error}
+            </p>
+          )}
+          <Input
+            label="Program name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+          />
+          <Input
+            label="Type"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            required
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Select
+              label="Target barangay"
+              value={form.targetBarangayId}
+              onChange={(e) => setForm({ ...form, targetBarangayId: e.target.value })}
+              hint="Leave as All / none for a municipality-wide program"
+            >
               <option value="">All / none</option>
               {barangays.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </Select>
-            <Input label="Budget (₱)" type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
+            <Input
+              label="Budget (₱)"
+              type="number"
+              value={form.budget}
+              onChange={(e) => setForm({ ...form, budget: e.target.value })}
+            />
           </div>
-          <Button type="submit">Create program</Button>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="secondary" onClick={closeForm}>
+              Cancel
+            </Button>
+            <Button type="submit">Create program</Button>
+          </div>
         </form>
-      )}
+      </Modal>
 
       <div className="space-y-2">
         {programs.length === 0 && <p className="text-sm text-[#5F5E5A]">No support programs yet.</p>}
