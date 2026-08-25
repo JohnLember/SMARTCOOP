@@ -1,11 +1,14 @@
 .claude/
 
-# Secrets — never commit. backend/.env holds DATABASE_URL and JWT_SECRET.
+# Secrets and local config — never commit. Includes .env.example, so the
+# variable list lives only in the working tree.
 .env
 .env.*
-!.env.example
 
 node_modules/
 dist/
 build/
 *.log
+
+# Local setup notes — kept out of the repo (they list the seeded demo logins).
+SETUP.md
