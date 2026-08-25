@@ -114,6 +114,13 @@ body {
    would restyle every child). */
 .notif-row {
   touch-action: pan-y;
+  /* Clip the surface as it slides right, or the card overhangs the page edge
+     mid-swipe. `clip` on one axis only — `hidden` would force the other axis to
+     scroll — and the small margin keeps the card's focus ring and selected ring
+     from being shaved off at the sides. */
+  overflow-x: clip;
+  overflow-y: visible;
+  overflow-clip-margin: 4px;
 }
 .notif-row-surface {
   transition: transform 220ms var(--ease-out);

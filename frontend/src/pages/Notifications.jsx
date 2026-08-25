@@ -94,6 +94,9 @@ export default function Notifications() {
       {list.length > 0 && (
         <Card className="mb-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* The checkbox only ever feeds the delete button beside it, so the
+                label says so outright rather than leaving "Select all" to be
+                read as marking things read. */}
             <label className="flex cursor-pointer items-center gap-2 text-sm text-[#2F3437]">
               <input
                 type="checkbox"
@@ -103,14 +106,24 @@ export default function Notifications() {
                 }
                 className="h-4 w-4 accent-[#346538]"
               />
-              {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+              {selected.size > 0 ? (
+                <span>
+                  <span className="font-medium text-[#9F2F2D]">{selected.size}</span> selected to
+                  delete
+                </span>
+              ) : (
+                <span>
+                  Select all to delete{" "}
+                  <span className="text-[#B0AFAB]">({list.length})</span>
+                </span>
+              )}
             </label>
 
             {selected.size > 0 && (
               <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={() => setSelected(new Set())} disabled={busy}>
                   <X size={16} />
-                  Clear
+                  Cancel
                 </Button>
                 <Button variant="danger" onClick={() => remove([...selected])} disabled={busy}>
                   <Trash2 size={16} />
@@ -236,7 +249,7 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
       style={{ "--enter-delay": `${Math.min(index, STAGGER_CAP) * STAGGER_MS}ms` }}
     >
       {/* Revealed underneath as the row slides right. */}
-      <div className="absolute inset-y-0 left-0 flex w-[104px] items-center justify-center">
+      <div className="absolute inset-y-0 left-0 flex w-26 items-center justify-center">
         <button
           type="button"
           onClick={onDelete}
@@ -258,6 +271,7 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onKeyDown={(e) => e.key === "Escape" && open && close()}
       >
         <Card
           className={`${n.status === "UNREAD" ? "border-[#C4D8C3] bg-[#EDF3EC]/40" : ""} ${
@@ -269,7 +283,7 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
               type="checkbox"
               checked={checked}
               onChange={onToggle}
-              aria-label={`Select notification: ${n.title}`}
+              aria-label={`Select to delete: ${n.title}`}
               className="mt-1 h-4 w-4 flex-none accent-[#346538]"
             />
 
@@ -286,27 +300,17 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
               <div className="min-w-0 flex-1">{body}</div>
             )}
 
-            <div className="flex flex-none items-center gap-1">
-              {open && (
-                <Button variant="ghost" onClick={close}>
-                  <X size={16} />
-                </Button>
-              )}
-              {n.status === "UNREAD" && (
+            {/* Nothing may enter or leave this row while the swipe is open —
+                inserting a control here would resize the message beside it and
+                make the row visibly jump as it slides back. */}
+            {n.status === "UNREAD" && (
+              <div className="flex-none">
                 <Button variant="ghost" onClick={onMarkRead}>
                   <Check size={16} />
                   Mark read
                 </Button>
-              )}
-              <Button
-                variant="ghost"
-                onClick={onDelete}
-                disabled={disabled}
-                aria-label={`Delete notification: ${n.title}`}
-              >
-                <Trash2 size={16} />
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         </Card>
       </div>
