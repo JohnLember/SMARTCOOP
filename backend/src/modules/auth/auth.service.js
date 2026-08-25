@@ -16,12 +16,18 @@ export async function login(username, password) {
     include: { member: true },
   });
 
+  // One message for "no such user", "disabled account" and "wrong password":
+  // anything more specific tells an attacker which usernames are real.
   if (!user || user.status !== "ACTIVE") {
+    await logActivity(null, `Failed sign-in for "${username}" (unknown or inactive account)`);
     throw unauthorized("Invalid credentials");
   }
 
   const ok = await comparePassword(password, user.passwordHash);
-  if (!ok) throw unauthorized("Invalid credentials");
+  if (!ok) {
+    await logActivity(user.id, `Failed sign-in for "${username}" (bad password)`);
+    throw unauthorized("Invalid credentials");
+  }
 
   const token = signToken({
     sub: user.id,

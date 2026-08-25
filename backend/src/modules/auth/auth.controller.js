@@ -8,7 +8,7 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(10, "Password must be at least 10 characters"),
   role: z.enum(["ADMIN", "STAFF", "MEMBER", "MAO"]),
   memberId: z.number().int().positive().optional(),
 });

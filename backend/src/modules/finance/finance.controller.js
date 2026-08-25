@@ -2,6 +2,7 @@ import { z } from "zod";
 import * as loans from "./loans.service.js";
 import * as credit from "./credit.service.js";
 import { forbidden, notFound, badRequest } from "../../utils/httpError.js";
+import { assertMemberAccess, memberScopeFor } from "../../utils/access.js";
 
 const isStaff = (user) => user.role === "ADMIN" || user.role === "STAFF";
 
@@ -17,9 +18,9 @@ const loanSchema = z.object({
 
 export async function listLoans(req, res, next) {
   try {
-    if (req.user.role === "MEMBER") {
-      return res.json(await loans.list({ memberId: req.user.memberId }));
-    }
+    // Staff see every loan; a member sees only their own; nobody else.
+    const scope = memberScopeFor(req.user);
+    if (scope !== null) return res.json(await loans.list({ memberId: scope }));
     res.json(await loans.list(req.query));
   } catch (err) {
     next(err);
@@ -29,9 +30,7 @@ export async function listLoans(req, res, next) {
 export async function getLoan(req, res, next) {
   try {
     const loan = await loans.getById(Number(req.params.id));
-    if (req.user.role === "MEMBER" && loan.memberId !== req.user.memberId) {
-      throw forbidden("You can only view your own loans");
-    }
+    assertMemberAccess(req.user, loan.memberId, "loans");
     res.json(loan);
   } catch (err) {
     next(err);
@@ -68,9 +67,7 @@ export async function computeAllCreditScores(req, res, next) {
 export async function getCreditScore(req, res, next) {
   try {
     const memberId = Number(req.params.memberId);
-    if (req.user.role === "MEMBER" && req.user.memberId !== memberId) {
-      throw forbidden("You can only view your own credit score");
-    }
+    assertMemberAccess(req.user, memberId, "credit score");
     const latest = await credit.currentForMember(memberId);
     const history = await credit.historyForMember(memberId);
     res.json({ latest, history });
@@ -101,9 +98,7 @@ export async function explainLoan(req, res, next) {
   try {
     const id = Number(req.params.id);
     const loan = await loans.getById(id); // also enforces existence
-    if (req.user.role === "MEMBER" && loan.memberId !== req.user.memberId) {
-      throw forbidden("You can only view your own loan computation");
-    }
+    assertMemberAccess(req.user, loan.memberId, "loan computation");
     res.json(await loans.explainSchedule(id));
   } catch (err) {
     next(err);
@@ -113,9 +108,7 @@ export async function explainLoan(req, res, next) {
 export async function explainCreditScore(req, res, next) {
   try {
     const memberId = Number(req.params.memberId);
-    if (req.user.role === "MEMBER" && req.user.memberId !== memberId) {
-      throw forbidden("You can only view your own credit computation");
-    }
+    assertMemberAccess(req.user, memberId, "credit computation");
     const result = await credit.explain(memberId);
     if (!result) throw notFound("No credit score computed yet");
     res.json(result);

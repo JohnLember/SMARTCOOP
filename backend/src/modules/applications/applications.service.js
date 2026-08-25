@@ -1,8 +1,21 @@
+import { randomInt } from "node:crypto";
 import prisma from "../../config/db.js";
 import { badRequest, conflict, notFound } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { hashPassword } from "../../utils/password.js";
 import { promoteIfEligible } from "../members/members.service.js";
+
+// A one-time password for a newly approved member: 12 characters drawn with a
+// CSPRNG from an alphabet with the look-alikes (0/O, 1/l/I) removed, so it can
+// be read aloud or copied off a printed slip without ambiguity.
+// ~62 bits of entropy — not guessable, unlike the name-derived password this
+// replaced. `randomInt` is rejection-sampled, so the distribution stays uniform.
+const PW_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function generateTempPassword(length = 12) {
+  let out = "";
+  for (let i = 0; i < length; i++) out += PW_ALPHABET[randomInt(PW_ALPHABET.length)];
+  return out;
+}
 
 // firstName+lastName with whitespace stripped, plus a numeric suffix if taken.
 async function uniqueUsername(first, last) {
@@ -49,8 +62,10 @@ export async function create(data) {
     select: { memberNo: true },
   });
   if (member) {
+    // Deliberately vague: this endpoint is public, so naming the member number
+    // would let anyone test whether a given person is a member.
     throw conflict(
-      `${data.firstName} ${data.lastName} is already a registered member (${member.memberNo}). Contact the cooperative office if this is not you.`
+      "We could not accept this application. If you believe this is an error, please contact the cooperative office."
     );
   }
 
@@ -60,7 +75,7 @@ export async function create(data) {
   });
   if (pending) {
     throw conflict(
-      `An application for this name is already awaiting review (${pending.applicationNo}).`
+      "An application for this name is already awaiting review. Please contact the cooperative office."
     );
   }
 
@@ -179,11 +194,14 @@ export async function approve(id, { memberNo, allowDuplicate }, actorId) {
     },
   });
 
-  // Create their MEMBER login. Username = firstName+lastName; password =
-  // lastName+currentYear+"pass". Plaintext is returned once so staff can hand
-  // it over — it is not stored anywhere in readable form.
+  // Create their MEMBER login. The username is still derived from the name so
+  // staff can recognise it, but the password MUST NOT be: it used to be
+  // `lastName + currentYear + "pass"`, which anyone who knew a member's surname
+  // could compute — and the member list is visible to every staff account and
+  // printed on receipts. That made every approved member's account trivially
+  // takeable. It is now random and returned once for staff to hand over.
   const username = await uniqueUsername(app.firstName, app.lastName);
-  const password = `${app.lastName}${new Date().getFullYear()}pass`.replace(/\s+/g, "");
+  const password = generateTempPassword();
   await prisma.user.create({
     data: { username, passwordHash: await hashPassword(password), role: "MEMBER", memberId: member.id },
   });

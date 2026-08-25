@@ -2,11 +2,13 @@ import { Router } from "express";
 import * as controller from "./applications.controller.js";
 import { authenticate } from "../../middleware/auth.js";
 import { requireRole } from "../../middleware/requireRole.js";
+import { publicWriteLimiter } from "../../middleware/rateLimit.js";
 
 const router = Router();
 
 // --- Public (no auth): prospective members apply ---
-router.post("/", controller.create);
+// Public and unauthenticated, so it is the natural spam target.
+router.post("/", publicWriteLimiter, controller.create);
 router.get("/barangays", controller.barangays);
 
 // --- Staff only: review applications ---

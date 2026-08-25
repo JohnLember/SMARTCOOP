@@ -15,18 +15,54 @@ import financeRoutes from "./modules/finance/finance.routes.js";
 import maoRoutes from "./modules/mao/mao.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
+import { apiLimiter } from "./middleware/rateLimit.js";
 
 const app = express();
 
+// Behind a reverse proxy (nginx, a PaaS router) req.ip is the proxy unless we
+// trust the forwarded header — without this every client shares one rate-limit
+// bucket. Kept to a single hop so the header cannot be spoofed further upstream.
+if (process.env.TRUST_PROXY) app.set("trust proxy", 1);
+
 app.use(helmet());
+
+// Allowed browser origins. This used to fall back to "*", which let any site on
+// the internet call this authenticated API from a victim's browser. There is no
+// safe wildcard for an app that serves member records, so a missing/blank
+// CORS_ORIGIN now means "no cross-origin access" rather than "everyone".
+const allowedOrigins = (process.env.CORS_ORIGIN ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+if (allowedOrigins.length === 0) {
+  console.warn(
+    "[security] CORS_ORIGIN is not set — all cross-origin browser requests will be refused."
+  );
+}
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN?.split(",") ?? "*",
+    // Same-origin and non-browser callers send no Origin header; those are not
+    // what CORS defends against, so they pass through.
+    origin: (origin, cb) =>
+      !origin || allowedOrigins.includes(origin)
+        ? cb(null, true)
+        : cb(new Error("Origin not allowed by CORS")),
     credentials: true,
   })
 );
-app.use(express.json());
-app.use(morgan("dev"));
+
+// Bounded request bodies. The default is 100kb; member profile photos are sent
+// as base64 data URLs, so the JSON parser needs headroom — but an explicit cap
+// keeps a single request from tying up memory.
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: false, limit: "100kb" }));
+
+// Combined format in production keeps a real access log; "dev" is for humans.
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
+
+app.use("/api", apiLimiter);
 
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 

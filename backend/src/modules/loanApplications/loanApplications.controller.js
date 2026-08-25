@@ -1,6 +1,7 @@
 import { z } from "zod";
 import * as service from "./loanApplications.service.js";
 import { forbidden } from "../../utils/httpError.js";
+import { assertMemberAccess, memberScopeFor } from "../../utils/access.js";
 
 const isStaff = (u) => u.role === "ADMIN" || u.role === "STAFF";
 
@@ -33,9 +34,9 @@ export async function create(req, res, next) {
 
 export async function list(req, res, next) {
   try {
-    if (req.user.role === "MEMBER") {
-      return res.json(await service.listForMember(req.user.memberId));
-    }
+    // Staff review every application; a member sees only their own.
+    const scope = memberScopeFor(req.user);
+    if (scope !== null) return res.json(await service.listForMember(scope));
     res.json(await service.list(req.query));
   } catch (err) {
     next(err);
@@ -45,9 +46,7 @@ export async function list(req, res, next) {
 export async function getById(req, res, next) {
   try {
     const app = await service.getById(Number(req.params.id));
-    if (req.user.role === "MEMBER" && app.memberId !== req.user.memberId) {
-      throw forbidden("You can only view your own loan application");
-    }
+    assertMemberAccess(req.user, app.memberId, "loan application");
     res.json(app);
   } catch (err) {
     next(err);

@@ -3,6 +3,7 @@ import * as batches from "./batches.service.js";
 import * as deliveries from "./deliveries.service.js";
 import * as receipts from "./receipts.service.js";
 import { forbidden } from "../../utils/httpError.js";
+import { assertMemberAccess, memberScopeFor } from "../../utils/access.js";
 
 const isStaff = (user) => user.role === "ADMIN" || user.role === "STAFF";
 
@@ -76,10 +77,9 @@ const deliverySchema = z.object({
 
 export async function listDeliveries(req, res, next) {
   try {
-    // Members may only list their own deliveries.
-    if (req.user.role === "MEMBER") {
-      return res.json(await deliveries.list({ memberId: req.user.memberId }));
-    }
+    // Staff see every delivery; a member sees only their own; nobody else.
+    const scope = memberScopeFor(req.user);
+    if (scope !== null) return res.json(await deliveries.list({ memberId: scope }));
     res.json(await deliveries.list(req.query));
   } catch (err) {
     next(err);
@@ -89,9 +89,7 @@ export async function listDeliveries(req, res, next) {
 export async function getDelivery(req, res, next) {
   try {
     const delivery = await deliveries.getById(Number(req.params.id));
-    if (req.user.role === "MEMBER" && delivery.memberId !== req.user.memberId) {
-      throw forbidden("You can only view your own deliveries");
-    }
+    assertMemberAccess(req.user, delivery.memberId, "deliveries");
     res.json(delivery);
   } catch (err) {
     next(err);
@@ -118,9 +116,7 @@ export async function deductionDefaults(_req, res, next) {
 export async function explainDelivery(req, res, next) {
   try {
     const delivery = await deliveries.getById(Number(req.params.id));
-    if (req.user.role === "MEMBER" && delivery.memberId !== req.user.memberId) {
-      throw forbidden("You can only view your own delivery computation");
-    }
+    assertMemberAccess(req.user, delivery.memberId, "delivery computation");
     res.json(await deliveries.explainDelivery(Number(req.params.id)));
   } catch (err) {
     next(err);
@@ -131,9 +127,8 @@ export async function explainDelivery(req, res, next) {
 
 export async function listReceipts(req, res, next) {
   try {
-    if (req.user.role === "MEMBER") {
-      return res.json(await receipts.list({ memberId: req.user.memberId }));
-    }
+    const scope = memberScopeFor(req.user);
+    if (scope !== null) return res.json(await receipts.list({ memberId: scope }));
     res.json(await receipts.list(req.query));
   } catch (err) {
     next(err);
@@ -143,9 +138,7 @@ export async function listReceipts(req, res, next) {
 export async function getReceipt(req, res, next) {
   try {
     const receipt = await receipts.getById(Number(req.params.id));
-    if (req.user.role === "MEMBER" && receipt.memberId !== req.user.memberId) {
-      throw forbidden("You can only view your own receipts");
-    }
+    assertMemberAccess(req.user, receipt.memberId, "receipts");
     res.json(receipt);
   } catch (err) {
     next(err);
