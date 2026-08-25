@@ -16,6 +16,7 @@ const pickerSelect = {
   lastName: true,
   membershipType: true,
   status: true,
+  dateJoined: true,
   barangay: true,
   user: { select: { id: true, username: true, status: true } },
 };
