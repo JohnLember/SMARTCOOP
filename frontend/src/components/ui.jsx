@@ -1,6 +1,6 @@
 // Small Tailwind-based design system shared across SMARTCOOP.
-import { useEffect } from "react";
-import { X, ArrowLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, ArrowLeft, ChevronDown, Search } from "lucide-react";
 import { useNavigate } from "react-router";
 
 // The tapping-cut motif from the landing page, reused sparingly as a brand
@@ -193,6 +193,111 @@ export function Card({ className = "", children }) {
       className={`rounded-[var(--radius-surface)] border border-[var(--line)] bg-white p-4 sm:p-5 ${className}`}
     >
       {children}
+    </div>
+  );
+}
+
+// Searchable member dropdown: click to open a panel with a search box inside
+// that filters by member no. or name, then click a result to select it. A plain
+// <select> is unusable against a roster of hundreds. Shared by the delivery form
+// and the loan form; `value` / `onChange` take the member id as a string, so it
+// drops into the same form state a <Select> was holding.
+export function MemberCombobox({ label, members, value, onChange, placeholder = "Select…" }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const selected = members.find((m) => String(m.id) === String(value));
+  const q = query.trim().toLowerCase();
+  // Every whitespace-separated term must hit the number or the name, so a full
+  // name matches the way it does in the members list.
+  const filtered = q
+    ? members.filter((m) => {
+        const hay = `${m.memberNo} ${m.firstName} ${m.middleName ?? ""} ${m.lastName}`.toLowerCase();
+        return q.split(/\s+/).every((t) => hay.includes(t));
+      })
+    : members;
+
+  function pick(m) {
+    onChange(String(m.id));
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      {label && (
+        <span className="mb-1.5 block text-sm font-medium text-[var(--ink-body)]">{label}</span>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="focus-ring flex w-full items-center justify-between rounded-[var(--radius-control)] border border-[var(--line-strong)] bg-white px-3 py-2 text-left text-sm outline-none transition-colors hover:border-[#cfceca]"
+      >
+        <span className={`truncate ${selected ? "text-[var(--ink-body)]" : "text-[var(--ink-faint)]"}`}>
+          {selected
+            ? `${selected.memberNo} — ${selected.firstName} ${selected.lastName}`
+            : placeholder}
+        </span>
+        <ChevronDown size={16} className="ml-2 flex-none text-[var(--ink-muted)]" />
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-1 w-full min-w-64 overflow-hidden rounded-[var(--radius-control)] border border-[var(--line)] bg-white shadow-[var(--shadow-popover)]">
+          <div className="flex items-center gap-2 border-b border-[#F2F1ED] px-3 py-2">
+            <Search size={15} className="flex-none text-[var(--ink-muted)]" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+              placeholder="Search by member no. or name…"
+              aria-label="Search members"
+              className="w-full text-sm outline-none placeholder:text-[var(--ink-faint)]"
+            />
+          </div>
+          <ul role="listbox" className="max-h-60 overflow-y-auto py-1">
+            {filtered.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => pick(m)}
+                  role="option"
+                  aria-selected={String(m.id) === String(value)}
+                  className={`focus-ring block w-full px-3 py-2 text-left text-sm hover:bg-[var(--brand-tint)] ${
+                    String(m.id) === String(value)
+                      ? "bg-[var(--brand-tint)] font-medium text-[var(--brand)]"
+                      : "text-[var(--ink-body)]"
+                  }`}
+                >
+                  {m.memberNo} — {m.firstName} {m.lastName}
+                </button>
+              </li>
+            ))}
+            {filtered.length === 0 && (
+              <li className="px-3 py-4 text-center text-sm text-[var(--ink-muted)]">
+                No members match “{query.trim()}”.
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

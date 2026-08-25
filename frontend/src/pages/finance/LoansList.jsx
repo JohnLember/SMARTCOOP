@@ -2,7 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination, Modal, DataTable} from "../../components/ui";
+import {
+  Button,
+  Card,
+  Input,
+  Select,
+  Spinner,
+  PageHeader,
+  Badge,
+  RiskBadge,
+  Pagination,
+  Modal,
+  DataTable,
+  MemberCombobox,
+} from "../../components/ui";
 import { usePagination } from "../../lib/usePagination";
 import { Plus, AlertTriangle, Search, X } from "lucide-react";
 
@@ -118,19 +131,14 @@ export default function LoansList() {
       <Modal open={show} onClose={() => setShow(false)} title="New loan" wide>
         <form onSubmit={submit} className="grid grid-cols-5 items-end gap-3">
           {error && <p className="col-span-5 text-sm text-[#9F2F2D]">{error}</p>}
-            <Select
+            {/* Only Regular members are loaded here, but that is still a long
+                list — searchable, same control as the delivery form. */}
+            <MemberCombobox
               label="Member"
+              members={members}
               value={form.memberId}
-              onChange={(e) => setForm({ ...form, memberId: e.target.value })}
-              required
-            >
-              <option value="">Select…</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.memberNo} — {m.firstName} {m.lastName}
-                </option>
-              ))}
-            </Select>
+              onChange={(memberId) => setForm({ ...form, memberId })}
+            />
             <Input label="Principal (₱)" type="number" step="0.01" value={form.principalAmount} onChange={(e) => setForm({ ...form, principalAmount: e.target.value })} required />
             <Input label="Interest %/mo" type="number" step="0.01" value={form.interestRate} onChange={(e) => setForm({ ...form, interestRate: e.target.value })} required />
             <Input label="Term (months)" type="number" value={form.termMonths} onChange={(e) => setForm({ ...form, termMonths: e.target.value })} required />
