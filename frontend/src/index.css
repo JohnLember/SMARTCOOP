@@ -230,29 +230,7 @@ body {
   .card-lift:hover { transform: none; }
 }
 
-/* --- Notification rows: swipe-to-delete + list enter/exit ---------------- */
-/* Only transform and opacity animate here; the row's transform is written
-   directly on the element during a drag (never a CSS var on the parent, which
-   would restyle every child). */
-.notif-row {
-  touch-action: pan-y;
-  /* Clip the surface as it slides right, or the card overhangs the page edge
-     mid-swipe. `clip` on one axis only — `hidden` would force the other axis to
-     scroll — and the small margin keeps the card's focus ring and selected ring
-     from being shaved off at the sides. */
-  overflow-x: clip;
-  overflow-y: visible;
-  overflow-clip-margin: 4px;
-}
-.notif-row-surface {
-  transition: transform 220ms var(--ease-out);
-  will-change: transform;
-}
-/* While a finger/pointer is down the surface follows it 1:1 — no transition,
-   or it would lag behind the drag. */
-.notif-row-surface[data-dragging="true"] {
-  transition: none;
-}
+/* --- Notification rows: list enter/exit ---------------------------------- */
 
 /* Enter: rows rise in. Staggered by --enter-delay, capped in the component so a
    long list never feels slow. */
@@ -265,33 +243,24 @@ body {
   animation-delay: var(--enter-delay, 0ms);
 }
 
-/* Exit: the row leaves the way it was pushed — out to the right — then collapses
-   its own height so the list closes the gap. Faster than the enter (200ms vs
-   260ms): the system responding should outpace the user deciding. */
+/* Exit: fade, then collapse the row's height so the list closes the gap.
+   Deletion is chosen from the checkbox now, so there is no direction to travel
+   in — a sideways exit would be arbitrary motion. Faster than the enter (200ms
+   vs 260ms): the system responding should outpace the user deciding. */
 .notif-row-leaving {
   animation: notif-leave 200ms var(--ease-out) both;
   overflow: hidden;
 }
 @keyframes notif-leave {
-  from { opacity: 1; transform: translateX(0); max-height: 320px; margin-bottom: 0.75rem; }
-  60% { opacity: 0; transform: translateX(40%); max-height: 320px; margin-bottom: 0.75rem; }
-  to { opacity: 0; transform: translateX(40%); max-height: 0; margin-bottom: 0; }
-}
-
-/* The delete action sitting under the row, revealed by swiping right. */
-.notif-swipe-action {
-  transition: opacity 160ms var(--ease-out);
+  from { opacity: 1; max-height: 320px; margin-bottom: 0.75rem; }
+  55% { opacity: 0; max-height: 320px; margin-bottom: 0.75rem; }
+  to { opacity: 0; max-height: 0; margin-bottom: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notif-row-surface { transition: none; }
   .notif-row-enter { animation: none; }
-  /* Keep the collapse (it prevents a jarring jump) but drop the travel. */
-  .notif-row-leaving { animation: notif-leave-reduced 160ms var(--ease-out) both; }
-  @keyframes notif-leave-reduced {
-    from { opacity: 1; max-height: 320px; margin-bottom: 0.75rem; }
-    to { opacity: 0; max-height: 0; margin-bottom: 0; }
-  }
+  /* Keep the collapse — it prevents a jarring jump — but make it quick. */
+  .notif-row-leaving { animation-duration: 120ms; }
 }
 
 /* --- "Tapping morning" concept tokens (LandingConcept) --- */
