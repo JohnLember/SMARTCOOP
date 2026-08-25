@@ -10,7 +10,7 @@ import {
   Badge,
   Modal,
   Pagination,
-  Field,
+  Field, DataTable
 } from "../components/ui";
 import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
@@ -145,8 +145,8 @@ export default function LoanApplications() {
 function LoanTable({ rows, status, onOpen }) {
   return (
     <Card className="p-0">
-      <table className="w-full text-sm">
-        <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+      <DataTable>
+        <thead>
           <tr>
             <th className="px-4 py-3 font-medium">Application No.</th>
             <th className="px-4 py-3 font-medium">Member</th>
@@ -158,7 +158,7 @@ function LoanTable({ rows, status, onOpen }) {
             <th className="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#F2F1ED]">
+        <tbody>
           {rows.map((a) => (
             <tr key={a.id} className="hover:bg-[#F7F6F3]">
               <td className="px-4 py-3 font-medium text-[#346538]">{a.applicationNo}</td>
@@ -181,13 +181,13 @@ function LoanTable({ rows, status, onOpen }) {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={8} className="px-4 py-10 text-center text-[#B0AFAB]">
+              <td colSpan={8} className="px-4 py-10 text-center text-[#5F5E5A]">
                 No {status ? status.toLowerCase() : ""} loan applications.
               </td>
             </tr>
           )}
         </tbody>
-      </table>
+      </DataTable>
     </Card>
   );
 }
@@ -300,13 +300,13 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
             )}
           </div>
           {deliveries === null ? (
-            <p className="text-sm text-[#B0AFAB]">Loading…</p>
+            <p className="text-sm text-[#5F5E5A]">Loading…</p>
           ) : deliveries.length === 0 ? (
-            <p className="text-sm text-[#B0AFAB]">No deliveries recorded for this member yet.</p>
+            <p className="text-sm text-[#5F5E5A]">No deliveries recorded for this member yet.</p>
           ) : (
             <div className="max-h-56 overflow-y-auto rounded-lg border border-[#F2F1ED]">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-[#F7F6F3] text-left text-[#787774]">
+              <DataTable>
+                <thead>
                   <tr>
                     <th className="px-3 py-2 font-medium">Date</th>
                     <th className="px-3 py-2 font-medium">Batch</th>
@@ -314,7 +314,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
                     <th className="px-3 py-2 font-medium">Net</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#F2F1ED]">
+                <tbody>
                   {deliveries.map((d) => (
                     <tr key={d.id}>
                       <td className="px-3 py-2 text-[#787774]">{formatDate(d.deliveryDate)}</td>
@@ -331,7 +331,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           )}
         </div>
@@ -398,7 +398,7 @@ function LoanReviewModal({ application, onClose, onReviewed }) {
               <span className="text-sm text-[#787774]">Status:</span>
               <Badge color={STATUS_COLOR[application.status]}>{application.status}</Badge>
               {application.reviewedAt && (
-                <span className="text-sm text-[#B0AFAB]">on {formatDate(application.reviewedAt)}</span>
+                <span className="text-sm text-[#5F5E5A]">on {formatDate(application.reviewedAt)}</span>
               )}
             </div>
             {application.reviewNote && (

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination, Modal } from "../../components/ui";
+import { Button, Card, Input, Select, Spinner, PageHeader, Badge, RiskBadge, Pagination, Modal, DataTable} from "../../components/ui";
 import { usePagination } from "../../lib/usePagination";
 import { Plus, AlertTriangle, Search, X } from "lucide-react";
 
@@ -232,8 +232,8 @@ export default function LoansList() {
         <Spinner />
       ) : (
         <Card className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+          <DataTable>
+            <thead>
               <tr>
                 <th className="px-4 py-3 font-medium">Member</th>
                 <th className="px-4 py-3 font-medium">Principal</th>
@@ -243,7 +243,7 @@ export default function LoansList() {
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F2F1ED]">
+            <tbody>
               {pageItems.map((l) => (
                 <tr key={l.id} className="hover:bg-[#F7F6F3]">
                   <td className="px-4 py-3">
@@ -262,11 +262,11 @@ export default function LoansList() {
               ))}
               {loans.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">No loans yet.</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">No loans yet.</td>
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </Card>
       )}
 

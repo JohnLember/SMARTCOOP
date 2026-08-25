@@ -1,4 +1,5 @@
 // Small Tailwind-based design system shared across SMARTCOOP.
+import { useEffect } from "react";
 import { X, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router";
 
@@ -32,7 +33,7 @@ export function BackButton({ to, label = "Back", className = "" }) {
   return (
     <button
       onClick={() => (to ? navigate(to) : navigate(-1))}
-      className={`mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#787774] transition hover:text-[#346538] ${className}`}
+      className={`focus-ring mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#787774] transition hover:text-[#346538] ${className}`}
     >
       <ArrowLeft size={16} />
       {label}
@@ -40,101 +41,203 @@ export function BackButton({ to, label = "Back", className = "" }) {
   );
 }
 
+// On phones this is a bottom sheet (thumb-reachable, full width); from `sm` up
+// it is a centred dialog. Escape closes it and the page behind it stops
+// scrolling, so the modal is the only thing the user can move.
 export function Modal({ open, onClose, title, children, wide = false }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => e.key === "Escape" && onClose?.();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
       onClick={onClose}
+      role="presentation"
     >
       <div
-        className={`max-h-[85vh] w-full ${wide ? "max-w-3xl" : "max-w-xl"} overflow-y-auto rounded-xl border border-[#EAEAEA] bg-white p-6 shadow-[0_20px_60px_rgba(17,17,17,0.14)]`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === "string" ? title : undefined}
+        className={`flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--radius-surface)] border border-[var(--line)] bg-white shadow-[var(--shadow-overlay)] sm:max-h-[85vh] sm:rounded-[var(--radius-surface)] ${
+          wide ? "sm:max-w-3xl" : "sm:max-w-xl"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-[#111111]">{title}</h2>
-          <button onClick={onClose} className="text-[#B0AFAB] transition-colors hover:text-[#111111]">
-            <X size={20} />
+        {/* Sticky header so the title and the way out stay reachable in a long form. */}
+        <div className="flex flex-none items-center justify-between gap-4 border-b border-[var(--line)] px-5 py-3.5 sm:px-6">
+          <h2 className="text-base font-semibold text-[var(--ink)]">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="focus-ring btn-press -mr-1.5 flex h-9 w-9 flex-none items-center justify-center rounded-[var(--radius-control)] text-[var(--ink-muted)] hover:bg-[var(--sunken)] hover:text-[var(--ink)]"
+          >
+            <X size={18} />
           </button>
         </div>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
       </div>
     </div>
   );
 }
 
-export function Button({ variant = "primary", className = "", ...props }) {
+// One button vocabulary for the whole shell. `size="lg"` is for member-facing
+// primary actions on phones; coarse pointers get a 44px floor either way.
+const BTN_SIZES = {
+  sm: "h-8 gap-1.5 px-2.5 text-xs",
+  md: "h-9 gap-2 px-3.5 text-sm",
+  lg: "h-11 gap-2 px-5 text-sm",
+};
+
+export function Button({ variant = "primary", size = "md", className = "", ...props }) {
   const base =
-    "btn-press inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#346538]/30 disabled:opacity-50 disabled:cursor-not-allowed";
+    "btn-press focus-ring touch-target inline-flex items-center justify-center rounded-[var(--radius-control)] font-medium whitespace-nowrap disabled:opacity-45 disabled:pointer-events-none";
   const variants = {
-    primary: "bg-[#346538] text-white hover:bg-[#2b5330]",
-    secondary: "bg-white text-[#2F3437] border border-[#EAEAEA] hover:bg-[#F7F6F3]",
-    danger: "bg-[#9F2F2D] text-white hover:bg-[#8a2725]",
-    ghost: "text-[#787774] hover:bg-[#F2F1ED] hover:text-[#111111]",
+    primary: "bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)]",
+    secondary:
+      "border border-[var(--line-strong)] bg-white text-[var(--ink-body)] hover:bg-[var(--sunken)] hover:border-[#cfceca]",
+    danger: "bg-[var(--danger)] text-white hover:bg-[#8a2725]",
+    ghost: "text-[var(--ink-muted)] hover:bg-[#F2F1ED] hover:text-[var(--ink)]",
   };
-  return <button className={`${base} ${variants[variant]} ${className}`} {...props} />;
+  return (
+    <button
+      type={props.type ?? "button"}
+      className={`${base} ${BTN_SIZES[size] ?? BTN_SIZES.md} ${variants[variant]} ${className}`}
+      {...props}
+    />
+  );
 }
 
-export function Input({ label, error, className = "", ...props }) {
+// Shared field chrome, so an input, a select and a textarea are the same control
+// with different innards. Error state is announced, not just coloured red.
+const FIELD =
+  "w-full rounded-[var(--radius-control)] border bg-white px-3 py-2 text-sm text-[var(--ink-body)] outline-none transition-colors placeholder:text-[var(--ink-faint)] disabled:cursor-not-allowed disabled:bg-[var(--sunken)] disabled:text-[var(--ink-muted)] focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/25";
+const fieldBorder = (error) => (error ? "border-[var(--danger)]" : "border-[var(--line-strong)]");
+
+function FieldShell({ label, error, hint, required, children }) {
   return (
     <label className="block">
       {label && (
-        <span className="mb-1 block text-sm font-medium text-[#2F3437]">
+        <span className="mb-1.5 block text-sm font-medium text-[var(--ink-body)]">
           {label}
-          {props.required && <span className="text-[#9F2F2D]"> *</span>}
+          {required && (
+            <span className="text-[var(--danger)]" aria-hidden="true">
+              {" "}
+              *
+            </span>
+          )}
         </span>
       )}
-      <input
-        className={`w-full rounded-lg border border-[#EAEAEA] bg-white px-3 py-2 text-sm text-[#2F3437] outline-none transition-colors focus:border-[#346538] focus:ring-1 focus:ring-[#346538] ${className}`}
-        {...props}
-      />
-      {error && <span className="mt-1 block text-xs text-[#9F2F2D]">{error}</span>}
+      {children}
+      {error ? (
+        <span className="mt-1.5 block text-xs font-medium text-[var(--danger)]">{error}</span>
+      ) : (
+        hint && <span className="mt-1.5 block text-xs text-[var(--ink-muted)]">{hint}</span>
+      )}
     </label>
   );
 }
 
-export function Select({ label, error, children, className = "", ...props }) {
+export function Input({ label, error, hint, className = "", ...props }) {
   return (
-    <label className="block">
-      {label && (
-        <span className="mb-1 block text-sm font-medium text-[#2F3437]">
-          {label}
-          {props.required && <span className="text-[#9F2F2D]"> *</span>}
-        </span>
-      )}
+    <FieldShell label={label} error={error} hint={hint} required={props.required}>
+      <input
+        aria-invalid={error ? true : undefined}
+        className={`${FIELD} ${fieldBorder(error)} ${className}`}
+        {...props}
+      />
+    </FieldShell>
+  );
+}
+
+export function Select({ label, error, hint, children, className = "", ...props }) {
+  return (
+    <FieldShell label={label} error={error} hint={hint} required={props.required}>
       <select
-        className={`w-full rounded-lg border border-[#EAEAEA] bg-white px-3 py-2 text-sm text-[#2F3437] outline-none transition-colors focus:border-[#346538] focus:ring-1 focus:ring-[#346538] ${className}`}
+        aria-invalid={error ? true : undefined}
+        className={`${FIELD} ${fieldBorder(error)} cursor-pointer ${className}`}
         {...props}
       >
         {children}
       </select>
-      {error && <span className="mt-1 block text-xs text-[#9F2F2D]">{error}</span>}
-    </label>
+    </FieldShell>
   );
 }
 
-export function Textarea({ label, className = "", ...props }) {
+export function Textarea({ label, error, hint, className = "", ...props }) {
   return (
-    <label className="block">
-      {label && (
-        <span className="mb-1 block text-sm font-medium text-[#2F3437]">
-          {label}
-          {props.required && <span className="text-[#9F2F2D]"> *</span>}
-        </span>
-      )}
+    <FieldShell label={label} error={error} hint={hint} required={props.required}>
       <textarea
         rows={3}
-        className={`w-full rounded-lg border border-[#EAEAEA] bg-white px-3 py-2 text-sm text-[#2F3437] outline-none transition-colors focus:border-[#346538] focus:ring-1 focus:ring-[#346538] ${className}`}
+        aria-invalid={error ? true : undefined}
+        className={`${FIELD} ${fieldBorder(error)} ${className}`}
         {...props}
       />
-    </label>
+    </FieldShell>
   );
 }
 
 export function Card({ className = "", children }) {
   return (
-    <div className={`rounded-xl border border-[#EAEAEA] bg-white p-5 ${className}`}>
+    <div
+      className={`rounded-[var(--radius-surface)] border border-[var(--line)] bg-white p-4 sm:p-5 ${className}`}
+    >
       {children}
+    </div>
+  );
+}
+
+// Tables scroll inside their own card instead of being clipped by the page.
+// Without this the right-hand columns are simply unreachable on a phone.
+export function DataTable({ children, className = "" }) {
+  return (
+    <div className="overflow-x-auto overscroll-x-contain">
+      <table className={`data-table ${className}`}>{children}</table>
+    </div>
+  );
+}
+
+// The row a table shows when it has nothing to show. Says what would be here
+// and, where there is one, how to put it there.
+export function EmptyRow({ colSpan, title, hint, action }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-4 py-12 text-center">
+        <p className="text-sm font-medium text-[var(--ink-body)]">{title}</p>
+        {hint && <p className="mx-auto mt-1 max-w-sm text-sm text-[var(--ink-muted)]">{hint}</p>}
+        {action && <div className="mt-4 flex justify-center">{action}</div>}
+      </td>
+    </tr>
+  );
+}
+
+// Loading placeholder shaped like the table that's coming, so the page doesn't
+// jump when the data lands.
+export function TableSkeleton({ rows = 6, cols = 5 }) {
+  return (
+    <div className="p-4" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Loading…</span>
+      {Array.from({ length: rows }).map((_, r) => (
+        <div key={r} className="flex gap-3 py-2.5" style={{ opacity: 1 - r * 0.1 }}>
+          {Array.from({ length: cols }).map((_, c) => (
+            <div
+              key={c}
+              className="skeleton h-4 flex-1"
+              style={c === 0 ? { maxWidth: 120 } : undefined}
+            />
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
@@ -164,17 +267,24 @@ export function Spinner() {
 
 export function PageHeader({ eyebrow, title, subtitle, actions }) {
   return (
-    <div className="page-head mb-8 flex items-start justify-between gap-4">
-      <div>
+    <div className="page-head mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0">
         {eyebrow && (
-          <p className="font-mono-meta mb-1.5 text-[11px] uppercase tracking-[0.16em] text-[#B0AFAB]">
+          <p className="font-mono-meta mb-1.5 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">
             {eyebrow}
           </p>
         )}
-        <h1 className="font-serif-display text-3xl font-light text-[#111111]">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#787774]">{subtitle}</p>}
+        <h1 className="font-serif-display text-2xl font-light text-[var(--ink)] sm:text-3xl">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--ink-faint)]">
+            {subtitle}
+          </p>
+        )}
       </div>
-      {actions && <div className="flex flex-none gap-2">{actions}</div>}
+      {/* Wraps on a phone instead of squeezing the title into one column. */}
+      {actions && <div className="flex flex-wrap gap-2 sm:flex-none">{actions}</div>}
     </div>
   );
 }
@@ -187,17 +297,29 @@ const ACCENTS = {
   red: "bg-[#FDEBEC] text-[#9F2F2D]",
 };
 
-export function StatCard({ label, value, icon: Icon, accent = "emerald" }) {
+// The figure is the point: label above in muted small caps, value large and
+// tabular so a column of these lines up. Icon is a quiet marker, not the hero.
+export function StatCard({ label, value, hint, icon: Icon, accent = "emerald" }) {
   return (
-    <Card className="card-lift flex items-center gap-4">
+    <Card className="flex items-center gap-3 sm:gap-4">
       {Icon && (
-        <div className={`rounded-[10px] p-3 ${ACCENTS[accent] ?? ACCENTS.emerald}`}>
-          <Icon size={22} />
+        <div
+          aria-hidden="true"
+          className={`flex h-10 w-10 flex-none items-center justify-center rounded-[var(--radius-control)] ${
+            ACCENTS[accent] ?? ACCENTS.emerald
+          }`}
+        >
+          <Icon size={19} />
         </div>
       )}
-      <div>
-        <p className="text-sm text-[#787774]">{label}</p>
-        <p className="tabular text-2xl font-bold text-[#111111]">{value}</p>
+      <div className="min-w-0">
+        <p className="truncate text-xs font-medium uppercase tracking-[0.04em] text-[var(--ink-muted)]">
+          {label}
+        </p>
+        <p className="tabular mt-0.5 truncate text-xl font-semibold text-[var(--ink)] sm:text-2xl">
+          {value}
+        </p>
+        {hint && <p className="mt-0.5 truncate text-xs text-[var(--ink-faint)]">{hint}</p>}
       </div>
     </Card>
   );
@@ -232,33 +354,45 @@ function pageRange(page, pageCount) {
 }
 
 // Table pager with numbered pages between Previous / Next. Nothing when 1 page.
+// On a phone the numbers give way to a "Page 2 of 9" readout so the control
+// never wraps into three lines of tiny targets.
 export function Pagination({ page, pageCount, onPage }) {
   if (pageCount <= 1) return null;
   return (
-    <div className="mt-4 flex items-center justify-end gap-2">
+    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-2 sm:justify-end">
       <Button variant="secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>
         Previous
       </Button>
-      {pageRange(page, pageCount).map((p, i) =>
-        p === "…" ? (
-          <span key={`gap-${i}`} className="px-1 text-sm text-[#B0AFAB]">
-            …
-          </span>
-        ) : (
-          <Button
-            key={p}
-            variant={p === page ? "primary" : "secondary"}
-            onClick={() => onPage(p)}
-            className="min-w-9 px-3"
-          >
-            {p}
-          </Button>
-        )
-      )}
+
+      <span className="tabular text-sm text-[var(--ink-muted)] sm:hidden">
+        Page {page} of {pageCount}
+      </span>
+
+      <div className="hidden items-center gap-1.5 sm:flex">
+        {pageRange(page, pageCount).map((p, i) =>
+          p === "…" ? (
+            <span key={`gap-${i}`} aria-hidden="true" className="px-1 text-sm text-[var(--ink-muted)]">
+              …
+            </span>
+          ) : (
+            <Button
+              key={p}
+              variant={p === page ? "primary" : "secondary"}
+              onClick={() => onPage(p)}
+              aria-label={`Page ${p}`}
+              aria-current={p === page ? "page" : undefined}
+              className="tabular min-w-9 px-2"
+            >
+              {p}
+            </Button>
+          )
+        )}
+      </div>
+
       <Button variant="secondary" disabled={page >= pageCount} onClick={() => onPage(page + 1)}>
         Next
       </Button>
-    </div>
+    </nav>
   );
 }
 
@@ -301,7 +435,7 @@ export function CategoryBadge({ category }) {
 export function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-[#B0AFAB]">{label}</p>
+      <p className="text-xs text-[#5F5E5A]">{label}</p>
       <p className="text-sm font-medium text-[#2F3437]">{value || "—"}</p>
     </div>
   );

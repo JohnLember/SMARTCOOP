@@ -20,6 +20,8 @@ import {
   UserCog,
   UserPlus,
   FileCheck,
+  Menu,
+  X,
 } from "lucide-react";
 
 // Navigation items per role, grouped into sections so a long flat list
@@ -93,6 +95,10 @@ export default function Layout() {
   const location = useLocation();
   const groups = NAV[user?.role] ?? [];
 
+  // Mobile drawer. Each nav link closes it on click, so a tap never leaves the
+  // menu covering the page it just opened.
+  const [navOpen, setNavOpen] = useState(false);
+
   // Unread-notification count for the sidebar badge. Refetched on route change
   // and whenever a page fires "notifications:changed" (e.g. marking one read),
   // so the badge clears immediately without a navigation.
@@ -146,8 +152,61 @@ export default function Layout() {
     : user?.username;
 
   return (
-    <div className="flex min-h-[100dvh] bg-[#FBFBFA]">
-      <aside className="sticky top-0 flex h-[100dvh] w-64 flex-col border-r border-[#EAEAEA] bg-white">
+    <div className="flex min-h-[100dvh] bg-[var(--canvas)]">
+      {/* Mobile top bar. The sidebar is a drawer below lg — a fixed 256px rail
+          would take most of a phone screen before any content appeared. */}
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 border-b border-[var(--line)] bg-white px-3 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setNavOpen(true)}
+          aria-label="Open navigation menu"
+          aria-expanded={navOpen}
+          className="focus-ring btn-press touch-target flex h-10 w-10 items-center justify-center rounded-[var(--radius-control)] text-[var(--ink-body)] hover:bg-[var(--sunken)]"
+        >
+          <Menu size={20} />
+        </button>
+        <NavLink to="/" className="flex min-w-0 items-center gap-2">
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[var(--radius-control)] bg-[var(--ink)] text-white">
+            <Leaf size={16} />
+          </span>
+          <span className="font-serif-display truncate text-[15px] font-light tracking-tight text-[var(--ink)]">
+            SMARTCOOP
+          </span>
+        </NavLink>
+        <NavLink
+          to="/notifications"
+          aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
+          className="focus-ring btn-press touch-target relative ml-auto flex h-10 w-10 items-center justify-center rounded-[var(--radius-control)] text-[var(--ink-body)] hover:bg-[var(--sunken)]"
+        >
+          <Bell size={20} />
+          {unread > 0 && (
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[var(--danger)] ring-2 ring-white" />
+          )}
+        </NavLink>
+      </header>
+
+      {/* Drawer scrim — click anywhere off the menu to dismiss it. */}
+      {navOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-64 flex-col border-r border-[var(--line)] bg-white transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 ${
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setNavOpen(false)}
+          aria-label="Close navigation menu"
+          className="focus-ring btn-press absolute right-2 top-3 flex h-10 w-10 items-center justify-center rounded-[var(--radius-control)] text-[var(--ink-muted)] hover:bg-[var(--sunken)] lg:hidden"
+        >
+          <X size={20} />
+        </button>
         <NavLink to="/" className="flex items-center gap-2.5 px-6 py-5">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111111] text-white">
             <Leaf size={18} />
@@ -163,7 +222,7 @@ export default function Layout() {
           {groups.map((group, gi) => (
             <div key={group.section ?? gi}>
               {group.section && (
-                <p className="mb-1.5 px-3 font-mono-meta text-[10px] uppercase tracking-[0.16em] text-[#B0AFAB]">
+                <p className="mb-1.5 px-3 font-mono-meta text-[10px] uppercase tracking-[0.16em] text-[#5F5E5A]">
                   {group.section}
                 </p>
               )}
@@ -173,11 +232,12 @@ export default function Layout() {
                     key={item.to}
                     to={item.to}
                     end={item.end}
+                    onClick={() => setNavOpen(false)}
                     className={({ isActive }) =>
-                      `btn-press relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+                      `btn-press focus-ring relative flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-sm font-medium lg:py-2 ${
                         isActive
-                          ? "bg-[#EDF3EC] text-[#346538]"
-                          : "text-[#787774] hover:bg-[#F2F1ED] hover:text-[#111111]"
+                          ? "bg-[var(--brand-tint)] text-[var(--brand)]"
+                          : "text-[var(--ink-muted)] hover:bg-[#F2F1ED] hover:text-[var(--ink)]"
                       }`
                     }
                   >
@@ -209,11 +269,11 @@ export default function Layout() {
         <div className="border-t border-[#EAEAEA] p-3">
           <div className="mb-2 px-3">
             <p className="truncate text-sm font-medium text-[#2F3437]">{displayName}</p>
-            <p className="font-mono-meta text-[11px] uppercase tracking-[0.12em] text-[#B0AFAB]">{user?.role}</p>
+            <p className="font-mono-meta text-[11px] uppercase tracking-[0.12em] text-[#5F5E5A]">{user?.role}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="btn-press flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#787774] hover:bg-[#FDEBEC] hover:text-[#9F2F2D]"
+            className="focus-ring btn-press flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[#787774] hover:bg-[#FDEBEC] hover:text-[#9F2F2D]"
           >
             <LogOut size={18} />
             Sign out
@@ -221,8 +281,10 @@ export default function Layout() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-6xl px-8 py-10">
+      {/* min-w-0 lets wide tables scroll inside their own card instead of
+          stretching the flex row and pushing the page sideways. */}
+      <main className="min-w-0 flex-1 pt-14 lg:pt-0">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
           <Outlet />
         </div>
       </main>

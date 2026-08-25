@@ -45,7 +45,7 @@ export default function MemberCategoryCard({ member, canRecategorize = false, on
 
       {error && <p className="mb-2 text-sm text-[#9F2F2D]">{error}</p>}
 
-      <p className="text-xs text-[#B0AFAB]">Activity score</p>
+      <p className="text-xs text-[#5F5E5A]">Activity score</p>
       <p className="mb-3 text-3xl font-bold text-[#346538]">
         {member.activityScore != null ? member.activityScore : "—"}
       </p>
@@ -88,7 +88,7 @@ export default function MemberCategoryCard({ member, canRecategorize = false, on
               <button
                 type="button"
                 onClick={() => setShowGuide(true)}
-                className="btn-press mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#F6D9DA] bg-white px-3 py-1.5 text-xs font-medium text-[#8a2725] hover:bg-[#FDEBEC]"
+                className="focus-ring btn-press mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#F6D9DA] bg-white px-3 py-1.5 text-xs font-medium text-[#8a2725] hover:bg-[#FDEBEC]"
               >
                 <TrendingUp size={14} />
                 How to become Active
@@ -112,7 +112,7 @@ export default function MemberCategoryCard({ member, canRecategorize = false, on
         />
       </div>
       {member.lastCategorizedAt && (
-        <p className="mt-2 text-xs text-[#B0AFAB]">
+        <p className="mt-2 text-xs text-[#5F5E5A]">
           Last categorized {formatDate(member.lastCategorizedAt)}
         </p>
       )}

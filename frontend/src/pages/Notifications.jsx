@@ -126,7 +126,7 @@ export default function Notifications() {
               ) : (
                 <span>
                   Select all to delete{" "}
-                  <span className="text-[#B0AFAB]">({list.length})</span>
+                  <span className="text-[#5F5E5A]">({list.length})</span>
                 </span>
               )}
             </label>
@@ -150,7 +150,7 @@ export default function Notifications() {
       <div>
         {list.length === 0 && (
           <Card>
-            <p className="text-center text-[#B0AFAB]">No notifications yet.</p>
+            <p className="text-center text-[#5F5E5A]">No notifications yet.</p>
           </Card>
         )}
         {list.map((n, i) => (
@@ -240,11 +240,11 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
       <p className="text-sm text-[#787774]">{n.message}</p>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
         <span className="inline-flex items-center gap-1 text-[#787774]">
-          <CalendarClock size={13} className="text-[#B0AFAB]" />
-          <span className="text-[#B0AFAB]">{dateLabelFor(n)}:</span>
+          <CalendarClock size={13} className="text-[#5F5E5A]" />
+          <span className="text-[#5F5E5A]">{dateLabelFor(n)}:</span>
           <span className="font-medium text-[#2F3437]">{formatDateTime(n.dateSent)}</span>
         </span>
-        {n.sender?.username && <span className="text-[#B0AFAB]">· From {n.sender.username}</span>}
+        {n.sender?.username && <span className="text-[#5F5E5A]">· From {n.sender.username}</span>}
         {to && (
           <span className="inline-flex items-center font-medium text-[#346538]">
             · View
@@ -268,7 +268,7 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
           disabled={disabled}
           aria-label={`Delete notification: ${n.title}`}
           tabIndex={open ? 0 : -1}
-          className={`btn-press notif-swipe-action flex h-11 w-11 items-center justify-center rounded-full bg-[#9F2F2D] text-white shadow-sm ${
+          className={`focus-ring btn-press notif-swipe-action flex h-11 w-11 items-center justify-center rounded-full bg-[#9F2F2D] text-white shadow-sm ${
             open ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
         >

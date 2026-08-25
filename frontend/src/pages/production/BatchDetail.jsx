@@ -11,7 +11,7 @@ import {
   Badge,
   StatCard,
   BackButton,
-  Modal,
+  Modal, DataTable
 } from "../../components/ui";
 import { Scale, Wallet, Boxes, Plus, Search, ChevronDown, ReceiptText, Printer } from "lucide-react";
 import ShowComputation from "../../components/ShowComputation";
@@ -162,7 +162,7 @@ export default function BatchDetail() {
         }
       />
 
-      <div className="mb-4 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Total volume (kg)" value={batch.totals.totalKg.toLocaleString()} icon={Scale} />
         <StatCard label="Total amount" value={peso(batch.totals.totalAmount)} icon={Wallet} accent="blue" />
         <StatCard label="Deliveries" value={batch.deliveries.length} icon={Boxes} accent="amber" />
@@ -245,7 +245,7 @@ export default function BatchDetail() {
               </div>
             </div>
 
-            <p className="col-span-5 text-xs text-[#B0AFAB]">
+            <p className="col-span-5 text-xs text-[#5F5E5A]">
               Any due loan installment is deducted automatically on top of these. Final net appears on the
               receipt (use “Show computation”).
             </p>
@@ -261,8 +261,8 @@ export default function BatchDetail() {
       )}
 
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Member</th>
               <th className="px-4 py-3 font-medium">Weight (kg)</th>
@@ -274,7 +274,7 @@ export default function BatchDetail() {
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {batch.deliveries.map((d) => (
               <tr key={d.id} className="hover:bg-[#F7F6F3]">
                 <td className="px-4 py-3">
@@ -296,13 +296,13 @@ export default function BatchDetail() {
             ))}
             {batch.deliveries.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-[#B0AFAB]">
+                <td colSpan={8} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No deliveries recorded for this batch yet.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
     </div>
   );
@@ -384,25 +384,25 @@ function MemberCombobox({ label, members, value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between rounded-lg border border-[#EAEAEA] bg-white px-3 py-2 text-left text-sm outline-none transition-colors focus:border-[#346538] focus:ring-1 focus:ring-[#346538]"
+        className="focus-ring flex w-full items-center justify-between rounded-lg border border-[#EAEAEA] bg-white px-3 py-2 text-left text-sm outline-none transition-colors focus:border-[#346538] focus:ring-1 focus:ring-[#346538]"
       >
-        <span className={`truncate ${selected ? "text-[#2F3437]" : "text-[#B0AFAB]"}`}>
+        <span className={`truncate ${selected ? "text-[#2F3437]" : "text-[#5F5E5A]"}`}>
           {selected ? `${selected.memberNo} — ${selected.firstName} ${selected.lastName}` : "Select…"}
         </span>
-        <ChevronDown size={16} className="ml-2 flex-none text-[#B0AFAB]" />
+        <ChevronDown size={16} className="ml-2 flex-none text-[#5F5E5A]" />
       </button>
 
       {open && (
         <div className="absolute z-20 mt-1 w-full min-w-64 rounded-lg border border-[#EAEAEA] bg-white shadow-lg">
           <div className="flex items-center gap-2 border-b border-[#F2F1ED] px-3 py-2">
-            <Search size={15} className="flex-none text-[#B0AFAB]" />
+            <Search size={15} className="flex-none text-[#5F5E5A]" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
               placeholder="Search by ID or name…"
-              className="w-full text-sm outline-none placeholder:text-[#B0AFAB]"
+              className="w-full text-sm outline-none placeholder:text-[#5F5E5A]"
             />
           </div>
           <ul className="max-h-60 overflow-y-auto py-1">
@@ -411,7 +411,7 @@ function MemberCombobox({ label, members, value, onChange }) {
                 <button
                   type="button"
                   onClick={() => pick(m)}
-                  className={`block w-full px-3 py-2 text-left text-sm hover:bg-[#EDF3EC] ${
+                  className={`focus-ring block w-full px-3 py-2 text-left text-sm hover:bg-[#EDF3EC] ${
                     String(m.id) === String(value)
                       ? "bg-[#EDF3EC] font-medium text-[#346538]"
                       : "text-[#2F3437]"
@@ -422,7 +422,7 @@ function MemberCombobox({ label, members, value, onChange }) {
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="px-3 py-3 text-center text-sm text-[#B0AFAB]">No members found.</li>
+              <li className="px-3 py-3 text-center text-sm text-[#5F5E5A]">No members found.</li>
             )}
           </ul>
         </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Card, Spinner, PageHeader, Badge, Select, Pagination } from "../components/ui";
+import { Card, Spinner, PageHeader, Badge, Select, Pagination, DataTable} from "../components/ui";
 import { usePagination } from "../lib/usePagination";
 import { formatDate } from "../lib/format";
 
@@ -64,8 +64,8 @@ export default function MyLoans() {
       />
 
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Application No.</th>
               <th className="px-4 py-3 font-medium">Date applied</th>
@@ -75,7 +75,7 @@ export default function MyLoans() {
               <th className="px-4 py-3 font-medium">Outcome</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {pageItems.map((a) => {
               const loan = loanFor(a);
               return (
@@ -95,24 +95,24 @@ export default function MyLoans() {
                             {peso(loan.remainingBalance)}
                           </span>{" "}
                           remaining · {title(loan.status)}
-                          <span className="block text-xs text-[#B0AFAB]">
+                          <span className="block text-xs text-[#5F5E5A]">
                             Issued {formatDate(loan.dateIssued)}
                           </span>
                         </span>
                       ) : (
-                        <span className="text-[#B0AFAB]">Approved — loan being prepared</span>
+                        <span className="text-[#5F5E5A]">Approved — loan being prepared</span>
                       )
                     ) : a.status === "REJECTED" ? (
                       <span>
                         {a.reviewNote || "No reason given"}
                         {a.reviewedAt && (
-                          <span className="block text-xs text-[#B0AFAB]">
+                          <span className="block text-xs text-[#5F5E5A]">
                             Reviewed {formatDate(a.reviewedAt)}
                           </span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-[#B0AFAB]">Awaiting review</span>
+                      <span className="text-[#5F5E5A]">Awaiting review</span>
                     )}
                   </td>
                 </tr>
@@ -120,7 +120,7 @@ export default function MyLoans() {
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">
+                <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">
                   {apps.length === 0
                     ? "You have not applied for a loan yet. Apply from My Profile."
                     : `No ${title(status).toLowerCase()} loan applications.`}
@@ -128,7 +128,7 @@ export default function MyLoans() {
               </tr>
             )}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
 
       {filtered.length > 0 && <Pagination page={page} pageCount={pageCount} onPage={setPage} />}

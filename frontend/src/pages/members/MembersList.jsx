@@ -13,7 +13,7 @@ import {
   CategoryBadge,
   Badge,
   Avatar,
-  Pagination,
+  Pagination, DataTable
 } from "../../components/ui";
 import { Plus, Search, RefreshCw, X } from "lucide-react";
 
@@ -161,8 +161,8 @@ export default function MembersList() {
         <Spinner />
       ) : (
         <Card className="overflow-hidden p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+          <DataTable>
+            <thead>
               <tr>
                 <th className="px-4 py-3 font-medium">Member No.</th>
                 <th className="px-4 py-3 font-medium">Photo</th>
@@ -174,7 +174,7 @@ export default function MembersList() {
                 <th className="px-4 py-3 font-medium">Account status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F2F1ED]">
+            <tbody>
               {data?.items.map((m) => (
                 <tr key={m.id} className="hover:bg-[#F7F6F3]">
                   <td className="px-4 py-3">
@@ -205,13 +205,13 @@ export default function MembersList() {
               ))}
               {data?.items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={8} className="px-4 py-10 text-center text-[#5F5E5A]">
                     No members found.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </Card>
       )}
       {data && (

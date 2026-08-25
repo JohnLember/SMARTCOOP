@@ -49,7 +49,7 @@ function fileToCompressedDataUrl(file, maxDim = 400, quality = 0.82) {
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-[#B0AFAB]">{label}</p>
+      <p className="text-xs text-[#5F5E5A]">{label}</p>
       <p className="text-sm font-medium text-[#2F3437]">{value ?? "—"}</p>
     </div>
   );
@@ -105,7 +105,7 @@ export default function MemberSelfView() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="col-span-2">
           <div className="mb-4 flex items-center gap-4">
             <Avatar src={member.profilePhoto} name={`${member.firstName} ${member.lastName}`} size={64} />
@@ -113,7 +113,7 @@ export default function MemberSelfView() {
               {member.firstName} {member.lastName}
             </h3>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Membership" value={<MembershipBadge type={member.membershipType} />} />
             <Field label="Account status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
             <Field label="Barangay" value={member.barangay?.name} />
@@ -228,7 +228,7 @@ function EditProfileModal({ open, member, onClose, onSaved }) {
             )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select label="Sex" value={form.sex} onChange={(e) => setForm({ ...form, sex: e.target.value })}>
             <option value="">—</option>
             <option value="Male">Male</option>

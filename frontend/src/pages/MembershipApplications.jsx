@@ -10,7 +10,7 @@ import {
   Badge,
   Modal,
   Pagination,
-  Field,
+  Field, DataTable
 } from "../components/ui";
 import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
@@ -145,8 +145,8 @@ export default function MembershipApplications() {
 function MembershipTable({ rows, status, onOpen }) {
   return (
     <Card className="p-0">
-      <table className="w-full text-sm">
-        <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+      <DataTable>
+        <thead>
           <tr>
             <th className="px-4 py-3 font-medium">Application No.</th>
             <th className="px-4 py-3 font-medium">Applicant</th>
@@ -157,7 +157,7 @@ function MembershipTable({ rows, status, onOpen }) {
             <th className="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#F2F1ED]">
+        <tbody>
           {rows.map((a) => (
             <tr key={a.id} className="hover:bg-[#F7F6F3]">
               <td className="px-4 py-3 font-medium text-[#346538]">{a.applicationNo}</td>
@@ -179,13 +179,13 @@ function MembershipTable({ rows, status, onOpen }) {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-10 text-center text-[#B0AFAB]">
+              <td colSpan={7} className="px-4 py-10 text-center text-[#5F5E5A]">
                 No {status ? status.toLowerCase() : ""} applications.
               </td>
             </tr>
           )}
         </tbody>
-      </table>
+      </DataTable>
     </Card>
   );
 }
@@ -426,7 +426,7 @@ function ReviewModal({ application, onClose, onReviewed }) {
               <span className="text-sm text-[#787774]">Status:</span>
               <Badge color={STATUS_COLOR[application.status]}>{application.status}</Badge>
               {application.reviewedAt && (
-                <span className="text-sm text-[#B0AFAB]">on {formatDate(application.reviewedAt)}</span>
+                <span className="text-sm text-[#5F5E5A]">on {formatDate(application.reviewedAt)}</span>
               )}
             </div>
             {application.reviewNote && (

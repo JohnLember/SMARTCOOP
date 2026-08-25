@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination } from "../../components/ui";
+import { Button, Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination, DataTable} from "../../components/ui";
 import ShowComputation from "../../components/ShowComputation";
 import { formatDate } from "../../lib/format";
 import { usePagination } from "../../lib/usePagination";
@@ -74,15 +74,15 @@ export default function CreditScoring() {
         }
       />
 
-      <div className="mb-4 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Low risk" value={counts.low} icon={ShieldCheck} accent="emerald" />
         <StatCard label="Medium risk" value={counts.medium} icon={ShieldAlert} accent="amber" />
         <StatCard label="High risk" value={counts.high} icon={ShieldX} accent="red" />
       </div>
 
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Member</th>
               <th className="px-4 py-3 font-medium">Score</th>
@@ -92,7 +92,7 @@ export default function CreditScoring() {
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {pageItems.map((r) => (
               <tr key={r.id} className="hover:bg-[#F7F6F3]">
                 <td className="px-4 py-3">
@@ -127,7 +127,7 @@ export default function CreditScoring() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
 
       <Pagination page={page} pageCount={pageCount} onPage={setPage} />

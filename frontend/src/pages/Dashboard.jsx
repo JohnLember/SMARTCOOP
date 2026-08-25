@@ -42,14 +42,14 @@ export default function Dashboard() {
       />
 
       {/* Queues waiting on staff — highlighted first. */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Pending membership apps" value={stats.pending.applications} icon={FileText} accent="amber" />
         <StatCard label="Pending loan apps" value={stats.pending.loanApplications} icon={FileCheck} accent="amber" />
         <StatCard label="Active loans" value={stats.loans.active} icon={Wallet} accent="blue" />
         <StatCard label="Open batches" value={stats.batches.open} icon={Boxes} accent="blue" />
       </div>
 
-      <div className="mt-4 grid grid-cols-4 gap-4">
+      <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Active members" value={stats.members.active} icon={Users} accent="emerald" />
         <StatCard label="Associates" value={stats.members.associates} icon={UserPlus} />
         <StatCard label="Regular members" value={stats.members.regulars} icon={UserCheck} accent="emerald" />
@@ -57,25 +57,25 @@ export default function Dashboard() {
       </div>
 
       {/* Charts */}
-      <div className="mt-4 grid grid-cols-3 gap-4">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="col-span-2">
-          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Trend</p>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Trend</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Monthly rubber production (kg)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={stats.monthlyProduction}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
-              <XAxis dataKey="month" fontSize={12} stroke="#B0AFAB" />
-              <YAxis fontSize={12} stroke="#B0AFAB" />
+              <XAxis dataKey="month" fontSize={12} stroke="#A3A29E" />
+              <YAxis fontSize={12} stroke="#A3A29E" />
               <Tooltip contentStyle={TOOLTIP_STYLE} />
               <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
             </LineChart>
           </ResponsiveContainer>
           {stats.monthlyProduction.length === 0 && (
-            <p className="mt-2 text-center text-sm text-[#B0AFAB]">No delivery data in the last 12 months.</p>
+            <p className="mt-2 text-center text-sm text-[#5F5E5A]">No delivery data in the last 12 months.</p>
           )}
         </Card>
         <Card>
-          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Membership</p>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Membership</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Associate vs Regular</h3>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
@@ -101,7 +101,7 @@ export default function Dashboard() {
       </div>
 
       {/* Actionable review queues */}
-      <div className="mt-6 grid grid-cols-2 gap-4">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <QueueCard
           title="Membership applications to review"
           to="/applications"
@@ -139,7 +139,7 @@ function QueueCard({ title, to, rows, empty }) {
         </Link>
       </div>
       <div className="space-y-2">
-        {rows.length === 0 && <p className="text-sm text-[#B0AFAB]">{empty}</p>}
+        {rows.length === 0 && <p className="text-sm text-[#5F5E5A]">{empty}</p>}
         {rows.map((r) => (
           <Link
             key={r.id}
@@ -148,7 +148,7 @@ function QueueCard({ title, to, rows, empty }) {
           >
             <div>
               <p className="text-sm font-medium text-[#2F3437]">{r.primary}</p>
-              <p className="text-xs text-[#B0AFAB]">{r.meta}</p>
+              <p className="text-xs text-[#5F5E5A]">{r.meta}</p>
             </div>
             <Badge color="amber">{formatDate(r.date)}</Badge>
           </Link>

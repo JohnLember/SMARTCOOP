@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Select, Input, Spinner, PageHeader, Badge, Modal } from "../../components/ui";
+import { Button, Card, Select, Input, Spinner, PageHeader, Badge, Modal, DataTable} from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -87,7 +87,7 @@ export default function BatchesList() {
       />
 
       <Modal open={show} onClose={() => setShow(false)} title="New loading batch">
-        <form onSubmit={submit} className="grid grid-cols-2 items-end gap-3">
+        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 items-end gap-3">
           {error && <p className="col-span-2 text-sm text-[#9F2F2D]">{error}</p>}
             <Select
               label="Barangay"
@@ -148,8 +148,8 @@ export default function BatchesList() {
         <Spinner />
       ) : (
         <Card className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+          <DataTable>
+            <thead>
               <tr>
                 <th className="px-4 py-3 font-medium">Barangay</th>
                 <th className="px-4 py-3 font-medium">Period</th>
@@ -159,7 +159,7 @@ export default function BatchesList() {
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F2F1ED]">
+            <tbody>
               {batches.map((b) => (
                 <tr key={b.id} className="hover:bg-[#F7F6F3]">
                   <td className="px-4 py-3">
@@ -189,13 +189,13 @@ export default function BatchesList() {
               ))}
               {batches.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">
                     No loading batches yet.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </Card>
       )}
     </div>

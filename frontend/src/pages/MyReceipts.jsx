@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Button, Card, Spinner, PageHeader, Badge, Modal } from "../components/ui";
+import { Button, Card, Spinner, PageHeader, Badge, Modal, DataTable} from "../components/ui";
 import ReceiptDocument from "../components/ReceiptDocument";
 import { formatDate } from "../lib/format";
 import { Eye } from "lucide-react";
@@ -23,8 +23,8 @@ export default function MyReceipts() {
       <PageHeader title="My Receipts" subtitle="Official receipts for your rubber deliveries" />
 
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Receipt No.</th>
               <th className="px-4 py-3 font-medium">Date</th>
@@ -35,7 +35,7 @@ export default function MyReceipts() {
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {receipts.map((r) => {
               const membership = r.deliveryId == null;
               return (
@@ -65,13 +65,13 @@ export default function MyReceipts() {
             })}
             {receipts.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-[#B0AFAB]">
+                <td colSpan={7} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No receipts yet. Receipts are generated when the cooperative records your deliveries.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title="Receipt">

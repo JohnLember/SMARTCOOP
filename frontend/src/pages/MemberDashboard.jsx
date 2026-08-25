@@ -106,7 +106,7 @@ export default function MemberDashboard() {
         subtitle="Your deliveries, earnings and loans at a glance"
       />
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total delivered" value={`${summary.kg.toLocaleString()} kg`} icon={Scale} accent="emerald" />
         <StatCard label="Total earned" value={peso(summary.net)} icon={Coins} accent="green" />
         <StatCard label="CBU total" value={peso(summary.cbu)} icon={Wallet} accent="blue" />
@@ -114,7 +114,7 @@ export default function MemberDashboard() {
       </div>
 
       <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Activity</h3>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link to="/my-deliveries">
           <Card className="h-full transition hover:border-[#8FB392] hover:shadow">
             <div className="mb-2 flex items-center gap-2 text-[#346538]">
@@ -145,7 +145,7 @@ export default function MemberDashboard() {
               ) : (
                 <p className="text-sm text-[#787774]">across {activeLoans.length} active loans</p>
               )}
-              <p className="mt-2 text-xs text-[#B0AFAB]">Auto-deducted from your deliveries</p>
+              <p className="mt-2 text-xs text-[#5F5E5A]">Auto-deducted from your deliveries</p>
               <div className="mt-2 space-y-1">
                 {activeLoans.map((l) => (
                   <div key={l.id} className="flex items-center justify-between gap-2">
@@ -184,7 +184,7 @@ export default function MemberDashboard() {
                 </Button>
               )
             ) : (
-              <p className="text-xs text-[#B0AFAB]">
+              <p className="text-xs text-[#5F5E5A]">
                 Only <span className="font-medium text-[#2F3437]">Regular</span> members can apply
                 for a loan.
               </p>
@@ -199,8 +199,8 @@ export default function MemberDashboard() {
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid stroke="#F2F1ED" vertical={false} />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} stroke="#B0AFAB" fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} stroke="#B0AFAB" fontSize={12} width={44} />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} stroke="#A3A29E" fontSize={12} />
+              <YAxis tickLine={false} axisLine={false} stroke="#A3A29E" fontSize={12} width={44} />
               <Tooltip formatter={(v) => [`${Number(v).toLocaleString()} kg`, "Delivered"]} />
               <Line
                 type="monotone"
@@ -212,7 +212,7 @@ export default function MemberDashboard() {
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <p className="py-10 text-center text-sm text-[#B0AFAB]">
+          <p className="py-10 text-center text-sm text-[#5F5E5A]">
             No deliveries in the last 6 months yet.
           </p>
         )}
@@ -271,7 +271,7 @@ function LoanApplyModal({ open, onClose, onSubmitted }) {
           Cooperative staff will review your request. Interest is charged at the standard 5% per
           month on the diminishing balance, and repayments are auto-deducted from your deliveries.
         </p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Amount requested (₱)"
             type="number"

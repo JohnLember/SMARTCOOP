@@ -81,7 +81,7 @@ export default function MemberForm() {
           {error && (
             <div className="rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">{error}</div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Member No."
               {...register("memberNo", { required: "Required" })}

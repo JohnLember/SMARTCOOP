@@ -10,7 +10,7 @@ import {
   Spinner,
   PageHeader,
   Badge,
-  Modal,
+  Modal, DataTable
 } from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { Plus, KeyRound, Pencil, Trash2, ShieldCheck } from "lucide-react";
@@ -119,8 +119,8 @@ export default function UsersList() {
         <Spinner />
       ) : (
         <Card className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+          <DataTable>
+            <thead>
               <tr>
                 <th className="px-4 py-3 font-medium">Username</th>
                 <th className="px-4 py-3 font-medium">Role</th>
@@ -130,14 +130,14 @@ export default function UsersList() {
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F2F1ED]">
+            <tbody>
               {users.map((u) => {
                 const isMe = u.id === me?.id;
                 return (
                   <tr key={u.id} className="hover:bg-[#F7F6F3]">
                     <td className="px-4 py-3 font-medium text-[#2F3437]">
                       {u.username}
-                      {isMe && <span className="ml-2 text-xs text-[#B0AFAB]">(you)</span>}
+                      {isMe && <span className="ml-2 text-xs text-[#5F5E5A]">(you)</span>}
                     </td>
                     <td className="px-4 py-3">
                       <Badge color={ROLE_COLOR[u.role]}>{u.role}</Badge>
@@ -170,7 +170,7 @@ export default function UsersList() {
                           disabled={isMe}
                           title={u.status === "ACTIVE" ? "Deactivate" : "Activate"}
                         >
-                          <ShieldCheck size={15} className={u.status === "ACTIVE" ? "text-[#346538]" : "text-[#B0AFAB]"} />
+                          <ShieldCheck size={15} className={u.status === "ACTIVE" ? "text-[#346538]" : "text-[#5F5E5A]"} />
                         </Button>
                         <Button variant="ghost" onClick={() => remove(u)} disabled={isMe} title="Delete">
                           <Trash2 size={15} className="text-[#9F2F2D]" />
@@ -182,13 +182,13 @@ export default function UsersList() {
               })}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">
                     No accounts found.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </Card>
       )}
 
@@ -325,7 +325,7 @@ function UserModal({ modal, onClose, onSaved, membersWithoutAccount }) {
               ))}
             </Select>
             {user?.memberId && (
-              <p className="-mt-2 text-xs text-[#B0AFAB]">
+              <p className="-mt-2 text-xs text-[#5F5E5A]">
                 Member-linked accounts stay as MEMBER.
               </p>
             )}

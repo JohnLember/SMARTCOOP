@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Card, Spinner, PageHeader, StatCard, Badge } from "../components/ui";
+import { Card, Spinner, PageHeader, StatCard, Badge, DataTable} from "../components/ui";
 import ShowComputation from "../components/ShowComputation";
 import { formatDate } from "../lib/format";
 import { Scale, Wallet, Boxes } from "lucide-react";
@@ -30,15 +30,15 @@ export default function MyDeliveries() {
     <div>
       <PageHeader title="My Deliveries" subtitle="Your rubber delivery history and receipts" />
 
-      <div className="mb-4 grid grid-cols-3 gap-4">
+      <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Total delivered (kg)" value={totals.kg.toLocaleString()} icon={Scale} />
         <StatCard label="Total earned (net)" value={peso(totals.net)} icon={Wallet} accent="blue" />
         <StatCard label="Deliveries" value={deliveries.length} icon={Boxes} accent="amber" />
       </div>
 
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Batch</th>
@@ -50,7 +50,7 @@ export default function MyDeliveries() {
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {deliveries.map((d) => (
               <tr key={d.id} className="hover:bg-[#F7F6F3]">
                 <td className="px-4 py-3 text-[#787774]">{formatDate(d.deliveryDate)}</td>
@@ -72,13 +72,13 @@ export default function MyDeliveries() {
             ))}
             {deliveries.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-[#B0AFAB]">
+                <td colSpan={8} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No deliveries recorded yet.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
     </div>
   );

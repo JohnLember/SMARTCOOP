@@ -11,7 +11,7 @@ import {
   PageHeader,
   StatCard,
   Badge,
-  Modal,
+  Modal, DataTable
 } from "../../components/ui";
 import {
   BarChart,
@@ -67,7 +67,7 @@ export default function MaoDashboard() {
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total volume (kg)" value={stats.totalVolumeKg.toLocaleString()} icon={Scale} />
         <StatCard label="Total value (₱)" value={stats.totalValue.toLocaleString()} icon={Wallet} accent="blue" />
         <StatCard label="Deliveries" value={stats.totalDeliveries.toLocaleString()} icon={Boxes} accent="amber" />
@@ -81,28 +81,28 @@ export default function MaoDashboard() {
       )}
 
       {/* Charts */}
-      <div className="mt-4 grid grid-cols-2 gap-4">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
-          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Trend</p>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Trend</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Monthly production (kg)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={stats.monthlyTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
-              <XAxis dataKey="month" fontSize={12} stroke="#B0AFAB" />
-              <YAxis fontSize={12} stroke="#B0AFAB" />
+              <XAxis dataKey="month" fontSize={12} stroke="#A3A29E" />
+              <YAxis fontSize={12} stroke="#A3A29E" />
               <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#EAEAEA", fontSize: 13 }} />
               <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
         <Card>
-          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">By barangay</p>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">By barangay</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Production by barangay (kg)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={stats.byBarangay}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
-              <XAxis dataKey="barangay" fontSize={11} stroke="#B0AFAB" />
-              <YAxis fontSize={12} stroke="#B0AFAB" />
+              <XAxis dataKey="barangay" fontSize={11} stroke="#A3A29E" />
+              <YAxis fontSize={12} stroke="#A3A29E" />
               <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#EAEAEA", fontSize: 13 }} />
               <Bar dataKey="totalKg" fill="#B9701F" radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -111,7 +111,7 @@ export default function MaoDashboard() {
       </div>
 
       {/* Support programs + Affected areas + Announcement */}
-      <div className="mt-6 grid grid-cols-2 gap-4">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <SupportPrograms programs={programs} barangays={barangays} members={members} onChange={loadAll} />
         <div className="space-y-4">
           <AffectedAreas tags={tags} barangays={barangays} onChange={loadAll} />
@@ -151,7 +151,7 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
     <Card>
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Assistance</p>
+          <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Assistance</p>
           <h3 className="mt-1 font-semibold text-[#2F3437]">Support programs</h3>
         </div>
         <Button variant="secondary" onClick={() => setShow((s) => !s)}>
@@ -165,7 +165,7 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
           {error && <p className="text-sm text-[#9F2F2D]">{error}</p>}
           <Input label="Program name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Input label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} required />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select label="Target barangay" value={form.targetBarangayId} onChange={(e) => setForm({ ...form, targetBarangayId: e.target.value })}>
               <option value="">All / none</option>
               {barangays.map((b) => (
@@ -179,16 +179,16 @@ function SupportPrograms({ programs, barangays, members, onChange }) {
       )}
 
       <div className="space-y-2">
-        {programs.length === 0 && <p className="text-sm text-[#B0AFAB]">No support programs yet.</p>}
+        {programs.length === 0 && <p className="text-sm text-[#5F5E5A]">No support programs yet.</p>}
         {programs.map((p) => (
           <button
             key={p.id}
             onClick={() => setOpenId(p.id)}
-            className="flex w-full items-center justify-between rounded-lg border border-[#F2F1ED] px-3 py-2 text-left transition hover:border-[#8FB392] hover:bg-[#EDF3EC]/40"
+            className="focus-ring flex w-full items-center justify-between rounded-lg border border-[#F2F1ED] px-3 py-2 text-left transition hover:border-[#8FB392] hover:bg-[#EDF3EC]/40"
           >
             <div>
               <p className="text-sm font-medium text-[#2F3437]">{p.name}</p>
-              <p className="text-xs text-[#B0AFAB]">
+              <p className="text-xs text-[#5F5E5A]">
                 {p.type}
                 {p.targetBarangay ? ` · ${p.targetBarangay.name}` : ""} · {p._count.recipients} recipients
               </p>
@@ -292,15 +292,15 @@ function ProgramDetailModal({ programId, members, onClose, onChange }) {
               Recipients ({program.recipients.length})
             </h4>
             <div className="max-h-48 overflow-y-auto rounded-lg border border-[#F2F1ED]">
-              <table className="w-full text-sm">
-                <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+              <DataTable>
+                <thead>
                   <tr>
                     <th className="px-3 py-2 font-medium">Member</th>
                     <th className="px-3 py-2 font-medium">Qty / Amount</th>
                     <th className="px-3 py-2 font-medium">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#F2F1ED]">
+                <tbody>
                   {program.recipients.map((r) => (
                     <tr key={r.id}>
                       <td className="px-3 py-2 text-[#2F3437]">
@@ -316,17 +316,17 @@ function ProgramDetailModal({ programId, members, onClose, onChange }) {
                   ))}
                   {program.recipients.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="px-3 py-6 text-center text-[#B0AFAB]">
+                      <td colSpan={3} className="px-3 py-6 text-center text-[#5F5E5A]">
                         No recipients yet.
                       </td>
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           </div>
 
-          <form onSubmit={addRecipient} className="grid grid-cols-4 items-end gap-3 rounded-lg bg-[#F7F6F3] p-3">
+          <form onSubmit={addRecipient} className="grid grid-cols-2 lg:grid-cols-4 items-end gap-3 rounded-lg bg-[#F7F6F3] p-3">
             <div className="col-span-2">
               <Select label="Add recipient" value={rec.memberId} onChange={(e) => setRec({ ...rec, memberId: e.target.value })} required>
                 <option value="">Select member…</option>
@@ -385,14 +385,14 @@ function AffectedAreas({ tags, barangays, onChange }) {
 
   return (
     <Card>
-      <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Advisory</p>
+      <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Advisory</p>
       <h3 className="mb-3 mt-1 flex items-center gap-2 font-semibold text-[#2F3437]">
         <AlertTriangle size={16} className="text-amber-500" />
         Affected areas
       </h3>
       <form onSubmit={submit} className="mb-4 space-y-3 rounded-lg bg-[#F7F6F3] p-3">
         {error && <p className="text-sm text-[#9F2F2D]">{error}</p>}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select label="Barangay" value={form.barangayId} onChange={(e) => setForm({ ...form, barangayId: e.target.value })} required>
             <option value="">Select…</option>
             {barangays.map((b) => (
@@ -412,13 +412,13 @@ function AffectedAreas({ tags, barangays, onChange }) {
 
       <div className="space-y-2">
         {tags.filter((t) => !t.resolvedAt).length === 0 && (
-          <p className="text-sm text-[#B0AFAB]">No active affected areas.</p>
+          <p className="text-sm text-[#5F5E5A]">No active affected areas.</p>
         )}
         {tags.filter((t) => !t.resolvedAt).map((t) => (
           <div key={t.id} className="flex items-center justify-between rounded-lg border border-[#F2F1ED] px-3 py-2">
             <div>
               <p className="text-sm font-medium text-[#2F3437]">{t.barangay.name}</p>
-              <p className="text-xs text-[#B0AFAB]">{t.reason}</p>
+              <p className="text-xs text-[#5F5E5A]">{t.reason}</p>
             </div>
             <div className="flex items-center gap-2">
               <Badge color={SEVERITY_COLOR[t.severity]}>{t.severity}</Badge>
@@ -447,7 +447,7 @@ function AnnouncementComposer() {
 
   return (
     <Card>
-      <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#B0AFAB]">Outreach</p>
+      <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Outreach</p>
       <h3 className="mb-3 mt-1 flex items-center gap-2 font-semibold text-[#2F3437]">
         <Megaphone size={16} className="text-[#346538]" />
         Send announcement

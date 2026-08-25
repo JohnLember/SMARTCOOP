@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
-import { Card, Spinner, PageHeader, Modal, Badge, MembershipBadge } from "../components/ui";
+import { Card, Spinner, PageHeader, Modal, Badge, MembershipBadge, DataTable} from "../components/ui";
 import { ChevronRight } from "lucide-react";
 
 export default function Barangays() {
@@ -43,8 +43,8 @@ export default function Barangays() {
         <Spinner />
       ) : (
         <Card className="p-0">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+          <DataTable>
+            <thead>
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Code</th>
@@ -52,7 +52,7 @@ export default function Barangays() {
                 <th className="px-4 py-3" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F2F1ED]">
+            <tbody>
               {list.map((b) => (
                 <tr
                   key={b.id}
@@ -80,13 +80,13 @@ export default function Barangays() {
               ))}
               {list.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-[#B0AFAB]">
+                  <td colSpan={4} className="px-4 py-10 text-center text-[#5F5E5A]">
                     No barangays yet.
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </Card>
       )}
 
@@ -101,7 +101,7 @@ export default function Barangays() {
         ) : !members ? (
           <Spinner />
         ) : members.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[#B0AFAB]">
+          <p className="py-8 text-center text-sm text-[#5F5E5A]">
             No members are assigned to this barangay yet.
           </p>
         ) : (
@@ -110,8 +110,8 @@ export default function Barangays() {
               {members.length} member{members.length !== 1 ? "s" : ""}
             </p>
             <div className="overflow-hidden rounded-lg border border-[#EAEAEA]">
-              <table className="w-full text-sm">
-                <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+              <DataTable>
+                <thead>
                   <tr>
                     <th className="px-3 py-2 font-medium">Member No.</th>
                     <th className="px-3 py-2 font-medium">Name</th>
@@ -119,7 +119,7 @@ export default function Barangays() {
                     <th className="px-3 py-2 font-medium">Account status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#F2F1ED]">
+                <tbody>
                   {members.map((m) => (
                     <tr key={m.id} className="hover:bg-[#F7F6F3]">
                       <td className="px-3 py-2">
@@ -142,7 +142,7 @@ export default function Barangays() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           </>
         )}

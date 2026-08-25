@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../../lib/api";
-import { Card, Spinner, PageHeader, Button, Badge, MembershipBadge, Modal, Select } from "../../components/ui";
+import { Card, Spinner, PageHeader, Button, Badge, MembershipBadge, Modal, Select, DataTable} from "../../components/ui";
 import { formatDate } from "../../lib/format";
 import { FileDown } from "lucide-react";
 
@@ -101,8 +101,8 @@ export default function MembersByBarangay() {
                 {b.members.length} member{b.members.length === 1 ? "" : "s"}
               </Badge>
             </div>
-            <table className="w-full text-sm">
-              <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+            <DataTable>
+              <thead>
                 <tr>
                   <th className="px-3 py-2 font-medium">Member No.</th>
                   <th className="px-3 py-2 font-medium">Name</th>
@@ -110,7 +110,7 @@ export default function MembersByBarangay() {
                   <th className="px-3 py-2 font-medium">Date joined</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#F2F1ED]">
+              <tbody>
                 {b.members.map((m) => (
                   <tr key={m.id}>
                     <td className="px-3 py-2 text-[#2F3437]">{m.memberNo}</td>
@@ -125,13 +125,13 @@ export default function MembersByBarangay() {
                 ))}
                 {b.members.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-3 py-6 text-center text-[#B0AFAB]">
+                    <td colSpan={4} className="px-3 py-6 text-center text-[#5F5E5A]">
                       No members in this barangay.
                     </td>
                   </tr>
                 )}
               </tbody>
-            </table>
+            </DataTable>
           </Card>
         ))}
       </div>

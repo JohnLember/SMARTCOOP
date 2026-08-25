@@ -13,7 +13,7 @@ import {
   Badge,
   BackButton,
   Modal,
-  Avatar,
+  Avatar, DataTable
 } from "../../components/ui";
 import { KeyRound, Eye, Printer } from "lucide-react";
 import CreditScoreCard from "../../components/CreditScoreCard";
@@ -26,7 +26,7 @@ const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionD
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-xs text-[#B0AFAB]">{label}</p>
+      <p className="text-xs text-[#5F5E5A]">{label}</p>
       <p className="text-sm font-medium text-[#2F3437]">{value ?? "—"}</p>
     </div>
   );
@@ -129,7 +129,7 @@ export default function MemberDetail() {
         <div className="mb-4 rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">{error}</div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="col-span-2">
           <div className="mb-4 flex items-center gap-4">
             <Avatar src={member.profilePhoto} name={`${member.firstName} ${member.lastName}`} size={64} />
@@ -137,10 +137,10 @@ export default function MemberDetail() {
               <h3 className="font-semibold text-[#2F3437]">
                 {member.firstName} {member.lastName}
               </h3>
-              <p className="text-xs text-[#B0AFAB]">Profile</p>
+              <p className="text-xs text-[#5F5E5A]">Profile</p>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Membership" value={<MembershipBadge type={member.membershipType} />} />
             <Field label="Account status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
             <Field label="Sex" value={member.sex} />
@@ -201,8 +201,8 @@ export default function MemberDetail() {
 
       <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Delivery History</h3>
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Batch</th>
@@ -212,7 +212,7 @@ export default function MemberDetail() {
               <th className="px-4 py-3 font-medium">Net (receipt)</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {deliveries.map((d) => (
               <tr key={d.id} className="hover:bg-[#F7F6F3]">
                 <td className="px-4 py-3 text-[#787774]">{formatDate(d.deliveryDate)}</td>
@@ -230,19 +230,19 @@ export default function MemberDetail() {
             ))}
             {deliveries.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-[#B0AFAB]">
+                <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No deliveries recorded yet.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
 
       <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Receipts</h3>
       <Card className="p-0">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F7F6F3] text-left text-[#787774]">
+        <DataTable>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Receipt No.</th>
               <th className="px-4 py-3 font-medium">Date</th>
@@ -251,7 +251,7 @@ export default function MemberDetail() {
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F2F1ED]">
+          <tbody>
             {receipts.map((r) => (
               <tr key={r.id} className="hover:bg-[#F7F6F3]">
                 <td className="px-4 py-3 font-medium text-[#2F3437]">
@@ -270,13 +270,13 @@ export default function MemberDetail() {
             ))}
             {receipts.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-[#B0AFAB]">
+                <td colSpan={5} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No receipts yet.
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+        </DataTable>
       </Card>
 
       <Modal open={!!selectedReceipt} onClose={() => setSelectedReceipt(null)} title="Receipt">

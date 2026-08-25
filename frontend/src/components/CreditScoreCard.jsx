@@ -45,7 +45,7 @@ export default function CreditScoreCard({ memberId }) {
       {error && <p className="mb-2 text-sm text-[#9F2F2D]">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-[#B0AFAB]">Loading…</p>
+        <p className="text-sm text-[#5F5E5A]">Loading…</p>
       ) : latest ? (
         <>
           <p className="text-3xl font-bold text-[#346538]">{Number(latest.score).toFixed(1)}</p>
@@ -66,7 +66,7 @@ export default function CreditScoreCard({ memberId }) {
                   <button
                     type="button"
                     onClick={() => setShowGuide(true)}
-                    className="btn-press mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#F6D9DA] bg-white px-3 py-1.5 text-xs font-medium text-[#8a2725] hover:bg-[#FDEBEC]"
+                    className="focus-ring btn-press mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#F6D9DA] bg-white px-3 py-1.5 text-xs font-medium text-[#8a2725] hover:bg-[#FDEBEC]"
                   >
                     <TrendingUp size={14} />
                     How to improve my score
@@ -88,7 +88,7 @@ export default function CreditScoreCard({ memberId }) {
             <p>Outstanding loan balance: {peso(f?.outstandingBalance ?? 0)}</p>
             <p className="font-medium text-[#2F3437]">Suggested credit limit: {peso(f?.suggestedCreditLimit ?? 0)}</p>
           </div>
-          <p className="mt-2 text-xs text-[#B0AFAB]">Assessed {formatDate(latest.computedAt)}</p>
+          <p className="mt-2 text-xs text-[#5F5E5A]">Assessed {formatDate(latest.computedAt)}</p>
           <div className="mt-2">
             <ShowComputation
               url={`/finance/credit-scores/${memberId}/explain`}
@@ -97,7 +97,7 @@ export default function CreditScoreCard({ memberId }) {
           </div>
         </>
       ) : (
-        <p className="text-sm text-[#B0AFAB]">
+        <p className="text-sm text-[#5F5E5A]">
           No score yet — assessed automatically once there are deliveries or loans on record.
         </p>
       )}

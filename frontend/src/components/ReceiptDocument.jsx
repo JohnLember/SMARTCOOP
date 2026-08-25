@@ -56,19 +56,19 @@ export default function ReceiptDocument({ receipt }) {
       {/* Member + delivery info */}
       <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         <div>
-          <p className="text-[#B0AFAB]">Member</p>
+          <p className="text-[#5F5E5A]">Member</p>
           <p className="font-medium text-[#111111]">{fullName(m)}</p>
         </div>
         <div>
-          <p className="text-[#B0AFAB]">Member No.</p>
+          <p className="text-[#5F5E5A]">Member No.</p>
           <p className="font-medium text-[#111111]">{m.memberNo}</p>
         </div>
         <div>
-          <p className="text-[#B0AFAB]">Barangay</p>
+          <p className="text-[#5F5E5A]">Barangay</p>
           <p className="font-medium text-[#111111]">{m.barangay?.name ?? "—"}</p>
         </div>
         <div>
-          <p className="text-[#B0AFAB]">Date issued</p>
+          <p className="text-[#5F5E5A]">Date issued</p>
           <p className="font-medium text-[#111111]">{formatDate(receipt.dateIssued)}</p>
         </div>
       </div>
@@ -92,7 +92,7 @@ export default function ReceiptDocument({ receipt }) {
           {/* Amounts */}
           <div className="border-t border-[#EAEAEA] pt-2">
             <Row label="Gross income" value={peso(receipt.grossAmount)} strong />
-            <div className="my-1 text-xs font-semibold uppercase text-[#B0AFAB]">Less deductions</div>
+            <div className="my-1 text-xs font-semibold uppercase text-[#5F5E5A]">Less deductions</div>
             <Row label="CBU (Capital Build-Up)" value={peso(receipt.cbu)} />
             <Row label="Loan payment" value={peso(receipt.loanDeduction)} />
             <Row label="Membership" value={peso(receipt.membershipFee)} />
@@ -113,7 +113,7 @@ export default function ReceiptDocument({ receipt }) {
         </span>
       </div>
 
-      <p className="mt-4 text-center text-[10px] text-[#B0AFAB]">
+      <p className="mt-4 text-center text-[10px] text-[#5F5E5A]">
         This is a system-generated receipt from SMARTCOOP.
       </p>
     </div>
