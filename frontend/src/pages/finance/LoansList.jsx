@@ -38,7 +38,26 @@ export default function LoansList() {
   const [assessment, setAssessment] = useState(null);
   const [search, setSearch] = useState("");
   const [barangayId, setBarangayId] = useState("");
-  const { page, setPage, pageCount, pageItems } = usePagination(loans);
+
+  // One row per member, not per loan: a member holding two loans was listed
+  // twice with no indication the two belonged together. Figures are summed here;
+  // the individual loans stay separate on the member's own loans page.
+  const byMember = useMemo(() => {
+    const map = new Map();
+    for (const l of loans ?? []) {
+      const key = l.member.id;
+      if (!map.has(key))
+        map.set(key, { member: l.member, loans: [], principal: 0, balance: 0, active: 0 });
+      const g = map.get(key);
+      g.loans.push(l);
+      g.principal += Number(l.principalAmount);
+      g.balance += Number(l.remainingBalance);
+      if (l.status === "ACTIVE") g.active += 1;
+    }
+    return [...map.values()];
+  }, [loans]);
+
+  const { page, setPage, pageCount, pageItems } = usePagination(loans ? byMember : null);
 
   async function load(overrides = {}) {
     const s = overrides.search ?? search;
@@ -243,34 +262,47 @@ export default function LoansList() {
           <DataTable>
             <thead>
               <tr>
-                <th className="px-4 py-3 font-medium">Member</th>
-                <th className="px-4 py-3 font-medium">Principal</th>
-                <th className="px-4 py-3 font-medium">Rate</th>
-                <th className="px-4 py-3 font-medium">Term</th>
-                <th className="px-4 py-3 font-medium">Balance</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th>Member</th>
+                <th>Loans</th>
+                <th>Total principal</th>
+                <th>Total balance</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {pageItems.map((l) => (
-                <tr key={l.id} className="hover:bg-[#F7F6F3]">
-                  <td className="px-4 py-3">
-                    <Link to={`/loans/${l.id}`} className="font-medium text-[#346538] hover:underline">
-                      {l.member.memberNo} — {l.member.firstName} {l.member.lastName}
+              {pageItems.map((g) => (
+                <tr key={g.member.id}>
+                  <td>
+                    <Link
+                      to={`/loans/member/${g.member.id}`}
+                      className="font-medium text-[#346538] hover:underline"
+                    >
+                      {g.member.memberNo} — {g.member.firstName} {g.member.lastName}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-[#787774]">{peso(l.principalAmount)}</td>
-                  <td className="px-4 py-3 text-[#787774]">{Number(l.interestRate)}%/mo</td>
-                  <td className="px-4 py-3 text-[#787774]">{l.termMonths} mo</td>
-                  <td className="px-4 py-3 font-medium text-[#2F3437]">{peso(l.remainingBalance)}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={l.status === "ACTIVE" ? "green" : "slate"}>{l.status}</Badge>
+                  <td className="text-[#787774]">
+                    {g.loans.length}
+                    {g.loans.length > 1 && (
+                      <span className="ml-1.5 text-xs text-[var(--ink-muted)]">merged</span>
+                    )}
+                  </td>
+                  <td className="text-[#787774]">{peso(g.principal)}</td>
+                  <td className="font-medium text-[#2F3437]">{peso(g.balance)}</td>
+                  <td>
+                    {/* One badge per member: how many of their loans are still running. */}
+                    <Badge color={g.active > 0 ? "green" : "slate"}>
+                      {g.active > 0
+                        ? `${g.active} active${
+                            g.loans.length > g.active ? ` · ${g.loans.length - g.active} settled` : ""
+                          }`
+                        : "Settled"}
+                    </Badge>
                   </td>
                 </tr>
               ))}
-              {loans.length === 0 && (
+              {byMember.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">No loans yet.</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-[#5F5E5A]">No loans yet.</td>
                 </tr>
               )}
             </tbody>

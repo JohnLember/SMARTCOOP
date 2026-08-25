@@ -1,6 +1,6 @@
 // Small Tailwind-based design system shared across SMARTCOOP.
 import { useEffect, useRef, useState } from "react";
-import { X, ArrowLeft, ChevronDown, Search } from "lucide-react";
+import { X, ArrowLeft, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router";
 
 // The tapping-cut motif from the landing page, reused sparingly as a brand
@@ -404,9 +404,17 @@ const ACCENTS = {
 
 // The figure is the point: label above in muted small caps, value large and
 // tabular so a column of these lines up. Icon is a quiet marker, not the hero.
-export function StatCard({ label, value, hint, icon: Icon, accent = "emerald" }) {
-  return (
-    <Card className="flex items-center gap-3 sm:gap-4">
+// Pass `onClick` to make the whole tile a button — used where a merged total
+// can be broken back down into the records behind it.
+export function StatCard({ label, value, hint, icon: Icon, accent = "emerald", onClick }) {
+  const inner = (
+    <Card
+      className={`flex items-center gap-3 sm:gap-4 ${
+        onClick
+          ? "card-lift h-full cursor-pointer text-left hover:border-[var(--line-strong)]"
+          : ""
+      }`}
+    >
       {Icon && (
         <div
           aria-hidden="true"
@@ -426,7 +434,17 @@ export function StatCard({ label, value, hint, icon: Icon, accent = "emerald" })
         </p>
         {hint && <p className="mt-0.5 truncate text-xs text-[var(--ink-faint)]">{hint}</p>}
       </div>
+      {onClick && (
+        <ChevronRight size={16} className="ml-auto flex-none text-[var(--ink-disabled)]" />
+      )}
     </Card>
+  );
+
+  if (!onClick) return inner;
+  return (
+    <button type="button" onClick={onClick} className="focus-ring block w-full rounded-[var(--radius-surface)] text-left">
+      {inner}
+    </button>
   );
 }
 
