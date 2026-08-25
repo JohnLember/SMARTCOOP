@@ -15,6 +15,18 @@ function targetFor(n) {
   return n.recipientMemberId ? "/me" : "/loan-applications";
 }
 
+// Each notification is created at the moment of the event it announces, so
+// dateSent is always the right value — but not always the same event. Only the
+// approval notice marks a loan actually being issued; the staff queue notice
+// marks the member submitting. Labelling everything "Date issued" claimed a loan
+// existed where none had been granted yet.
+function dateLabelFor(n) {
+  if (/approved/i.test(n.title)) return "Date issued";
+  if (/new loan application/i.test(n.title)) return "Date submitted";
+  if (/rejected/i.test(n.title)) return "Date reviewed";
+  return "Received";
+}
+
 // Swipe geometry. The row travels right at most this far, and a release past
 // OPEN_AT (or a fast enough flick) leaves the delete button showing.
 const SWIPE_MAX = 104;
@@ -229,7 +241,7 @@ function NotificationRow({ n, index, checked, onToggle, onMarkRead, onDelete, le
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
         <span className="inline-flex items-center gap-1 text-[#787774]">
           <CalendarClock size={13} className="text-[#B0AFAB]" />
-          <span className="text-[#B0AFAB]">Date issued:</span>
+          <span className="text-[#B0AFAB]">{dateLabelFor(n)}:</span>
           <span className="font-medium text-[#2F3437]">{formatDateTime(n.dateSent)}</span>
         </span>
         {n.sender?.username && <span className="text-[#B0AFAB]">· From {n.sender.username}</span>}
