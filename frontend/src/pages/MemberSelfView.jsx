@@ -101,7 +101,10 @@ export default function MemberSelfView() {
     { kg: 0, net: 0, cbu: 0 }
   );
 
-  const activeLoan = loans.find((l) => l.status === "ACTIVE");
+  // A member can hold more than one approved loan at a time, so the card shows
+  // the summed balance — picking the first active one under-reported it.
+  const activeLoans = loans.filter((l) => l.status === "ACTIVE");
+  const loanBalance = activeLoans.reduce((sum, l) => sum + Number(l.remainingBalance), 0);
   const pendingLoanApp = loanApps.find((a) => a.status === "PENDING");
 
   if (loading) return <Spinner />;
@@ -178,19 +181,34 @@ export default function MemberSelfView() {
             <Wallet size={20} />
             <span className="text-sm font-semibold text-[#2F3437]">Loan balance</span>
           </div>
-          {activeLoan ? (
+          {activeLoans.length > 0 ? (
             <>
-              <p className="text-2xl font-bold text-[#111111]">{peso(activeLoan.remainingBalance)}</p>
-              <p className="text-sm text-[#787774]">
-                of {peso(activeLoan.principalAmount)} · {Number(activeLoan.interestRate)}%/mo ·{" "}
-                {activeLoan.termMonths} mo
-              </p>
+              <p className="text-2xl font-bold text-[#111111]">{peso(loanBalance)}</p>
+              {activeLoans.length === 1 ? (
+                <p className="text-sm text-[#787774]">
+                  of {peso(activeLoans[0].principalAmount)} ·{" "}
+                  {Number(activeLoans[0].interestRate)}%/mo · {activeLoans[0].termMonths} mo
+                </p>
+              ) : (
+                <p className="text-sm text-[#787774]">
+                  across {activeLoans.length} active loans
+                </p>
+              )}
               <p className="mt-2 text-xs text-[#B0AFAB]">Auto-deducted from your deliveries</p>
-              <div className="mt-2">
-                <ShowComputation
-                  url={`/finance/loans/${activeLoan.id}/explain`}
-                  label="Show amortization"
-                />
+              <div className="mt-2 space-y-1">
+                {activeLoans.map((l) => (
+                  <div key={l.id} className="flex items-center justify-between gap-2">
+                    {activeLoans.length > 1 && (
+                      <span className="text-xs text-[#787774]">
+                        {peso(l.remainingBalance)} of {peso(l.principalAmount)} · {l.termMonths} mo
+                      </span>
+                    )}
+                    <ShowComputation
+                      url={`/finance/loans/${l.id}/explain`}
+                      label={activeLoans.length > 1 ? "Amortization" : "Show amortization"}
+                    />
+                  </div>
+                ))}
               </div>
             </>
           ) : (
