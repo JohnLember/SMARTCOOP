@@ -8,11 +8,12 @@ import { Check, ChevronRight, CalendarClock, Trash2, X } from "lucide-react";
 
 // Notifications carry no link column, and every one produced today comes from the
 // loan-application flow. Route by audience: staff review applications on the queue
-// page, a member sees their own application status on their profile. Anything that
-// doesn't match stays plain text rather than navigating somewhere wrong.
+// page, a member sees their own on My Loans — which lists every application with
+// its outcome, so an approval or rejection notice lands on the row it refers to.
+// Anything that doesn't match stays plain text rather than navigating somewhere wrong.
 function targetFor(n) {
   if (!/loan application/i.test(n.title)) return null;
-  return n.recipientMemberId ? "/me" : "/loan-applications";
+  return n.recipientMemberId ? "/my-loans" : "/loan-applications";
 }
 
 // Each notification is created at the moment of the event it announces, so
