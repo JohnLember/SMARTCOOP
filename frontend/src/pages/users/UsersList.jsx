@@ -44,7 +44,7 @@ export default function UsersList() {
 
   useEffect(() => {
     // Members without a login, for linking new MEMBER accounts.
-    api.get("/members", { params: { pageSize: 200 } }).then((res) => setMembers(res.data.items));
+    api.get("/members", { params: { all: 1 } }).then((res) => setMembers(res.data.items));
   }, []);
 
   async function toggleStatus(u) {

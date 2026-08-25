@@ -41,7 +41,7 @@ export default function LoansList() {
   useEffect(() => {
     // Only Regular members may be issued a loan.
     api
-      .get("/members", { params: { pageSize: 200, membershipType: "REGULAR" } })
+      .get("/members", { params: { all: 1, membershipType: "REGULAR" } })
       .then((res) => setMembers(res.data.items));
     api.get("/barangays").then((res) => setBarangays(res.data));
   }, []);

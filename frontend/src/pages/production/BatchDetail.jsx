@@ -48,7 +48,8 @@ export default function BatchDetail() {
 
   useEffect(() => {
     load();
-    api.get("/members", { params: { pageSize: 200 } }).then((res) => setMembers(res.data.items));
+    // all=1: the combobox searches this list client-side, so it needs every member.
+    api.get("/members", { params: { all: 1 } }).then((res) => setMembers(res.data.items));
     api.get("/production/deduction-defaults").then((res) => {
       setDefaults(res.data);
       setForm((f) => ({

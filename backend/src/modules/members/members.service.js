@@ -5,6 +5,21 @@ import { logActivity } from "../../utils/activityLog.js";
 
 const memberInclude = { barangay: true, user: { select: { id: true, username: true, status: true } } };
 
+// Projection for `all=1` roster fetches: everything a member picker needs, minus
+// the base64 profilePhoto — that column is a MediumText image, so pulling it for
+// the whole roster would be megabytes per dropdown.
+const pickerSelect = {
+  id: true,
+  memberNo: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  membershipType: true,
+  status: true,
+  barangay: true,
+  user: { select: { id: true, username: true, status: true } },
+};
+
 // A member is auto-promoted from Associate to Regular once accumulated CBU
 // (Capital Build-Up) reaches this amount.
 export const REGULAR_PROMOTION_THRESHOLD = 10000;
@@ -35,7 +50,7 @@ export async function promoteIfEligible(memberId) {
   return member;
 }
 
-export async function list({ search, membershipType, status, barangayId, page = 1, pageSize = 20 }) {
+export async function list({ search, membershipType, status, barangayId, page = 1, pageSize = 20, all }) {
   const where = {};
 
   if (search) {
@@ -51,13 +66,18 @@ export async function list({ search, membershipType, status, barangayId, page = 
 
   const skip = (Number(page) - 1) * Number(pageSize);
 
+  // Member pickers (record a delivery, issue a loan, link a login) search the
+  // whole roster client-side, so they must receive it whole — a fixed page
+  // silently hid every member sorting past it.
+  const fetchAll = all === "1" || all === true;
+
   const [items, total] = await Promise.all([
     prisma.member.findMany({
       where,
-      include: memberInclude,
+      ...(fetchAll
+        ? { select: pickerSelect }
+        : { include: memberInclude, skip, take: Number(pageSize) }),
       orderBy: [{ lastName: "asc" }],
-      skip,
-      take: Number(pageSize),
     }),
     prisma.member.count({ where }),
   ]);
