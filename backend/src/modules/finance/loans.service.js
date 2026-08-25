@@ -2,7 +2,7 @@ import prisma from "../../config/db.js";
 import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
-import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD } from "../members/members.service.js";
+import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD, memberSearchWhere } from "../members/members.service.js";
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -51,13 +51,7 @@ export async function list({ memberId, search, barangayId } = {}) {
 
   const memberWhere = {};
   if (barangayId) memberWhere.barangayId = Number(barangayId);
-  if (search) {
-    memberWhere.OR = [
-      { memberNo: { contains: search } },
-      { firstName: { contains: search } },
-      { lastName: { contains: search } },
-    ];
-  }
+  if (search) Object.assign(memberWhere, memberSearchWhere(search));
   if (Object.keys(memberWhere).length > 0) where.member = memberWhere;
 
   return prisma.loan.findMany({

@@ -50,16 +50,28 @@ export async function promoteIfEligible(memberId) {
   return member;
 }
 
+// A full name lives in separate columns, so "Benigno Abadia" matches nothing
+// when compared against any single one. Split on whitespace and require every
+// term to hit some name field (or the member no.) — order-independent, so
+// "Abadia Benigno" works too. Shared with the loan list's member search.
+export function memberSearchWhere(search) {
+  const terms = String(search).trim().split(/\s+/).filter(Boolean);
+  return {
+    AND: terms.map((t) => ({
+      OR: [
+        { firstName: { contains: t } },
+        { middleName: { contains: t } },
+        { lastName: { contains: t } },
+        { memberNo: { contains: t } },
+      ],
+    })),
+  };
+}
+
 export async function list({ search, membershipType, status, barangayId, page = 1, pageSize = 20, all }) {
   const where = {};
 
-  if (search) {
-    where.OR = [
-      { firstName: { contains: search } },
-      { lastName: { contains: search } },
-      { memberNo: { contains: search } },
-    ];
-  }
+  if (search) Object.assign(where, memberSearchWhere(search));
   if (membershipType) where.membershipType = membershipType;
   if (status) where.status = status;
   if (barangayId) where.barangayId = Number(barangayId);
