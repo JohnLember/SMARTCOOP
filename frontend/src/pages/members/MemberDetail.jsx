@@ -195,7 +195,7 @@ export default function MemberDetail() {
             )}
           </Card>
 
-          <CreditScoreCard memberId={member.id} canCompute />
+          <CreditScoreCard memberId={member.id} />
         </div>
       </div>
 

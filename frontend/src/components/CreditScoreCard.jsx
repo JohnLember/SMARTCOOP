@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
 import api, { apiError } from "../lib/api";
-import { toast } from "react-toastify";
 import { Button, Card, RiskBadge, Modal } from "./ui";
 import ShowComputation from "./ShowComputation";
 import { formatDate } from "../lib/format";
-import { RefreshCw, AlertTriangle, TrendingUp } from "lucide-react";
+import { AlertTriangle, TrendingUp } from "lucide-react";
 
 const peso = (n) => `₱${Number(n).toLocaleString()}`;
 
-// Shows a member's latest credit score with factor breakdown. If `canCompute`,
-// staff can (re)compute it. Calls onComputed after a successful compute.
-export default function CreditScoreCard({ memberId, canCompute = false, onComputed }) {
+// Shows a member's latest credit score with factor breakdown. The score is
+// assessed automatically on read (see currentForMember in credit.service.js) —
+// there is no button, and nothing to press before a score appears.
+export default function CreditScoreCard({ memberId }) {
   const [latest, setLatest] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showGuide, setShowGuide] = useState(false);
 
@@ -22,6 +21,8 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
     try {
       const res = await api.get(`/finance/credit-scores/${memberId}`);
       setLatest(res.data.latest);
+    } catch (err) {
+      setError(apiError(err));
     } finally {
       setLoading(false);
     }
@@ -31,21 +32,6 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
-
-  async function compute() {
-    setBusy(true);
-    setError("");
-    try {
-      await api.post(`/finance/credit-scores/${memberId}/compute`);
-      await load();
-      toast.success("Credit score computed");
-      onComputed?.();
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const f = latest?.factors;
 
@@ -111,14 +97,9 @@ export default function CreditScoreCard({ memberId, canCompute = false, onComput
           </div>
         </>
       ) : (
-        <p className="text-sm text-[#B0AFAB]">Not yet assessed.</p>
-      )}
-
-      {canCompute && (
-        <Button variant="secondary" className="mt-3 w-full" onClick={compute} disabled={busy}>
-          <RefreshCw size={16} className={busy ? "animate-spin" : ""} />
-          {latest ? "Recompute score" : "Assess credit"}
-        </Button>
+        <p className="text-sm text-[#B0AFAB]">
+          No score yet — assessed automatically once there are deliveries or loans on record.
+        </p>
       )}
 
       <CreditGuideModal

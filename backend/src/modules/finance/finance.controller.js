@@ -71,7 +71,7 @@ export async function getCreditScore(req, res, next) {
     if (req.user.role === "MEMBER" && req.user.memberId !== memberId) {
       throw forbidden("You can only view your own credit score");
     }
-    const latest = await credit.latestForMember(memberId);
+    const latest = await credit.currentForMember(memberId);
     const history = await credit.historyForMember(memberId);
     res.json({ latest, history });
   } catch (err) {

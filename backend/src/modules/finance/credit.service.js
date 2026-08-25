@@ -231,6 +231,24 @@ export async function latestForMember(memberId) {
   });
 }
 
+// How long a saved score stays fresh before a read recomputes it.
+const FRESH_FOR_MS = 24 * 60 * 60 * 1000;
+
+// The score a reader gets: assessed automatically when missing or stale, so no
+// one has to press "Assess credit". Runs without an actor — an automatic
+// assessment isn't someone's activity-log entry.
+// ponytail: recompute-on-read, no scheduler. If scoring ever gets expensive or
+// reads get hot, move it to a nightly job and serve the saved row here.
+export async function currentForMember(memberId) {
+  const latest = await latestForMember(memberId);
+  if (latest && Date.now() - new Date(latest.computedAt).getTime() < FRESH_FOR_MS) return latest;
+
+  const result = await evaluateAndSave(memberId);
+  // Member gone, or no deliveries/loans yet to score — keep whatever we had.
+  if (!result || result.insufficientActivity) return latest;
+  return latestForMember(memberId);
+}
+
 export async function historyForMember(memberId) {
   return prisma.creditScore.findMany({
     where: { memberId },

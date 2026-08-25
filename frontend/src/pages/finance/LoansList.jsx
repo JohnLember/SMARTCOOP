@@ -167,7 +167,7 @@ export default function LoansList() {
                   </div>
                 ) : (
                   <span>
-                    No credit assessment yet for this member — open their profile to “Assess credit” first.
+                    No credit score yet — this member has no deliveries or loans on record to assess.
                   </span>
                 )}
               </div>
