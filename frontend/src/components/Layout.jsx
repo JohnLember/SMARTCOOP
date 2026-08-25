@@ -77,6 +77,7 @@ const NAV = {
   ],
   MEMBER: [
     { section: null, items: [
+      { to: "/my-dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/me", label: "My Profile", icon: UserCircle },
       { to: "/my-deliveries", label: "My Deliveries", icon: Truck },
       { to: "/my-receipts", label: "My Receipts", icon: ReceiptText },

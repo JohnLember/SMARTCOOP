@@ -25,7 +25,7 @@ export default function Login() {
       const user = await login(data.username, data.password);
       // Route to a sensible landing page per role.
       const home =
-        user.role === "MEMBER" ? "/me" : user.role === "MAO" ? "/mao" : "/dashboard";
+        user.role === "MEMBER" ? "/my-dashboard" : user.role === "MAO" ? "/mao" : "/dashboard";
       navigate(home, { replace: true });
     } catch (err) {
       setError(apiError(err));

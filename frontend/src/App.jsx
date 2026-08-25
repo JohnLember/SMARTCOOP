@@ -21,6 +21,7 @@ import MemberSelfView from "./pages/MemberSelfView";
 import MyDeliveries from "./pages/MyDeliveries";
 import MyReceipts from "./pages/MyReceipts";
 import MyLoans from "./pages/MyLoans";
+import MemberDashboard from "./pages/MemberDashboard";
 import Notifications from "./pages/Notifications";
 import MaoDashboard from "./pages/mao/MaoDashboard";
 import MembersByBarangay from "./pages/mao/MembersByBarangay";
@@ -74,6 +75,7 @@ function App() {
         <Route path="/mao/members-by-barangay" element={<ProtectedRoute roles={MAO_ACCESS}><MembersByBarangay /></ProtectedRoute>} />
 
         {/* Member self-view */}
+        <Route path="/my-dashboard" element={<ProtectedRoute roles={["MEMBER"]}><MemberDashboard /></ProtectedRoute>} />
         <Route path="/me" element={<ProtectedRoute roles={["MEMBER"]}><MemberSelfView /></ProtectedRoute>} />
         <Route path="/my-deliveries" element={<ProtectedRoute roles={["MEMBER"]}><MyDeliveries /></ProtectedRoute>} />
         <Route path="/my-receipts" element={<ProtectedRoute roles={["MEMBER"]}><MyReceipts /></ProtectedRoute>} />

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
@@ -15,10 +14,9 @@ import {
   Modal,
   Avatar,
 } from "../components/ui";
-import { Truck, Wallet, Pencil, Camera, Plus } from "lucide-react";
+import { Pencil, Camera } from "lucide-react";
 import CreditScoreCard from "../components/CreditScoreCard";
 import MemberCategoryCard from "../components/MemberCategoryCard";
-import ShowComputation from "../components/ShowComputation";
 import { formatDate } from "../lib/format";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -61,51 +59,28 @@ export default function MemberSelfView() {
   const { user } = useAuth();
   const [member, setMember] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
-  const [loans, setLoans] = useState([]);
-  const [loanApps, setLoanApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [applying, setApplying] = useState(false);
-
-  function reloadLoanApps() {
-    api.get("/loan-applications").then((res) => setLoanApps(res.data));
-  }
 
   useEffect(() => {
     if (!user?.memberId) {
       setLoading(false);
       return;
     }
-    Promise.all([
-      api.get(`/members/${user.memberId}`),
-      api.get("/production/deliveries"),
-      api.get("/finance/loans"),
-      api.get("/loan-applications"),
-    ])
-      .then(([m, d, l, la]) => {
+    // Deliveries are still needed here: CBU total is derived from their receipts.
+    // Loans and applications moved to the member dashboard with the Activity cards.
+    Promise.all([api.get(`/members/${user.memberId}`), api.get("/production/deliveries")])
+      .then(([m, d]) => {
         setMember(m.data);
         setDeliveries(d.data);
-        setLoans(l.data);
-        setLoanApps(la.data);
       })
       .finally(() => setLoading(false));
   }, [user]);
 
-  const deliverySummary = deliveries.reduce(
-    (acc, d) => {
-      acc.kg += Number(d.weightKg);
-      acc.net += d.receipt ? Number(d.receipt.netAmount) : 0;
-      acc.cbu += d.receipt ? Number(d.receipt.cbu) : 0;
-      return acc;
-    },
-    { kg: 0, net: 0, cbu: 0 }
+  const cbuTotal = deliveries.reduce(
+    (sum, d) => sum + (d.receipt ? Number(d.receipt.cbu) : 0),
+    0
   );
-
-  // A member can hold more than one approved loan at a time, so the card shows
-  // the summed balance — picking the first active one under-reported it.
-  const activeLoans = loans.filter((l) => l.status === "ACTIVE");
-  const loanBalance = activeLoans.reduce((sum, l) => sum + Number(l.remainingBalance), 0);
-  const pendingLoanApp = loanApps.find((a) => a.status === "PENDING");
 
   if (loading) return <Spinner />;
   if (!member)
@@ -143,13 +118,13 @@ export default function MemberSelfView() {
             <Field label="Account status" value={<Badge color={member.status === "ACTIVE" ? "green" : "slate"}>{member.status}</Badge>} />
             <Field label="Barangay" value={member.barangay?.name} />
             <Field label="Contact" value={member.contactNo} />
-            <Field label="CBU (Capital Build-Up) total" value={peso(deliverySummary.cbu)} />
+            <Field label="CBU (Capital Build-Up) total" value={peso(cbuTotal)} />
             <Field label="Date joined" value={formatDate(member.dateJoined)} />
           </div>
           {member.membershipType === "ASSOCIATE" && (
             <p className="mt-3 text-xs text-[#787774]">
               You become a <span className="font-medium text-[#2F3437]">Regular</span> member once your CBU
-              reaches ₱10,000 — {peso(Math.max(0, 10000 - deliverySummary.cbu))} to go.
+              reaches ₱10,000 — {peso(Math.max(0, 10000 - cbuTotal))} to go.
             </p>
           )}
         </Card>
@@ -160,96 +135,6 @@ export default function MemberSelfView() {
           <CreditScoreCard memberId={member.id} />
         </div>
       </div>
-
-      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Activity</h3>
-      <div className="grid grid-cols-2 gap-4">
-        <Link to="/my-deliveries">
-          <Card className="h-full transition hover:border-[#8FB392] hover:shadow">
-            <div className="mb-2 flex items-center gap-2 text-[#346538]">
-              <Truck size={20} />
-              <span className="text-sm font-semibold text-[#2F3437]">Rubber deliveries</span>
-            </div>
-            <p className="text-2xl font-bold text-[#111111]">{deliverySummary.kg.toLocaleString()} kg</p>
-            <p className="text-sm text-[#787774]">
-              {deliveries.length} deliveries · {peso(deliverySummary.net)} earned
-            </p>
-            <p className="mt-2 text-xs font-medium text-[#346538]">View history & receipts →</p>
-          </Card>
-        </Link>
-        <Card className="h-full">
-          <div className="mb-2 flex items-center gap-2 text-amber-600">
-            <Wallet size={20} />
-            <span className="text-sm font-semibold text-[#2F3437]">Loan balance</span>
-          </div>
-          {activeLoans.length > 0 ? (
-            <>
-              <p className="text-2xl font-bold text-[#111111]">{peso(loanBalance)}</p>
-              {activeLoans.length === 1 ? (
-                <p className="text-sm text-[#787774]">
-                  of {peso(activeLoans[0].principalAmount)} ·{" "}
-                  {Number(activeLoans[0].interestRate)}%/mo · {activeLoans[0].termMonths} mo
-                </p>
-              ) : (
-                <p className="text-sm text-[#787774]">
-                  across {activeLoans.length} active loans
-                </p>
-              )}
-              <p className="mt-2 text-xs text-[#B0AFAB]">Auto-deducted from your deliveries</p>
-              <div className="mt-2 space-y-1">
-                {activeLoans.map((l) => (
-                  <div key={l.id} className="flex items-center justify-between gap-2">
-                    {activeLoans.length > 1 && (
-                      <span className="text-xs text-[#787774]">
-                        {peso(l.remainingBalance)} of {peso(l.principalAmount)} · {l.termMonths} mo
-                      </span>
-                    )}
-                    <ShowComputation
-                      url={`/finance/loans/${l.id}/explain`}
-                      label={activeLoans.length > 1 ? "Amortization" : "Show amortization"}
-                    />
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-2xl font-bold text-[#111111]">₱0.00</p>
-              <p className="text-sm text-[#787774]">No active loan</p>
-            </>
-          )}
-
-          <div className="mt-3 border-t border-[#F2F1ED] pt-3">
-            {member.membershipType === "REGULAR" ? (
-              pendingLoanApp ? (
-                <p className="text-xs text-[#787774]">
-                  Loan application{" "}
-                  <span className="font-medium text-[#2F3437]">{pendingLoanApp.applicationNo}</span> —{" "}
-                  <span className="font-medium text-amber-600">pending review</span>
-                </p>
-              ) : (
-                <Button variant="secondary" className="w-full" onClick={() => setApplying(true)}>
-                  <Plus size={16} />
-                  Apply for loan
-                </Button>
-              )
-            ) : (
-              <p className="text-xs text-[#B0AFAB]">
-                Only <span className="font-medium text-[#2F3437]">Regular</span> members can apply for
-                a loan.
-              </p>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      <LoanApplyModal
-        open={applying}
-        onClose={() => setApplying(false)}
-        onSubmitted={() => {
-          setApplying(false);
-          reloadLoanApps();
-        }}
-      />
 
       <EditProfileModal
         open={editing}
@@ -382,83 +267,6 @@ function EditProfileModal({ open, member, onClose, onSaved }) {
           </Button>
           <Button type="submit" disabled={busy}>
             {busy ? "Saving..." : "Save changes"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function LoanApplyModal({ open, onClose, onSubmitted }) {
-  const [form, setForm] = useState({ principalAmount: "", termMonths: "12", purpose: "" });
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setForm({ principalAmount: "", termMonths: "12", purpose: "" });
-      setError("");
-    }
-  }, [open]);
-
-  async function submit(e) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await api.post("/loan-applications", {
-        principalAmount: parseFloat(form.principalAmount),
-        termMonths: parseInt(form.termMonths, 10),
-        purpose: form.purpose || null,
-      });
-      toast.success("Loan application submitted");
-      onSubmitted();
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title="Apply for a loan">
-      <form onSubmit={submit} className="space-y-4">
-        {error && (
-          <div className="rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">{error}</div>
-        )}
-        <p className="text-sm text-[#787774]">
-          Cooperative staff will review your request. Interest is charged at the standard 5% per
-          month on the diminishing balance, and repayments are auto-deducted from your deliveries.
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Amount requested (₱)"
-            type="number"
-            step="0.01"
-            value={form.principalAmount}
-            onChange={(e) => setForm({ ...form, principalAmount: e.target.value })}
-            required
-          />
-          <Input
-            label="Term (months)"
-            type="number"
-            value={form.termMonths}
-            onChange={(e) => setForm({ ...form, termMonths: e.target.value })}
-            required
-          />
-        </div>
-        <Input
-          label="Purpose (optional)"
-          value={form.purpose}
-          onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-          placeholder="e.g. farm inputs, equipment"
-        />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {busy ? "Submitting…" : "Submit application"}
           </Button>
         </div>
       </form>
