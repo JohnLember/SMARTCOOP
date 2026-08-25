@@ -32,8 +32,38 @@ async function nextApplicationNo() {
   return `APP-${String(max + 1).padStart(4, "0")}`;
 }
 
+// An application carries no ID number, so a person's name is the only identity
+// available to match against the member roster. MySQL's default collation makes
+// the equality case-insensitive.
+const samePerson = ({ firstName, lastName }) => ({
+  firstName: firstName.trim(),
+  lastName: lastName.trim(),
+});
+
 // Public: a prospective member submits an application.
 export async function create(data) {
+  // Someone already on the roster — or already in the review queue — must not
+  // enter it a second time.
+  const member = await prisma.member.findFirst({
+    where: samePerson(data),
+    select: { memberNo: true },
+  });
+  if (member) {
+    throw conflict(
+      `${data.firstName} ${data.lastName} is already a registered member (${member.memberNo}). Contact the cooperative office if this is not you.`
+    );
+  }
+
+  const pending = await prisma.membershipApplication.findFirst({
+    where: { ...samePerson(data), status: "PENDING" },
+    select: { applicationNo: true },
+  });
+  if (pending) {
+    throw conflict(
+      `An application for this name is already awaiting review (${pending.applicationNo}).`
+    );
+  }
+
   return prisma.membershipApplication.create({
     data: {
       applicationNo: await nextApplicationNo(),
@@ -98,9 +128,25 @@ async function nextMemberNo() {
 // Approve: create a real Member from the application, then mark it approved.
 // New members always start as ASSOCIATE; they are auto-promoted to REGULAR once
 // their CBU reaches the threshold (see promoteIfEligible).
-export async function approve(id, { memberNo }, actorId) {
+export async function approve(id, { memberNo, allowDuplicate }, actorId) {
   const app = await getById(id);
   if (app.status !== "PENDING") throw badRequest("This application has already been reviewed");
+
+  // The applicant may already be on the roster; approving regardless would create
+  // a second member record for the same person. Genuine namesakes do exist here,
+  // so this is an override staff must make deliberately, not a hard block.
+  if (!allowDuplicate) {
+    const existing = await prisma.member.findFirst({
+      where: samePerson(app),
+      select: { memberNo: true },
+    });
+    if (existing) {
+      throw conflict(
+        `${app.firstName} ${app.lastName} is already a member (${existing.memberNo}). Approving would create a duplicate member record.`,
+        { code: "DUPLICATE_MEMBER", memberNo: existing.memberNo }
+      );
+    }
+  }
 
   const finalMemberNo = memberNo?.trim() || (await nextMemberNo());
   const taken = await prisma.member.findUnique({ where: { memberNo: finalMemberNo } });

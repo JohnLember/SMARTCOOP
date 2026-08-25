@@ -16,6 +16,8 @@ const applicationSchema = z.object({
 
 const approveSchema = z.object({
   memberNo: z.string().optional(),
+  // Staff override for a genuine namesake — see approve() in the service.
+  allowDuplicate: z.boolean().optional(),
 });
 
 const rejectSchema = z.object({ note: z.string().optional() });

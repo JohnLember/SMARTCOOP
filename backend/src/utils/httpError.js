@@ -12,4 +12,4 @@ export const badRequest = (msg = "Bad request", details) =>
   new HttpError(400, msg, details);
 export const unauthorized = (msg = "Unauthorized") => new HttpError(401, msg);
 export const forbidden = (msg = "Forbidden") => new HttpError(403, msg);
-export const conflict = (msg = "Conflict") => new HttpError(409, msg);
+export const conflict = (msg = "Conflict", details) => new HttpError(409, msg, details);

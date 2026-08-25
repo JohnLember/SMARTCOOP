@@ -40,15 +40,13 @@ If your MySQL root has a password, the URL becomes
 ```sh
 npm install
 npm run migrate     # applies prisma/migrations, generates the client
-npm run seed        # barangays, app settings, demo accounts, farmer roster
+npm run seed        # barangays, app settings, demo accounts
 ```
 
-`npm run seed` also imports the cooperative's farmer roster from
-`farmers.js.txt` — 774 members numbered `M-0006` onward, added as ASSOCIATE with
-no barangay assigned (edit that in Members afterwards). Re-running the seed skips
-anyone already imported, so it's safe to run again; the console prints how many
-were newly created. To reload the roster after editing `farmers.js.txt`, delete
-the affected members first — existing member numbers are never overwritten.
+The seed does **not** create members from `farmers.js.txt`. Those farmers join
+through the membership application queue and become members only once staff
+approves them — seeding them directly made every pending applicant look like an
+existing member and produced a duplicate record on approval.
 
 Seeded logins:
 
@@ -85,6 +83,5 @@ npm run generate    # regenerate the Prisma client after editing schema.prisma
 | `Unknown database 'smartcoop'` | Step 1 was skipped |
 | `P1000: Authentication failed` | Wrong user/password in `DATABASE_URL` |
 | `@prisma/client did not initialize` | Run `npm run generate` |
-| `farmers.js.txt: some rows did not parse` | A name in that file contains a `'` — the seed's tuple regex can't read it. Remove or escape it |
 | CORS errors in the browser | `CORS_ORIGIN` must match the Vite URL exactly |
 | Port 4000 in use | Change `PORT`, and update `VITE_API_URL` in the frontend |

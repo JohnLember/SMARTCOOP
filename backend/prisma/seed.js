@@ -1,5 +1,4 @@
 import "dotenv/config";
-import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -78,24 +77,10 @@ async function main() {
     });
   }
 
-  // --- Cooperative's farmer roster (backend/farmers.js.txt) ---
-  // The file is a raw `farmers = [...]` array literal, not a module, so pull the
-  // [first, last, middle] tuples out with a regex instead of making it importable.
-  // Numbered M-0006 onward by position; skipDuplicates makes re-seeding a no-op.
-  const roster = readFileSync(new URL("../farmers.js.txt", import.meta.url), "utf8");
-  const farmers = [...roster.matchAll(/\['(.*?)',\s*'(.*?)',\s*'(.*?)'\]/g)];
-  if (farmers.length !== (roster.match(/\n\s*\[/g) ?? []).length)
-    throw new Error("farmers.js.txt: some rows did not parse — check for quotes inside a name");
-
-  const { count: farmersAdded } = await prisma.member.createMany({
-    data: farmers.map(([, firstName, lastName, middleName], i) => ({
-      memberNo: `M-${String(i + 6).padStart(4, "0")}`,
-      firstName,
-      lastName,
-      middleName: middleName || null,
-    })),
-    skipDuplicates: true,
-  });
+  // The cooperative's farmer roster (backend/farmers.js.txt) is deliberately NOT
+  // seeded as members: those farmers enter through MembershipApplication and
+  // become members only when staff approves them. Importing them here created a
+  // member for every pending applicant and a duplicate on approval.
 
   // --- Link a member login to the first member ---
   // Skipped when M-0001 already has a login — a member can only have one, so
@@ -127,7 +112,6 @@ async function main() {
     },
   }).catch(() => {});
 
-  console.log(`\nFarmer roster: ${farmers.length} in file, ${farmersAdded} new members created.`);
   console.log("\nSeed complete. Login accounts:");
   console.log("  admin / admin123   (ADMIN)");
   console.log("  staff / staff123   (STAFF)");

@@ -198,6 +198,10 @@ function ReviewModal({ application, onClose, onReviewed }) {
   const [busy, setBusy] = useState(false);
   const [creds, setCreds] = useState(null);
   const [approved, setApproved] = useState(null);
+  // Set when the backend reports this applicant is already on the roster; shows
+  // the namesake override instead of silently creating a duplicate member.
+  const [duplicateOf, setDuplicateOf] = useState(null);
+  const [allowDuplicate, setAllowDuplicate] = useState(false);
 
   useEffect(() => {
     if (application) {
@@ -207,6 +211,8 @@ function ReviewModal({ application, onClose, onReviewed }) {
       setError("");
       setCreds(null);
       setApproved(null);
+      setDuplicateOf(null);
+      setAllowDuplicate(false);
     }
   }, [application]);
 
@@ -219,11 +225,14 @@ function ReviewModal({ application, onClose, onReviewed }) {
     try {
       const res = await api.post(`/applications/${application.id}/approve`, {
         memberNo: approve.memberNo || undefined,
+        allowDuplicate: allowDuplicate || undefined,
       });
       toast.success("Application approved — member created");
       setCreds(res.data.credentials);
       setApproved(res.data);
     } catch (err) {
+      const details = err.response?.data?.details;
+      if (details?.code === "DUPLICATE_MEMBER") setDuplicateOf(details.memberNo);
       setError(apiError(err));
     } finally {
       setBusy(false);
@@ -363,7 +372,30 @@ function ReviewModal({ application, onClose, onReviewed }) {
                   cooperative office.
                 </span>
               </label>
-              <Button onClick={doApprove} disabled={busy || !feePaid} className="w-full">
+              {duplicateOf && (
+                <label className="flex items-start gap-2 rounded-lg border border-[#9F2F2D] bg-[#FBF2F1] px-3 py-2 text-xs leading-relaxed text-[#7A2422]">
+                  <input
+                    type="checkbox"
+                    checked={allowDuplicate}
+                    onChange={(e) => setAllowDuplicate(e.target.checked)}
+                    className="mt-0.5 accent-[#9F2F2D]"
+                  />
+                  <span>
+                    A member named{" "}
+                    <span className="font-medium">
+                      {application.firstName} {application.lastName}
+                    </span>{" "}
+                    already exists ({duplicateOf}). Tick only if this is a{" "}
+                    <span className="font-medium">different person with the same name</span> — a
+                    second member record will be created.
+                  </span>
+                </label>
+              )}
+              <Button
+                onClick={doApprove}
+                disabled={busy || !feePaid || (duplicateOf && !allowDuplicate)}
+                className="w-full"
+              >
                 <Check size={16} />
                 Approve &amp; create member
               </Button>
