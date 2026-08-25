@@ -111,11 +111,17 @@ export default function MemberDetail() {
         subtitle={member.memberNo}
         actions={
           <div className="flex items-center gap-2">
+            {/* Unlabelled, this read as a mystery dropdown sitting beside the
+                member's name. It is also a live control — picking a value saves
+                straight away — so the hint says so rather than leaving staff
+                hunting for a Save button. */}
             <Select
+              label="Account status"
+              hint="Saves immediately"
               value={member.status}
               onChange={(e) => changeStatus(e.target.value)}
               disabled={busy}
-              className="w-36"
+              className="w-40"
             >
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
