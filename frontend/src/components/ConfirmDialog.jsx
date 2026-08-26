@@ -94,6 +94,10 @@ function ConfirmDialog({ options, onSettle }) {
     // Typing a phrase is reserved for the handful of actions that cascade into
     // other records. Everywhere else it is friction without a payoff.
     confirmPhrase,
+    // { label, placeholder, required } — collects a short note explaining the
+    // action, handed to onConfirm. Used by the loan-payment void, where the
+    // reason ends up on the member's cancelled slip.
+    reason,
     onConfirm,
   } = options;
 
@@ -101,10 +105,12 @@ function ConfirmDialog({ options, onSettle }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [typed, setTyped] = useState("");
+  const [reasonText, setReasonText] = useState("");
 
   const panelRef = useRef(null);
   const cancelRef = useRef(null);
   const phraseRef = useRef(null);
+  const reasonRef = useRef(null);
   // Where focus was before the dialog took it, so it can be handed back.
   const openerRef = useRef(null);
   const settledRef = useRef(false);
@@ -112,6 +118,8 @@ function ConfirmDialog({ options, onSettle }) {
   const toneCfg = TONES[tone] ?? TONES.danger;
   const Icon = toneCfg.icon;
   const phraseOk = !confirmPhrase || typed.trim().toUpperCase() === confirmPhrase.toUpperCase();
+  const reasonOk = !reason?.required || reasonText.trim().length > 0;
+  const ready = phraseOk && reasonOk;
 
   const close = useCallback(
     (result) => {
@@ -131,7 +139,7 @@ function ConfirmDialog({ options, onSettle }) {
   // when there is one, is the exception — it is the thing to interact with.
   useEffect(() => {
     openerRef.current = document.activeElement;
-    const target = phraseRef.current ?? cancelRef.current;
+    const target = phraseRef.current ?? reasonRef.current ?? cancelRef.current;
     target?.focus();
 
     const body = document.body;
@@ -181,14 +189,18 @@ function ConfirmDialog({ options, onSettle }) {
   }
 
   async function handleConfirm() {
-    if (!phraseOk || busy) return;
+    if (!ready || busy) return;
 
-    if (!onConfirm) return close(true);
+    // Resolves with the note when one was given, so a caller using the plain
+    // boolean form can still read it; `true` otherwise. Both are truthy, so
+    // `if (!(await confirm(...))) return;` reads the same either way.
+    const note = reasonText.trim() || null;
+    if (!onConfirm) return close(note ?? true);
 
     setError("");
     setBusy(true);
     try {
-      await onConfirm();
+      await onConfirm(note);
     } catch (err) {
       // Stay open and say what went wrong: closing here would hide the failure
       // behind a dialog the user believes succeeded.
@@ -254,6 +266,22 @@ function ConfirmDialog({ options, onSettle }) {
                 </dl>
               )}
 
+              {reason && (
+                <div className="mt-4">
+                  <Input
+                    ref={reasonRef}
+                    label={reason.label ?? "Reason"}
+                    placeholder={reason.placeholder ?? "optional"}
+                    value={reasonText}
+                    onChange={(e) => setReasonText(e.target.value)}
+                    disabled={busy}
+                    required={reason.required}
+                    autoComplete="off"
+                    hint={reason.hint}
+                  />
+                </div>
+              )}
+
               {confirmPhrase && (
                 <div className="mt-4">
                   <Input
@@ -291,7 +319,7 @@ function ConfirmDialog({ options, onSettle }) {
           <Button
             variant={toneCfg.confirmVariant}
             onClick={handleConfirm}
-            disabled={busy || !phraseOk}
+            disabled={busy || !ready}
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? (busyLabel ?? "Working…") : confirmLabel}

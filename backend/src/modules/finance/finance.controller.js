@@ -77,9 +77,25 @@ export async function recordLoanPayment(req, res, next) {
   }
 }
 
+const voidSchema = z.object({
+  reason: z.string().max(500).optional().nullable(),
+});
+
 export async function voidLoanPayment(req, res, next) {
   try {
-    res.json(await loans.voidPayment(Number(req.params.paymentId), req.user.id));
+    const { reason } = voidSchema.parse(req.body ?? {});
+    res.json(await loans.voidPayment(Number(req.params.paymentId), req.user.id, reason));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// A member's loan payments in one call, for the receipts list. Staff may ask for
+// any member; a member is forced to their own; nobody else gets in.
+export async function listLoanPayments(req, res, next) {
+  try {
+    const scope = memberScopeFor(req.user);
+    res.json(await loans.listPayments({ memberId: scope ?? req.query.memberId }));
   } catch (err) {
     next(err);
   }

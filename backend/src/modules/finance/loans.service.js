@@ -233,6 +233,21 @@ export async function getPaymentById(id) {
   return payment;
 }
 
+// A member's loan payments in one query, so the receipts page does not have to
+// walk every loan to find them. Voided rows are included on purpose — the whole
+// point of the soft void is that a cancelled payment stays visible — so callers
+// showing a total must exclude `voidedAt != null` themselves.
+export function listPayments({ memberId } = {}) {
+  const where = { paymentNo: { not: null } };
+  if (memberId) where.loan = { memberId: Number(memberId) };
+
+  return prisma.loanPayment.findMany({
+    where,
+    orderBy: [{ paymentDate: "desc" }, { id: "desc" }],
+    include: paymentInclude,
+  });
+}
+
 // Re-derives the loan row from its schedule. Called after any change to the
 // rows, by both record and void.
 async function syncLoanState(tx, loanId) {
@@ -350,14 +365,15 @@ export async function recordPayment(loanId, data, actorId) {
   return full;
 }
 
-// Reverses a payment completely: every period it touched goes back to what it
-// was, the balance is re-derived, and a loan that closed on this payment
-// reopens. Only correct because the allocation was stored - do not try to infer
-// it from the schedule's current state.
-// ponytail: hard delete, no void-audit row. If the cooperative ever needs to
-// show that a payment existed and was cancelled, add a `voidedAt` column and
-// filter it out of the lists instead of deleting.
-export async function voidPayment(paymentId, actorId) {
+// Cancels a payment: every period it touched goes back to what it was, the
+// balance is re-derived, and a loan that closed on this payment reopens. Only
+// correct because the allocation was stored - do not try to infer it from the
+// schedule's current state.
+//
+// The row is MARKED, not deleted. A member may be holding the printed LP- slip,
+// and a record that simply vanishes leaves them with a document matching nothing.
+// Voided payments stay in every list, struck through, and out of every total.
+export async function voidPayment(paymentId, actorId, reason) {
   const voided = await prisma.$transaction(async (tx) => {
     const payment = await tx.loanPayment.findUnique({
       where: { id: paymentId },
@@ -367,6 +383,10 @@ export async function voidPayment(paymentId, actorId) {
     if (!payment.paymentNo) {
       throw badRequest("This is a legacy delivery deduction and cannot be voided here");
     }
+    // Voiding twice would replay the same allocation a second time and subtract
+    // the amount from the schedule again. Impossible back when this deleted the
+    // row; very possible now that it survives.
+    if (payment.voidedAt) throw badRequest(`${payment.paymentNo} has already been voided`);
 
     for (const alloc of payment.allocations ?? []) {
       const row = await tx.loanSchedule.findUnique({ where: { id: alloc.scheduleId } });
@@ -378,7 +398,14 @@ export async function voidPayment(paymentId, actorId) {
       });
     }
 
-    await tx.loanPayment.delete({ where: { id: paymentId } });
+    await tx.loanPayment.update({
+      where: { id: paymentId },
+      data: {
+        voidedAt: new Date(),
+        voidedByUserId: actorId ?? null,
+        voidReason: reason?.trim() || null,
+      },
+    });
     await syncLoanState(tx, payment.loanId);
 
     return {

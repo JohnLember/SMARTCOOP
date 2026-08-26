@@ -323,6 +323,15 @@ model LoanPayment {
   // renaming the column would be a data migration for a cosmetic gain.
   amount           Decimal         @map("amount_deducted") @db.Decimal(12, 2)
   paymentDate      DateTime        @default(now()) @map("payment_date")
+  // Voiding cancels a payment without erasing it: the schedule allocation is
+  // reversed, but the row stays so a member holding the printed slip still finds
+  // a record that explains itself. null = live.
+  // Every total filters on this; lists show voided rows, marked.
+  voidedAt         DateTime?       @map("voided_at")
+  // Plain column, no relation: `recordedBy` above already relates to User, and a
+  // second relation would force naming both. Who voided it is in the ActivityLog.
+  voidedByUserId   Int?            @map("voided_by_user_id")
+  voidReason       String?         @map("void_reason") @db.Text
 
   @@index([loanId])
   @@map("loan_payments")

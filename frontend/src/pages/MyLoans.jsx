@@ -246,15 +246,33 @@ function LoanRepayments({ loan, onPrint }) {
             {loan.payments.map((p) => (
               <div
                 key={p.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[#F2F1ED] px-3 py-2 text-sm"
+                className={`flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm ${
+                  p.voidedAt
+                    ? "border-dashed border-[var(--line-strong)] bg-[var(--sunken)]"
+                    : "border-[#F2F1ED]"
+                }`}
               >
                 <div className="min-w-0">
-                  <p className="font-medium text-[var(--brand)]">{peso(p.amount)}</p>
+                  <p
+                    className={`font-medium ${
+                      p.voidedAt ? "text-[var(--ink-faint)] line-through" : "text-[var(--brand)]"
+                    }`}
+                  >
+                    {peso(p.amount)}
+                  </p>
                   <p className="text-xs text-[var(--ink-muted)]">
                     {formatDate(p.paymentDate)}
                     {p.paymentNo ? ` · ${p.paymentNo}` : " · from delivery (legacy)"}
                     {p.referenceNo ? ` · ${p.referenceNo}` : ""}
                   </p>
+                  {/* The reason the record was kept: a member holding the printed
+                      slip finds it here, saying why it no longer counts. */}
+                  {p.voidedAt && (
+                    <p className="mt-0.5 text-xs font-medium text-[var(--danger)]">
+                      Cancelled {formatDate(p.voidedAt)}
+                      {p.voidReason ? ` · ${p.voidReason}` : ""}
+                    </p>
+                  )}
                 </div>
                 {p.paymentNo && (
                   <Button

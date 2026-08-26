@@ -62,8 +62,25 @@ export default function ReceiptDocument({ receipt }) {
   const total =
     kind === "loan" ? receipt.amount : kind === "membership" ? receipt.membershipFee : receipt.netAmount;
 
+  // A cancelled payment still prints, on purpose: staff need to be able to hand
+  // the member the voided document matching the slip already in their hands.
+  const voidedAt = kind === "loan" ? receipt.voidedAt : null;
+
   return (
     <div id="printable-receipt" className="mx-auto max-w-md bg-white p-6 text-sm text-[#111111]">
+      {voidedAt && (
+        <div className="mb-4 rounded-lg border-2 border-[#9F2F2D] px-3 py-2 text-center">
+          <p className="text-lg font-bold uppercase tracking-[0.3em] text-[#9F2F2D]">Voided</p>
+          <p className="text-xs text-[#8a2725]">
+            Cancelled {formatDate(voidedAt)}
+            {receipt.voidReason ? ` · ${receipt.voidReason}` : ""}
+          </p>
+          <p className="mt-1 text-[10px] text-[#5F5E5A]">
+            This payment was reversed and no longer counts toward the loan.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-4 flex items-center gap-3 border-b border-[#EAEAEA] pb-4">
         <div className="rounded-lg bg-[#346538] p-2 text-white">

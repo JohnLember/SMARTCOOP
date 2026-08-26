@@ -18,6 +18,7 @@ router.get("/loans/:id", controller.getLoan);
 // they are staff-only; reading one is scoped by assertMemberAccess so a member
 // can re-print their own acknowledgment slip.
 router.post("/loan-payments/:paymentId/void", staff, controller.voidLoanPayment);
+router.get("/loan-payments", controller.listLoanPayments);
 router.get("/loan-payments/:paymentId", controller.getLoanPayment);
 
 // Agricultural Credit Scoring — staff compute/list; members read their own.

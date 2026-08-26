@@ -117,7 +117,7 @@ export default function MemberLoans() {
     await confirm({
       title: `Void payment ${payment.paymentNo}?`,
       description:
-        "The installments this payment settled go back to what they were before, and the loan balance is restored. The payment record is removed for good.",
+        "The installments this payment settled go back to what they were before, and the loan balance is restored. The record stays on file marked VOIDED, so the member can still match it to the slip they were given.",
       details: [
         { label: "Amount", value: peso(payment.amount) },
         { label: "Date received", value: formatDate(payment.paymentDate) },
@@ -126,10 +126,15 @@ export default function MemberLoans() {
           value: periods.join(", "),
         },
       ].filter(Boolean),
+      reason: {
+        label: "Reason for voiding",
+        placeholder: "e.g. duplicate entry, wrong amount",
+        hint: "Shown on the member's cancelled slip.",
+      },
       confirmLabel: "Void payment",
       busyLabel: "Voiding…",
-      onConfirm: async () => {
-        await api.post(`/finance/loan-payments/${payment.id}/void`);
+      onConfirm: async (reason) => {
+        await api.post(`/finance/loan-payments/${payment.id}/void`, { reason });
         toast.success(`Payment ${payment.paymentNo} voided`);
         await load();
       },
@@ -437,7 +442,11 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
 
   // Newest first, as the API returns them. The card shows a recent window; the
   // rest stay one click away rather than turning the sidebar into a ledger.
+  // Voided payments stay in the list — that is the point of the soft void — but
+  // never in a count or a total.
   const payments = loan.payments;
+  const live = payments.filter((p) => !p.voidedAt);
+  const voidedCount = payments.length - live.length;
   const recent = payments.slice(0, PAYMENTS_SHOWN);
   const hidden = payments.length - recent.length;
 
@@ -515,7 +524,7 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
             <h3 className="text-sm font-semibold text-[var(--ink-body)]">Payments</h3>
             {payments.length > 0 && (
               <span className="font-mono-meta text-[11px] text-[var(--ink-muted)]">
-                {payments.length} total
+                {live.length} total{voidedCount > 0 ? ` · ${voidedCount} voided` : ""}
               </span>
             )}
           </div>
@@ -554,11 +563,12 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
         wide
       >
         <p className="mb-3 text-sm text-[var(--ink-muted)]">
-          {payments.length} payment{payments.length !== 1 ? "s" : ""} totalling{" "}
+          {live.length} payment{live.length !== 1 ? "s" : ""} totalling{" "}
           <span className="font-medium text-[var(--ink-body)]">
-            {peso(payments.reduce((s, p) => s + Number(p.amount), 0))}
+            {peso(live.reduce((s, p) => s + Number(p.amount), 0))}
           </span>{" "}
-          against this loan.
+          against this loan
+          {voidedCount > 0 ? `, plus ${voidedCount} voided (not counted)` : ""}.
         </p>
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">
           {payments.length === 0 ? (
@@ -590,12 +600,23 @@ function PaymentRow({ payment, loan, onVoid, onPrint }) {
   // automatic delivery deduction that has since been removed. They can be read
   // but not voided or printed, because there is no stored allocation to reverse.
   const legacy = !payment.paymentNo;
+  const voided = !!payment.voidedAt;
   const periods = (payment.allocations ?? []).map((a) => a.periodNo);
 
   return (
-    <div className="rounded-[var(--radius-control)] border border-[#F2F1ED] px-3 py-2 text-sm">
+    <div
+      className={`rounded-[var(--radius-control)] border px-3 py-2 text-sm ${
+        voided ? "border-dashed border-[var(--line-strong)] bg-[var(--sunken)]" : "border-[#F2F1ED]"
+      }`}
+    >
       <div className="flex items-baseline justify-between gap-2">
-        <p className="tabular font-medium text-[var(--brand)]">{peso(payment.amount)}</p>
+        <p
+          className={`tabular font-medium ${
+            voided ? "text-[var(--ink-faint)] line-through" : "text-[var(--brand)]"
+          }`}
+        >
+          {peso(payment.amount)}
+        </p>
         <p className="font-mono-meta text-[11px] text-[var(--ink-muted)]">
           {payment.paymentNo ?? "legacy"}
         </p>
@@ -606,6 +627,12 @@ function PaymentRow({ payment, loan, onVoid, onPrint }) {
         {periods.length > 0 ? ` · period ${periods.join(", ")}` : ""}
         {payment.referenceNo ? ` · ${payment.referenceNo}` : ""}
       </p>
+      {voided && (
+        <p className="mt-1 text-xs font-medium text-[var(--danger)]">
+          Voided {formatDate(payment.voidedAt)}
+          {payment.voidReason ? ` · ${payment.voidReason}` : ""}
+        </p>
+      )}
       {payment.remarks && <p className="mt-0.5 text-xs text-[var(--ink-faint)]">{payment.remarks}</p>}
       {!legacy && (
         <div className="mt-1.5 flex gap-1.5">
@@ -617,15 +644,19 @@ function PaymentRow({ payment, loan, onVoid, onPrint }) {
             <Printer size={14} />
             Print
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="hover:bg-[var(--danger-tint)] hover:text-[var(--danger)]"
-            onClick={() => onVoid(payment)}
-          >
-            <Trash2 size={14} />
-            Void
-          </Button>
+          {/* Print stays on a voided payment — the slip is the whole reason the
+              record was kept — but there is nothing left to void. */}
+          {!voided && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="hover:bg-[var(--danger-tint)] hover:text-[var(--danger)]"
+              onClick={() => onVoid(payment)}
+            >
+              <Trash2 size={14} />
+              Void
+            </Button>
+          )}
         </div>
       )}
     </div>

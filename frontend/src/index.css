@@ -111,6 +111,13 @@
     background: var(--sunken);
   }
 }
+/* A totals row, when a table has one. Same rhythm as a body row, but it sits on
+   the sunken ground so the eye reads it as a summary rather than more data. */
+.data-table tfoot td {
+  padding: 0.625rem 1rem;
+  vertical-align: middle;
+}
+
 /* Money and weights read as columns of digits, not sentences. */
 .data-table .num {
   text-align: right;

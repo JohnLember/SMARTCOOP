@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
 import {
@@ -19,7 +19,10 @@ import { KeyRound, Eye, Printer } from "lucide-react";
 import CreditScoreCard from "../../components/CreditScoreCard";
 import MemberCategoryCard from "../../components/MemberCategoryCard";
 import ReceiptDocument from "../../components/ReceiptDocument";
+import { buildReceiptRows } from "../../lib/receiptRows";
 import { formatDate } from "../../lib/format";
+
+const RECEIPT_TYPE_COLOR = { Delivery: "green", Membership: "amber", "Loan payment": "blue" };
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
@@ -55,12 +58,15 @@ export default function MemberDetail() {
   }
 
   async function loadHistory() {
-    const [d, r] = await Promise.all([
+    // Loan payments are their own record, not Receipt rows, so the receipts
+    // section merges the two sources — same list the member sees on My Receipts.
+    const [d, r, p] = await Promise.all([
       api.get("/production/deliveries", { params: { memberId: id } }),
       api.get("/production/receipts", { params: { memberId: id } }),
+      api.get("/finance/loan-payments", { params: { memberId: id } }),
     ]);
     setDeliveries(d.data);
-    setReceipts(r.data);
+    setReceipts(buildReceiptRows(r.data, p.data));
   }
 
   useEffect(() => {
@@ -247,42 +253,58 @@ export default function MemberDetail() {
 
       <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Receipts</h3>
       <Card className="p-0">
-        <DataTable>
-          <thead>
-            <tr>
-              <th className="px-4 py-3 font-medium">Receipt No.</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Gross</th>
-              <th className="px-4 py-3 font-medium">Net</th>
-              <th className="px-4 py-3 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {receipts.map((r) => (
-              <tr key={r.id} className="hover:bg-[#F7F6F3]">
-                <td className="px-4 py-3 font-medium text-[#2F3437]">
-                  OR-{String(r.id).padStart(6, "0")}
-                </td>
-                <td className="px-4 py-3 text-[#787774]">{formatDate(r.dateIssued)}</td>
-                <td className="px-4 py-3 text-[#787774]">{peso(r.grossAmount)}</td>
-                <td className="px-4 py-3 font-medium text-[#346538]">{peso(r.netAmount)}</td>
-                <td className="px-4 py-3 text-right">
-                  <Button variant="ghost" onClick={() => setSelectedReceipt(r)}>
-                    <Eye size={16} />
-                    View
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {receipts.length === 0 && (
+        {/* Deliveries, membership fees and loan payments together — the same
+            list the member sees on My Receipts, built by the same helper. */}
+        <div className="overflow-x-auto">
+          <DataTable>
+            <thead>
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-[#5F5E5A]">
-                  No receipts yet.
-                </td>
+                <th>Receipt No.</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th className="num">Received</th>
+                <th className="num">Paid</th>
+                <th></th>
               </tr>
-            )}
-          </tbody>
-        </DataTable>
+            </thead>
+            <tbody>
+              {receipts.map((r) => (
+                <tr key={r.key} className={r.voidedAt ? "text-[var(--ink-faint)]" : undefined}>
+                  <td className={`font-medium ${r.voidedAt ? "line-through" : "text-[var(--ink-body)]"}`}>
+                    {r.no}
+                  </td>
+                  <td className="text-[var(--ink-muted)]">{formatDate(r.date)}</td>
+                  <td>
+                    <Badge color={r.voidedAt ? "slate" : RECEIPT_TYPE_COLOR[r.type]}>{r.type}</Badge>
+                  </td>
+                  <td className="num font-medium text-[var(--brand)]">
+                    {r.received != null ? peso(r.received) : "—"}
+                  </td>
+                  <td className="num">
+                    {r.voidedAt ? (
+                      <span className="font-mono-meta text-[11px] uppercase tracking-[0.12em]">Voided</span>
+                    ) : r.paid != null ? (
+                      <span className="font-medium text-[var(--ink-body)]">{peso(r.paid)}</span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="text-right">
+                    <Button variant="ghost" onClick={() => setSelectedReceipt(r.doc)}>
+                      <Eye size={16} />
+                      View
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {receipts.length === 0 && (
+                <tr>
+                  <td colSpan={6}>No receipts yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </DataTable>
+        </div>
       </Card>
 
       <Modal open={!!selectedReceipt} onClose={() => setSelectedReceipt(null)} title="Receipt">
