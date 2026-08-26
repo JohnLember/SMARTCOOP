@@ -12,6 +12,7 @@ import {
   Badge,
   Modal, DataTable
 } from "../../components/ui";
+import { useConfirm } from "../../components/ConfirmDialog";
 import { formatDate } from "../../lib/format";
 import { Plus, KeyRound, Pencil, Trash2, ShieldCheck } from "lucide-react";
 
@@ -20,6 +21,7 @@ const ROLES = ["ADMIN", "STAFF", "MAO", "MEMBER"];
 
 export default function UsersList() {
   const { user: me } = useAuth();
+  const confirm = useConfirm();
   const [users, setUsers] = useState(null);
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState("");
@@ -48,9 +50,27 @@ export default function UsersList() {
   }, []);
 
   async function toggleStatus(u) {
+    const next = u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+
+    // Reactivating is harmless and stays a single click. Deactivating locks
+    // someone out of the system mid-shift, so it asks first.
+    if (next === "INACTIVE") {
+      const ok = await confirm({
+        title: `Deactivate ${u.username}?`,
+        description:
+          "They will be signed out on their next request and cannot sign in again until the account is reactivated. Their records stay untouched.",
+        details: [
+          { label: "Account", value: u.username },
+          { label: "Role", value: u.role },
+        ],
+        confirmLabel: "Deactivate",
+        busyLabel: "Deactivating…",
+      });
+      if (!ok) return;
+    }
+
     setError("");
     try {
-      const next = u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
       await api.put(`/users/${u.id}`, { status: next });
       await load();
       toast.success(`Account ${next === "ACTIVE" ? "activated" : "deactivated"}`);
@@ -60,15 +80,24 @@ export default function UsersList() {
   }
 
   async function remove(u) {
-    if (!confirm(`Delete the account "${u.username}"? This cannot be undone.`)) return;
-    setError("");
-    try {
-      await api.delete(`/users/${u.id}`);
-      await load();
-      toast.success("Account deleted");
-    } catch (err) {
-      setError(apiError(err));
-    }
+    await confirm({
+      title: `Delete the account "${u.username}"?`,
+      description:
+        "The login is removed permanently. If this account belongs to a member, their member record and history are kept — only the ability to sign in goes.",
+      details: [
+        { label: "Username", value: u.username },
+        { label: "Role", value: u.role },
+        u.member && { label: "Member", value: u.member.memberNo },
+      ].filter(Boolean),
+      confirmLabel: "Delete account",
+      busyLabel: "Deleting…",
+      onConfirm: async () => {
+        setError("");
+        await api.delete(`/users/${u.id}`);
+        await load();
+        toast.success("Account deleted");
+      },
+    });
   }
 
   const membersWithoutAccount = members.filter((m) => !m.user);

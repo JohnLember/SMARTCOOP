@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
 import { Button, Card, Select, Input, Spinner, PageHeader, Badge, Modal, DataTable} from "../../components/ui";
+import { useConfirm } from "../../components/ConfirmDialog";
 import { formatDate } from "../../lib/format";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -21,6 +22,7 @@ function computeEndDate(periodType, startDate) {
 
 
 export default function BatchesList() {
+  const confirm = useConfirm();
   const [batches, setBatches] = useState(null);
   const [barangays, setBarangays] = useState([]);
   const [show, setShow] = useState(false);
@@ -43,15 +45,23 @@ export default function BatchesList() {
   }, []);
 
   async function remove(b) {
-    if (!confirm(`Delete settled batch for ${b.barangay.name}? This removes its ${b._count.deliveries} delivery record(s) and receipts. This cannot be undone.`))
-      return;
-    try {
-      await api.delete(`/production/batches/${b.id}`);
-      await load();
-      toast.success("Loading batch deleted");
-    } catch (err) {
-      toast.error(apiError(err));
-    }
+    await confirm({
+      title: `Delete the settled batch for ${b.barangay.name}?`,
+      description:
+        "Its deliveries and receipts go with it, permanently. Note this is a purge, not an undo: CBU and loan payments those deliveries already applied are not reversed.",
+      details: [
+        { label: "Barangay", value: b.barangay.name },
+        { label: "Period", value: b.periodType },
+        { label: "Deliveries removed", value: b._count.deliveries },
+      ],
+      confirmLabel: "Delete batch",
+      busyLabel: "Deleting…",
+      onConfirm: async () => {
+        await api.delete(`/production/batches/${b.id}`);
+        await load();
+        toast.success("Loading batch deleted");
+      },
+    });
   }
 
   async function submit(e) {

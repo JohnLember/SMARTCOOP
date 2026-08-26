@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from "react-router";
 import { AuthProvider } from "./context/AuthContext";
+import { ConfirmProvider } from "./components/ConfirmDialog";
 import { ToastContainer, cssTransition } from "react-toastify";
 import { CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react";
 
@@ -37,7 +38,11 @@ createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <StrictMode>
       <AuthProvider>
-        <App />
+        {/* One confirmation dialog for every destructive action in the app;
+            reach it with useConfirm() from anywhere below here. */}
+        <ConfirmProvider>
+          <App />
+        </ConfirmProvider>
         <ToastContainer
           position="top-right"
           autoClose={3200}

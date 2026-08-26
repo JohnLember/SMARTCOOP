@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { toast } from "react-toastify";
 import { Card, Spinner, PageHeader, Badge, Button } from "../components/ui";
+import { useConfirm } from "../components/ConfirmDialog";
 import { formatDateTime } from "../lib/format";
 import { Check, ChevronRight, CalendarClock, Trash2, X } from "lucide-react";
 
@@ -33,6 +34,7 @@ const STAGGER_MS = 40;
 const STAGGER_CAP = 6;
 
 export default function Notifications() {
+  const confirm = useConfirm();
   const [list, setList] = useState(null);
   const [selected, setSelected] = useState(() => new Set());
   // Ids mid-exit-animation: rendered, but already gone as far as the user cares.
@@ -59,6 +61,26 @@ export default function Notifications() {
   // state only after the server confirms, so a failed delete puts them back.
   async function remove(ids) {
     if (!ids.length || busy) return;
+
+    // A notification addressed to a role is one shared row, so deleting it takes
+    // it away from every colleague who holds that role — not obvious from a
+    // checkbox, and worth saying out loud before it happens.
+    const shared = list.filter((n) => ids.includes(n.id) && !n.recipientMemberId).length;
+    const ok = await confirm({
+      title: ids.length === 1 ? "Delete this notification?" : `Delete ${ids.length} notifications?`,
+      description:
+        shared > 0
+          ? "This cannot be undone. Some of these were sent to a role rather than to you, so deleting them removes them for everyone who holds that role."
+          : "This cannot be undone.",
+      details: [
+        { label: "Selected", value: ids.length },
+        shared > 0 && { label: "Shared with your role", value: shared },
+      ].filter(Boolean),
+      confirmLabel: ids.length === 1 ? "Delete" : `Delete ${ids.length}`,
+      busyLabel: "Deleting…",
+    });
+    if (!ok) return;
+
     setBusy(true);
     setLeaving(new Set(ids));
     try {

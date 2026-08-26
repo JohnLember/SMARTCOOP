@@ -15,6 +15,7 @@ import {
 import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
 import ReceiptDocument from "../components/ReceiptDocument";
+import { useConfirm } from "../components/ConfirmDialog";
 import { Check, X, Search, Printer } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -191,6 +192,7 @@ function MembershipTable({ rows, status, onOpen }) {
 }
 
 function ReviewModal({ application, onClose, onReviewed }) {
+  const confirm = useConfirm();
   const [approve, setApprove] = useState({ memberNo: "" });
   const [feePaid, setFeePaid] = useState(false);
   const [note, setNote] = useState("");
@@ -268,19 +270,30 @@ function ReviewModal({ application, onClose, onReviewed }) {
   }
 
   async function doUnapprove() {
-    if (!confirm("Revert this approval? The member record and all their deliveries, receipts, loans and payments will be permanently deleted. This cannot be undone."))
-      return;
-    setBusy(true);
-    setError("");
-    try {
-      await api.post(`/applications/${application.id}/unapprove`);
-      toast.success("Approval reverted — member deleted, application back to pending");
-      onReviewed();
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusy(false);
-    }
+    // The only action in the app that deletes a person's whole history in one
+    // step, so it is also the only one that asks for the word to be typed.
+    await confirm({
+      title: "Revert this approval?",
+      description: `${application.firstName} ${application.lastName}'s member record is deleted along with every delivery, receipt, loan, loan payment and credit score attached to it. The application returns to pending.`,
+      details: [
+        { label: "Member", value: `${application.firstName} ${application.lastName}` },
+        { label: "Application", value: application.applicationNo },
+      ],
+      confirmPhrase: "REVERT",
+      confirmLabel: "Revert approval",
+      busyLabel: "Reverting…",
+      onConfirm: async () => {
+        setBusy(true);
+        setError("");
+        try {
+          await api.post(`/applications/${application.id}/unapprove`);
+          toast.success("Approval reverted — member deleted, application back to pending");
+          onReviewed();
+        } finally {
+          setBusy(false);
+        }
+      },
+    });
   }
 
   return (

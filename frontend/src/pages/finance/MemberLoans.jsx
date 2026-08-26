@@ -16,6 +16,7 @@ import {
 } from "../../components/ui";
 import ShowComputation from "../../components/ShowComputation";
 import ReceiptDocument from "../../components/ReceiptDocument";
+import { useConfirm } from "../../components/ConfirmDialog";
 import { formatDate } from "../../lib/format";
 import { Wallet, CalendarClock, Layers, Printer, Trash2, Plus, History } from "lucide-react";
 
@@ -87,6 +88,7 @@ const METRICS = {
 
 export default function MemberLoans() {
   const { memberId } = useParams();
+  const confirm = useConfirm();
   const [loans, setLoans] = useState(null);
   const [metric, setMetric] = useState(null);
   // { loan, row } — the installment staff clicked "Record payment" on.
@@ -111,19 +113,27 @@ export default function MemberLoans() {
   }, [load]);
 
   async function voidPayment(payment) {
-    if (
-      !confirm(
-        `Void payment ${payment.paymentNo} of ${peso(payment.amount)}?\n\nThe installments it paid will go back to what they were before, and the loan balance will be restored. This cannot be undone.`
-      )
-    )
-      return;
-    try {
-      await api.post(`/finance/loan-payments/${payment.id}/void`);
-      toast.success(`Payment ${payment.paymentNo} voided`);
-      await load();
-    } catch (err) {
-      toast.error(apiError(err));
-    }
+    const periods = (payment.allocations ?? []).map((a) => a.periodNo);
+    await confirm({
+      title: `Void payment ${payment.paymentNo}?`,
+      description:
+        "The installments this payment settled go back to what they were before, and the loan balance is restored. The payment record is removed for good.",
+      details: [
+        { label: "Amount", value: peso(payment.amount) },
+        { label: "Date received", value: formatDate(payment.paymentDate) },
+        periods.length > 0 && {
+          label: periods.length === 1 ? "Applied to period" : "Applied to periods",
+          value: periods.join(", "),
+        },
+      ].filter(Boolean),
+      confirmLabel: "Void payment",
+      busyLabel: "Voiding…",
+      onConfirm: async () => {
+        await api.post(`/finance/loan-payments/${payment.id}/void`);
+        toast.success(`Payment ${payment.paymentNo} voided`);
+        await load();
+      },
+    });
   }
 
   if (!loans) return <Spinner />;

@@ -230,6 +230,73 @@ body {
   .card-lift:hover { transform: none; }
 }
 
+/* --- Confirmation dialog -------------------------------------------------
+   Exit is faster than enter (140ms vs 200ms): the user is still deciding on the
+   way in, but once they have chosen, the system should get out of the way. */
+
+@keyframes confirm-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes confirm-scrim-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.confirm-scrim {
+  animation: confirm-scrim-in 160ms var(--ease-out) both;
+}
+.confirm-scrim[data-closing="true"] {
+  animation: confirm-scrim-out 120ms var(--ease-out) both;
+}
+
+/* Phones get a bottom sheet, so it travels straight up from the edge it is
+   anchored to. Never from scale(0) — nothing in the world appears from nothing. */
+@keyframes confirm-sheet-in {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes confirm-sheet-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(100%); }
+}
+.confirm-panel {
+  animation: confirm-sheet-in 220ms var(--ease-out) both;
+}
+.confirm-panel[data-closing="true"] {
+  animation: confirm-sheet-out 140ms var(--ease-out) both;
+}
+
+/* From `sm` up it is a centred dialog, so it settles in place instead. Centre
+   origin is right here: unlike a popover, a dialog is not anchored to a trigger. */
+@media (min-width: 640px) {
+  @keyframes confirm-panel-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes confirm-panel-out {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0; transform: scale(0.98); }
+  }
+  .confirm-panel {
+    animation: confirm-panel-in 200ms var(--ease-out) both;
+  }
+  .confirm-panel[data-closing="true"] {
+    animation: confirm-panel-out 140ms var(--ease-out) both;
+  }
+}
+
+/* Reduced motion keeps the fade — it explains that something arrived — and
+   drops every bit of travel and scaling. */
+@media (prefers-reduced-motion: reduce) {
+  .confirm-panel,
+  .confirm-panel[data-closing="true"] {
+    animation-name: confirm-scrim-in;
+  }
+  .confirm-panel[data-closing="true"] {
+    animation-name: confirm-scrim-out;
+  }
+}
+
 /* --- Notification rows: list enter/exit ---------------------------------- */
 
 /* Enter: rows rise in. Staggered by --enter-delay, capped in the component so a
