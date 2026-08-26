@@ -11,7 +11,14 @@ router.use(authenticate);
 router.get("/loans", controller.listLoans);
 router.post("/loans", controller.createLoan);
 router.get("/loans/:id/explain", controller.explainLoan);
+router.post("/loans/:id/payments", staff, controller.recordLoanPayment);
 router.get("/loans/:id", controller.getLoan);
+
+// Manual loan payments. Recording and voiding move money on the schedule, so
+// they are staff-only; reading one is scoped by assertMemberAccess so a member
+// can re-print their own acknowledgment slip.
+router.post("/loan-payments/:paymentId/void", staff, controller.voidLoanPayment);
+router.get("/loan-payments/:paymentId", controller.getLoanPayment);
 
 // Agricultural Credit Scoring — staff compute/list; members read their own.
 // Specific routes before the parameterized ones.

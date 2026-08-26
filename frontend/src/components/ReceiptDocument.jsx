@@ -16,18 +16,51 @@ function Row({ label, value, strong }) {
   );
 }
 
+// Three kinds of printable document, one component:
+//   delivery   OR-  gross less deductions = net income
+//   membership MR-  the membership fee charged on approval (no delivery)
+//   loan       LP-  a payment the member made at the office against their
+//                   amortization schedule
+// The kind is inferred from the record's own shape, so every existing call site
+// keeps passing a plain `receipt`.
+const KIND = {
+  delivery: { title: "Official Delivery Receipt", label: "Receipt No.", total: "NET INCOME" },
+  membership: { title: "Official Membership Receipt", label: "Receipt No.", total: "AMOUNT PAID" },
+  loan: { title: "Loan Payment Acknowledgment", label: "Payment No.", total: "AMOUNT PAID" },
+};
+
+function kindOf(r) {
+  if (r.paymentNo != null && r.loan) return "loan";
+  if (r.kind === "membership" || r.deliveryId == null) return "membership";
+  return "delivery";
+}
+
 // A printable official receipt. Wrapped in #printable-receipt so print CSS can
 // isolate it from the rest of the page.
 export default function ReceiptDocument({ receipt }) {
-  const isMembership = receipt.kind === "membership" || receipt.deliveryId == null;
+  const kind = kindOf(receipt);
+  const meta = KIND[kind];
   const d = receipt.delivery ?? {};
-  const m = receipt.member ?? {};
+  const m = (kind === "loan" ? receipt.loan.member : receipt.member) ?? {};
+
+  const docNo =
+    kind === "loan"
+      ? receipt.paymentNo
+      : kind === "membership"
+        ? `MR-${receipt.id ? String(receipt.id).padStart(6, "0") : m.memberNo ?? "—"}`
+        : `OR-${String(receipt.id).padStart(6, "0")}`;
+
   const deductions =
-    Number(receipt.cbu) +
-    Number(receipt.loanDeduction) +
-    Number(receipt.membershipFee) +
-    Number(receipt.supplies) +
-    Number(receipt.dayong);
+    kind === "loan"
+      ? 0
+      : Number(receipt.cbu) +
+        Number(receipt.loanDeduction) +
+        Number(receipt.membershipFee) +
+        Number(receipt.supplies) +
+        Number(receipt.dayong);
+
+  const total =
+    kind === "loan" ? receipt.amount : kind === "membership" ? receipt.membershipFee : receipt.netAmount;
 
   return (
     <div id="printable-receipt" className="mx-auto max-w-md bg-white p-6 text-sm text-[#111111]">
@@ -38,22 +71,16 @@ export default function ReceiptDocument({ receipt }) {
         </div>
         <div className="leading-tight">
           <p className="text-base font-bold text-[#111111]">SMARTCOOP</p>
-          <p className="text-xs text-[#787774]">San Luis Rubber Producer's Cooperative</p>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#346538]">
-            {isMembership ? "Official Membership Receipt" : "Official Delivery Receipt"}
-          </p>
+          <p className="text-xs text-[#787774]">San Luis Rubber Producer&apos;s Cooperative</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#346538]">{meta.title}</p>
         </div>
         <div className="ml-auto text-right text-xs text-[#787774]">
-          <p>Receipt No.</p>
-          <p className="font-bold text-[#111111]">
-            {isMembership
-              ? `MR-${receipt.id ? String(receipt.id).padStart(6, "0") : m.memberNo ?? "—"}`
-              : `OR-${String(receipt.id).padStart(6, "0")}`}
-          </p>
+          <p>{meta.label}</p>
+          <p className="font-bold text-[#111111]">{docNo}</p>
         </div>
       </div>
 
-      {/* Member + delivery info */}
+      {/* Member + document info */}
       <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
         <div>
           <p className="text-[#5F5E5A]">Member</p>
@@ -68,13 +95,22 @@ export default function ReceiptDocument({ receipt }) {
           <p className="font-medium text-[#111111]">{m.barangay?.name ?? "—"}</p>
         </div>
         <div>
-          <p className="text-[#5F5E5A]">Date issued</p>
-          <p className="font-medium text-[#111111]">{formatDate(receipt.dateIssued)}</p>
+          <p className="text-[#5F5E5A]">{kind === "loan" ? "Date paid" : "Date issued"}</p>
+          <p className="font-medium text-[#111111]">
+            {formatDate(kind === "loan" ? receipt.paymentDate : receipt.dateIssued)}
+          </p>
         </div>
+        {kind === "loan" && receipt.referenceNo && (
+          <div className="col-span-2">
+            <p className="text-[#5F5E5A]">Reference</p>
+            <p className="font-medium text-[#111111]">{receipt.referenceNo}</p>
+          </div>
+        )}
       </div>
 
-      {isMembership ? (
-        /* Membership fee */
+      {kind === "loan" ? (
+        <LoanPaymentBody payment={receipt} />
+      ) : kind === "membership" ? (
         <div className="border-t border-[#EAEAEA] pt-2">
           <Row label="Membership fee" value={peso(receipt.membershipFee)} strong />
         </div>
@@ -94,7 +130,11 @@ export default function ReceiptDocument({ receipt }) {
             <Row label="Gross income" value={peso(receipt.grossAmount)} strong />
             <div className="my-1 text-xs font-semibold uppercase text-[#5F5E5A]">Less deductions</div>
             <Row label="CBU (Capital Build-Up)" value={peso(receipt.cbu)} />
-            <Row label="Loan payment" value={peso(receipt.loanDeduction)} />
+            {/* Only appears on receipts issued while the automatic loan deduction
+                still existed; new deliveries never touch a loan. */}
+            {Number(receipt.loanDeduction) > 0 && (
+              <Row label="Loan payment" value={peso(receipt.loanDeduction)} />
+            )}
             <Row label="Membership" value={peso(receipt.membershipFee)} />
             <Row label="Acid / Tapping Knife" value={peso(receipt.supplies)} />
             <Row label="Dayong" value={peso(receipt.dayong)} />
@@ -107,15 +147,67 @@ export default function ReceiptDocument({ receipt }) {
 
       {/* Total */}
       <div className="mt-3 flex items-baseline justify-between rounded-lg bg-[#EDF3EC] px-3 py-2">
-        <span className="font-semibold text-[#2b5330]">{isMembership ? "AMOUNT PAID" : "NET INCOME"}</span>
-        <span className="text-lg font-bold text-[#346538]">
-          {peso(isMembership ? receipt.membershipFee : receipt.netAmount)}
-        </span>
+        <span className="font-semibold text-[#2b5330]">{meta.total}</span>
+        <span className="text-lg font-bold text-[#346538]">{peso(total)}</span>
       </div>
+
+      {kind === "loan" && (
+        <div className="mt-2 space-y-1 text-xs">
+          <Row label="Remaining balance on this loan" value={peso(receipt.loan.remainingBalance)} />
+          {receipt.remarks && (
+            <p className="pt-1 text-[#5F5E5A]">
+              Remarks: <span className="text-[#2F3437]">{receipt.remarks}</span>
+            </p>
+          )}
+          <p className="pt-2 text-[#5F5E5A]">
+            Received by:{" "}
+            <span className="font-medium text-[#111111]">{receipt.recordedBy?.username ?? "—"}</span>
+          </p>
+        </div>
+      )}
 
       <p className="mt-4 text-center text-[10px] text-[#5F5E5A]">
         This is a system-generated receipt from SMARTCOOP.
       </p>
     </div>
+  );
+}
+
+// Which installments this payment actually settled. Read straight off the stored
+// allocation, so the slip shows what was really applied rather than a fresh
+// guess at where the money should have gone.
+function LoanPaymentBody({ payment }) {
+  const schedule = payment.loan.schedule ?? [];
+  const rows = (payment.allocations ?? []).map((a) => ({
+    ...a,
+    dueDate: schedule.find((r) => r.id === a.scheduleId)?.dueDate,
+  }));
+
+  return (
+    <>
+      <div className="mb-3 rounded-lg bg-[#F7F6F3] p-3 text-xs">
+        <Row label="Loan principal" value={peso(payment.loan.principalAmount)} />
+        <Row
+          label="Term"
+          value={`${payment.loan.termMonths} months @ ${Number(payment.loan.interestRate)}%/mo`}
+        />
+        <Row label="Date issued" value={formatDate(payment.loan.dateIssued)} />
+      </div>
+
+      <div className="border-t border-[#EAEAEA] pt-2">
+        <div className="my-1 text-xs font-semibold uppercase text-[#5F5E5A]">Applied to</div>
+        {rows.length === 0 ? (
+          <p className="py-1 text-xs text-[#5F5E5A]">—</p>
+        ) : (
+          rows.map((r) => (
+            <Row
+              key={r.scheduleId}
+              label={`Period ${r.periodNo}${r.dueDate ? ` — due ${formatDate(r.dueDate)}` : ""}`}
+              value={peso(r.amount)}
+            />
+          ))
+        )}
+      </div>
+    </>
   );
 }

@@ -74,8 +74,10 @@ export default function BatchDetail() {
     return w * p;
   }, [form.weightKg, form.pricePerKg]);
 
-  // Net before the automatic loan deduction (loan is only known on submit).
-  const previewNetBeforeLoan = useMemo(() => {
+  // The real net. Loans are no longer deducted here: members pay their
+  // amortization at the office and staff record it against the schedule, so
+  // what this preview shows is exactly what the receipt will say.
+  const previewNet = useMemo(() => {
     if (previewTotal == null) return null;
     const d =
       (parseFloat(form.cbu) || 0) +
@@ -211,7 +213,7 @@ export default function BatchDetail() {
               </div>
             </div>
 
-            {/* Net-income deductions (loan is deducted automatically) */}
+            {/* Net-income deductions. Loan repayment is not one of them. */}
             <Input
               label="CBU (₱)"
               type="number"
@@ -241,16 +243,11 @@ export default function BatchDetail() {
               onChange={(e) => setForm({ ...form, dayong: e.target.value })}
             />
             <div>
-              <p className="mb-1 text-sm font-medium text-[#2F3437]">Net (before loan)</p>
+              <p className="mb-1 text-sm font-medium text-[#2F3437]">Net income</p>
               <div className="rounded-lg bg-[#F7F6F3] px-3 py-2 text-sm font-semibold text-[#346538]">
-                {previewNetBeforeLoan != null ? peso(previewNetBeforeLoan) : "—"}
+                {previewNet != null ? peso(previewNet) : "—"}
               </div>
             </div>
-
-            <p className="col-span-5 text-xs text-[#5F5E5A]">
-              Any due loan installment is deducted automatically on top of these. Final net appears on the
-              receipt (use “Show computation”).
-            </p>
 
             <div className="col-span-5 flex justify-end">
               <Button type="submit" disabled={busy}>

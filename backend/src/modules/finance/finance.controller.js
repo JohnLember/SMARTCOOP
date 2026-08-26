@@ -56,6 +56,44 @@ export async function listCreditScores(_req, res, next) {
   }
 }
 
+// --- Manual loan payments (staff record what a member paid at the office) ---
+
+const paymentSchema = z.object({
+  scheduleId: z.number().int().positive(),
+  amount: z.number().positive("Enter the amount the member paid"),
+  paymentDate: z.string().optional().nullable(),
+  referenceNo: z.string().max(60).optional().nullable(),
+  remarks: z.string().max(500).optional().nullable(),
+});
+
+export async function recordLoanPayment(req, res, next) {
+  try {
+    const body = paymentSchema.parse(req.body);
+    res.status(201).json(await loans.recordPayment(Number(req.params.id), body, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function voidLoanPayment(req, res, next) {
+  try {
+    res.json(await loans.voidPayment(Number(req.params.paymentId), req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Re-printing an acknowledgment slip, and the member's own view of it.
+export async function getLoanPayment(req, res, next) {
+  try {
+    const payment = await loans.getPaymentById(Number(req.params.paymentId));
+    assertMemberAccess(req.user, payment.loan.memberId, "loan payments");
+    res.json(payment);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function computeAllCreditScores(req, res, next) {
   try {
     res.json(await credit.evaluateAll(req.user.id));

@@ -3,6 +3,8 @@ import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
 import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD, memberSearchWhere } from "../members/members.service.js";
+import { planAllocation, deriveLoanState, statusFor } from "./allocate.js";
+import * as notifications from "../notifications/notifications.service.js";
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -68,8 +70,11 @@ export async function getById(id) {
       ...loanInclude,
       schedule: { orderBy: { periodNo: "asc" } },
       payments: {
-        orderBy: { paymentDate: "desc" },
-        include: { delivery: { select: { id: true, deliveryDate: true, weightKg: true } } },
+        orderBy: [{ paymentDate: "desc" }, { id: "desc" }],
+        include: {
+          delivery: { select: { id: true, deliveryDate: true, weightKg: true } },
+          recordedBy: { select: { username: true } },
+        },
       },
     },
   });
@@ -178,68 +183,199 @@ export async function explainSchedule(loanId) {
 }
 
 // ---------------------------------------------------------------------------
-// Applies a delivery's proceeds to the member's active loan, following the
-// "scheduled installment per period" rule: only installments that are already
-// due (dueDate <= delivery date) are collected, capped by the delivery amount.
-// Earliest installments are paid first. Principal balance drops as installments
-// are fully settled. Runs inside the delivery-creation transaction.
-// Returns the amount deducted (0 if no active loan / nothing due).
+// Manual loan payments.
+//
+// This replaced an automatic deduction that took due installments out of a
+// member's rubber delivery proceeds. That was wrong for this cooperative:
+// members pay their amortization in cash at the office, and the system's job is
+// only to RECORD that it happened. There is no online payment anywhere here.
+//
+// Two rules make the whole thing work:
+//   1. The allocation is planned by a pure function and STORED on the payment,
+//      so a void replays what actually happened instead of guessing.
+//   2. The loan's balance and status are DERIVED from its schedule after every
+//      change, never incremented or decremented - so record and void are the
+//      same operation over different rows, and neither can drift.
 // ---------------------------------------------------------------------------
-export async function applyDeliveryToLoan(tx, memberId, availableAmount, deliveryId, date) {
-  const loan = await tx.loan.findFirst({
-    where: { memberId, status: "ACTIVE" },
-    include: { schedule: { orderBy: { periodNo: "asc" } } },
-    orderBy: { dateIssued: "asc" },
+
+// Next "LP-0001"-style payment number, same shape as nextApplicationNo.
+async function nextPaymentNo(tx) {
+  const rows = await tx.loanPayment.findMany({
+    where: { paymentNo: { startsWith: "LP-" } },
+    select: { paymentNo: true },
   });
-  if (!loan) return 0;
+  let max = 0;
+  for (const r of rows) {
+    const n = parseInt(r.paymentNo.slice(3), 10);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  return `LP-${String(max + 1).padStart(4, "0")}`;
+}
 
-  const due = loan.schedule.filter(
-    (r) => r.status !== "PAID" && new Date(r.dueDate) <= new Date(date)
-  );
-  const outstandingDue = round2(
-    due.reduce((s, r) => s + (Number(r.totalDue) - Number(r.amountPaid)), 0)
-  );
+const paymentInclude = {
+  recordedBy: { select: { username: true } },
+  loan: {
+    include: {
+      member: {
+        select: {
+          id: true,
+          memberNo: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          barangay: { select: { name: true } },
+        },
+      },
+      schedule: { orderBy: { periodNo: "asc" } },
+    },
+  },
+};
 
-  let remaining = round2(Math.min(Number(availableAmount), outstandingDue));
-  if (remaining <= 0) return 0;
+export async function getPaymentById(id) {
+  const payment = await prisma.loanPayment.findUnique({ where: { id }, include: paymentInclude });
+  if (!payment) throw notFound("Payment not found");
+  return payment;
+}
 
-  let principalReduction = 0;
-  for (const row of due) {
-    if (remaining <= 0) break;
-    const need = round2(Number(row.totalDue) - Number(row.amountPaid));
-    const pay = round2(Math.min(need, remaining));
-    const newPaid = round2(Number(row.amountPaid) + pay);
-    const paidOff = newPaid >= Number(row.totalDue);
+// Re-derives the loan row from its schedule. Called after any change to the
+// rows, by both record and void.
+async function syncLoanState(tx, loanId) {
+  const loan = await tx.loan.findUnique({
+    where: { id: loanId },
+    include: { schedule: { orderBy: { periodNo: "asc" } } },
+  });
+  const state = deriveLoanState(loan.schedule, loan.principalAmount);
+  await tx.loan.update({ where: { id: loanId }, data: state });
+  return state;
+}
 
-    await tx.loanSchedule.update({
-      where: { id: row.id },
-      data: { amountPaid: newPaid, status: paidOff ? "PAID" : "PARTIAL" },
+// Records a payment against one period of the amortization schedule. Anything
+// above that period's outstanding spills forward into the next unpaid periods
+// (see planAllocation) - a member settling three months at once is one payment,
+// not three.
+export async function recordPayment(loanId, data, actorId) {
+  const amount = Number(data.amount);
+  if (!(amount > 0)) throw badRequest("Payment amount must be greater than zero");
+
+  const payment = await prisma.$transaction(async (tx) => {
+    const loan = await tx.loan.findUnique({
+      where: { id: loanId },
+      include: { schedule: { orderBy: { periodNo: "asc" } } },
+    });
+    if (!loan) throw notFound("Loan not found");
+
+    const anchor = loan.schedule.find((r) => r.id === Number(data.scheduleId));
+    if (!anchor) throw badRequest("That installment does not belong to this loan");
+    if (anchor.status === "PAID") throw badRequest(`Period ${anchor.periodNo} is already fully paid`);
+
+    const { plan, applied, unapplied } = planAllocation(loan.schedule, amount, anchor.periodNo);
+
+    // Refuse rather than quietly keeping money the schedule has no room for.
+    if (unapplied > 0) {
+      throw badRequest(
+        `This loan only has ₱${fmt(applied)} outstanding from period ${anchor.periodNo} onward. Enter that amount or less.`
+      );
+    }
+
+    for (const row of plan) {
+      await tx.loanSchedule.update({
+        where: { id: row.scheduleId },
+        data: { amountPaid: row.newPaid, status: row.status },
+      });
+    }
+
+    const created = await tx.loanPayment.create({
+      data: {
+        paymentNo: await nextPaymentNo(tx),
+        loanId: loan.id,
+        scheduleId: anchor.id,
+        amount: applied,
+        paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
+        referenceNo: data.referenceNo?.trim() || null,
+        remarks: data.remarks?.trim() || null,
+        recordedByUserId: actorId ?? null,
+        allocations: plan.map((r) => ({
+          scheduleId: r.scheduleId,
+          periodNo: r.periodNo,
+          amount: r.amount,
+        })),
+      },
     });
 
-    if (paidOff) principalReduction = round2(principalReduction + Number(row.principalDue));
-    remaining = round2(remaining - pay);
-  }
-
-  const totalDeducted = round2(Math.min(Number(availableAmount), outstandingDue) - remaining);
-  if (totalDeducted <= 0) return 0;
-
-  // Did this clear the whole loan?
-  const unpaidLeft = await tx.loanSchedule.count({
-    where: { loanId: loan.id, status: { not: "PAID" } },
-  });
-  const newBalance = round2(Math.max(0, Number(loan.remainingBalance) - principalReduction));
-
-  await tx.loan.update({
-    where: { id: loan.id },
-    data: {
-      remainingBalance: unpaidLeft === 0 ? 0 : newBalance,
-      status: unpaidLeft === 0 ? "INACTIVE" : "ACTIVE",
-    },
+    await syncLoanState(tx, loan.id);
+    return created;
   });
 
-  await tx.loanPayment.create({
-    data: { loanId: loan.id, deliveryId, amountDeducted: totalDeducted, paymentDate: new Date(date) },
+  const full = await getPaymentById(payment.id);
+  const member = full.loan.member;
+
+  await logActivity(
+    actorId,
+    `Recorded loan payment ${full.paymentNo} of ₱${fmt(full.amount)} for ${member.memberNo}`
+  );
+
+  await notifications
+    .create(
+      {
+        title: "Loan payment recorded",
+        message: `Your payment of ₱${fmt(full.amount)} was recorded (${full.paymentNo}). Remaining balance: ₱${fmt(
+          full.loan.remainingBalance
+        )}.`,
+        recipientMemberId: member.id,
+      },
+      actorId
+    )
+    .catch(() => {});
+
+  // Repayment feeds both the credit score and the activity category.
+  await evaluateAndSave(member.id).catch(() => {});
+
+  return full;
+}
+
+// Reverses a payment completely: every period it touched goes back to what it
+// was, the balance is re-derived, and a loan that closed on this payment
+// reopens. Only correct because the allocation was stored - do not try to infer
+// it from the schedule's current state.
+// ponytail: hard delete, no void-audit row. If the cooperative ever needs to
+// show that a payment existed and was cancelled, add a `voidedAt` column and
+// filter it out of the lists instead of deleting.
+export async function voidPayment(paymentId, actorId) {
+  const voided = await prisma.$transaction(async (tx) => {
+    const payment = await tx.loanPayment.findUnique({
+      where: { id: paymentId },
+      include: { loan: { include: { member: { select: { id: true, memberNo: true } } } } },
+    });
+    if (!payment) throw notFound("Payment not found");
+    if (!payment.paymentNo) {
+      throw badRequest("This is a legacy delivery deduction and cannot be voided here");
+    }
+
+    for (const alloc of payment.allocations ?? []) {
+      const row = await tx.loanSchedule.findUnique({ where: { id: alloc.scheduleId } });
+      if (!row) continue; // schedule row is gone; nothing to give back
+      const amountPaid = Math.max(0, round2(Number(row.amountPaid) - Number(alloc.amount)));
+      await tx.loanSchedule.update({
+        where: { id: row.id },
+        data: { amountPaid, status: statusFor(row.totalDue, amountPaid) },
+      });
+    }
+
+    await tx.loanPayment.delete({ where: { id: paymentId } });
+    await syncLoanState(tx, payment.loanId);
+
+    return {
+      memberNo: payment.loan.member.memberNo,
+      memberId: payment.loan.member.id,
+      paymentNo: payment.paymentNo,
+      amount: Number(payment.amount),
+    };
   });
 
-  return totalDeducted;
+  await logActivity(
+    actorId,
+    `Voided loan payment ${voided.paymentNo} (₱${fmt(voided.amount)}) for ${voided.memberNo}`
+  );
+  await evaluateAndSave(voided.memberId).catch(() => {});
+  return { voided: voided.paymentNo };
 }

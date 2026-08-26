@@ -104,48 +104,49 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  sentNotifications Notification[] @relation("NotificationSender")
+  sentNotifications Notification[]    @relation("NotificationSender")
   activityLogs      ActivityLog[]
+  loanPayments      LoanPayment[]
   taggedAreas       AffectedAreaTag[]
 
   @@map("users")
 }
 
 model Member {
-  id              Int            @id @default(autoincrement())
-  memberNo        String         @unique @map("member_no")
-  firstName       String         @map("first_name")
-  middleName      String?        @map("middle_name")
-  lastName        String         @map("last_name")
-  sex             String?
-  birthdate       DateTime?
-  address         String?
-  barangayId      Int?           @map("barangay_id")
-  barangay        Barangay?      @relation(fields: [barangayId], references: [id], onDelete: SetNull)
-  contactNo       String?        @map("contact_no")
-  profilePhoto    String?        @map("profile_photo") @db.MediumText
-  membershipType  MembershipType @default(ASSOCIATE) @map("membership_type")
-  shareCapital    Decimal        @default(0) @map("share_capital") @db.Decimal(12, 2)
-  dateJoined      DateTime       @default(now()) @map("date_joined")
-  status          MemberStatus   @default(ACTIVE)
+  id                Int               @id @default(autoincrement())
+  memberNo          String            @unique @map("member_no")
+  firstName         String            @map("first_name")
+  middleName        String?           @map("middle_name")
+  lastName          String            @map("last_name")
+  sex               String?
+  birthdate         DateTime?
+  address           String?
+  barangayId        Int?              @map("barangay_id")
+  barangay          Barangay?         @relation(fields: [barangayId], references: [id], onDelete: SetNull)
+  contactNo         String?           @map("contact_no")
+  profilePhoto      String?           @map("profile_photo") @db.MediumText
+  membershipType    MembershipType    @default(ASSOCIATE) @map("membership_type")
+  shareCapital      Decimal           @default(0) @map("share_capital") @db.Decimal(12, 2)
+  dateJoined        DateTime          @default(now()) @map("date_joined")
+  status            MemberStatus      @default(ACTIVE)
   // Dynamic Member Categorization Algorithm results
-  deliveryScore   Int?              @map("delivery_score")
-  loanScore       Int?              @map("loan_score")
-  activityScore   Int?              @map("activity_score")
-  repaymentRate   Decimal?          @map("repayment_rate") @db.Decimal(6, 2)
-  activityCategory ActivityCategory? @map("activity_category")
-  lastCategorizedAt DateTime?        @map("last_categorized_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
+  deliveryScore     Int?              @map("delivery_score")
+  loanScore         Int?              @map("loan_score")
+  activityScore     Int?              @map("activity_score")
+  repaymentRate     Decimal?          @map("repayment_rate") @db.Decimal(6, 2)
+  activityCategory  ActivityCategory? @map("activity_category")
+  lastCategorizedAt DateTime?         @map("last_categorized_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
-  user                User?
-  deliveries          RubberDelivery[]
-  receipts            Receipt[]
-  loans               Loan[]
-  loanApplications    LoanApplication[]
-  creditScores        CreditScore[]
-  notifications       Notification[]              @relation("NotificationRecipient")
-  programRecipients   SupportProgramRecipient[]
+  user              User?
+  deliveries        RubberDelivery[]
+  receipts          Receipt[]
+  loans             Loan[]
+  loanApplications  LoanApplication[]
+  creditScores      CreditScore[]
+  notifications     Notification[]            @relation("NotificationRecipient")
+  programRecipients SupportProgramRecipient[]
 
   @@index([barangayId])
   @@index([membershipType])
@@ -233,21 +234,21 @@ model RubberDelivery {
 }
 
 model Receipt {
-  id            Int            @id @default(autoincrement())
+  id            Int             @id @default(autoincrement())
   // Nullable: membership-fee receipts (issued on approval) have no delivery.
   deliveryId    Int?            @unique @map("delivery_id")
   delivery      RubberDelivery? @relation(fields: [deliveryId], references: [id])
-  memberId      Int            @map("member_id")
-  member        Member         @relation(fields: [memberId], references: [id])
-  grossAmount   Decimal        @map("gross_amount") @db.Decimal(12, 2)
+  memberId      Int             @map("member_id")
+  member        Member          @relation(fields: [memberId], references: [id])
+  grossAmount   Decimal         @map("gross_amount") @db.Decimal(12, 2)
   // Deductions: gross - (loan + CBU + membership + supplies + dayong) = net
-  loanDeduction Decimal        @default(0) @map("loan_deduction") @db.Decimal(12, 2)
-  cbu           Decimal        @default(0) @db.Decimal(12, 2)
-  membershipFee Decimal        @default(0) @map("membership_fee") @db.Decimal(12, 2)
-  supplies      Decimal        @default(0) @db.Decimal(12, 2) // acid / tapping knife
-  dayong        Decimal        @default(0) @db.Decimal(12, 2)
-  netAmount     Decimal        @map("net_amount") @db.Decimal(12, 2)
-  dateIssued    DateTime       @default(now()) @map("date_issued")
+  loanDeduction Decimal         @default(0) @map("loan_deduction") @db.Decimal(12, 2)
+  cbu           Decimal         @default(0) @db.Decimal(12, 2)
+  membershipFee Decimal         @default(0) @map("membership_fee") @db.Decimal(12, 2)
+  supplies      Decimal         @default(0) @db.Decimal(12, 2) // acid / tapping knife
+  dayong        Decimal         @default(0) @db.Decimal(12, 2)
+  netAmount     Decimal         @map("net_amount") @db.Decimal(12, 2)
+  dateIssued    DateTime        @default(now()) @map("date_issued")
 
   @@index([memberId])
   @@map("receipts")
@@ -285,18 +286,43 @@ model LoanSchedule {
   amountPaid   Decimal        @default(0) @map("amount_paid") @db.Decimal(12, 2)
   status       ScheduleStatus @default(PENDING)
 
+  payments LoanPayment[]
+
   @@index([loanId])
   @@map("loan_schedules")
 }
 
+// A payment recorded by staff against the loan's amortization schedule. Members
+// pay cash at the cooperative office — there is no online payment anywhere in this
+// system, so a row here only ever means "staff confirmed this money arrived".
+//
+// paymentNo is null on legacy rows created by the old automatic delivery
+// deduction (removed); those also carry a deliveryId. A manually recorded
+// payment has an "LP-0001" number and no delivery.
 model LoanPayment {
-  id            Int             @id @default(autoincrement())
-  loanId        Int             @map("loan_id")
-  loan          Loan            @relation(fields: [loanId], references: [id])
-  deliveryId    Int?            @map("delivery_id")
-  delivery      RubberDelivery? @relation(fields: [deliveryId], references: [id])
-  amountDeducted Decimal        @map("amount_deducted") @db.Decimal(12, 2)
-  paymentDate   DateTime        @default(now()) @map("payment_date")
+  id               Int             @id @default(autoincrement())
+  paymentNo        String?         @unique @map("payment_no")
+  loanId           Int             @map("loan_id")
+  loan             Loan            @relation(fields: [loanId], references: [id])
+  deliveryId       Int?            @map("delivery_id")
+  delivery         RubberDelivery? @relation(fields: [deliveryId], references: [id])
+  // The schedule row staff anchored the payment to; overflow spills forward
+  // from here into later unpaid periods.
+  scheduleId       Int?            @map("schedule_id")
+  schedule         LoanSchedule?   @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  // Exactly which periods this payment settled, and by how much:
+  // [{ scheduleId, periodNo, amount }]. Stored so a void replays the real
+  // allocation instead of re-deriving a guess from the current schedule.
+  allocations      Json?
+  // The office's own manual receipt / OR number, if they issued one.
+  referenceNo      String?         @map("reference_no")
+  remarks          String?         @db.Text
+  recordedByUserId Int?            @map("recorded_by_user_id")
+  recordedBy       User?           @relation(fields: [recordedByUserId], references: [id], onDelete: SetNull)
+  // DB column stays `amount_deducted` — nothing is "deducted" any more, but
+  // renaming the column would be a data migration for a cosmetic gain.
+  amount           Decimal         @map("amount_deducted") @db.Decimal(12, 2)
+  paymentDate      DateTime        @default(now()) @map("payment_date")
 
   @@index([loanId])
   @@map("loan_payments")
@@ -372,16 +398,16 @@ model ActivityLog {
 // ---------- MAO module (built this milestone) ----------
 
 model SupportProgram {
-  id             Int           @id @default(autoincrement())
-  name           String
-  type           String // e.g. "Fertilizer Distribution"
-  description    String?       @db.Text
-  targetBarangayId Int?        @map("target_barangay_id")
-  targetBarangay Barangay?     @relation(fields: [targetBarangayId], references: [id], onDelete: SetNull)
-  startDate      DateTime?     @map("start_date")
-  endDate        DateTime?     @map("end_date")
-  status         ProgramStatus @default(PLANNED)
-  budget         Decimal?      @db.Decimal(14, 2)
+  id               Int           @id @default(autoincrement())
+  name             String
+  type             String // e.g. "Fertilizer Distribution"
+  description      String?       @db.Text
+  targetBarangayId Int?          @map("target_barangay_id")
+  targetBarangay   Barangay?     @relation(fields: [targetBarangayId], references: [id], onDelete: SetNull)
+  startDate        DateTime?     @map("start_date")
+  endDate          DateTime?     @map("end_date")
+  status           ProgramStatus @default(PLANNED)
+  budget           Decimal?      @db.Decimal(14, 2)
 
   recipients SupportProgramRecipient[]
 

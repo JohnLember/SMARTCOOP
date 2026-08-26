@@ -2,7 +2,6 @@ import prisma from "../../config/db.js";
 import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
-import { applyDeliveryToLoan } from "../finance/loans.service.js";
 import { promoteIfEligible } from "../members/members.service.js";
 
 const deliveryInclude = {
@@ -46,7 +45,11 @@ export async function create(data, actorId) {
   const pricePerKg = Number(data.pricePerKg);
   const totalAmount = Math.round(weightKg * pricePerKg * 100) / 100;
 
-  // Staff-entered deductions (default 0). Loan is added automatically below.
+  // Staff-entered deductions (default 0). Loans are NOT deducted here: members
+  // pay their amortization in cash at the office and staff record it against the
+  // schedule (see recordPayment in finance/loans.service.js). This used to
+  // auto-deduct due installments out of the proceeds, which is not how this
+  // cooperative collects.
   const cbu = Number(data.cbu ?? 0);
   const membershipFee = Number(data.membershipFee ?? 0);
   const supplies = Number(data.supplies ?? 0); // acid / tapping knife
@@ -67,25 +70,18 @@ export async function create(data, actorId) {
       },
     });
 
-    // Auto-deduct any due loan installment from the proceeds.
-    const loanDeduction = await applyDeliveryToLoan(
-      tx,
-      data.memberId,
-      totalAmount,
-      created.id,
-      deliveryDate
-    );
-
-    // Automated receipt: gross − (loan + CBU + membership + supplies + dayong) = net.
+    // Automated receipt: gross − (CBU + membership + supplies + dayong) = net.
     const netAmount =
-      Math.round((totalAmount - loanDeduction - cbu - membershipFee - supplies - dayong) * 100) / 100;
+      Math.round((totalAmount - cbu - membershipFee - supplies - dayong) * 100) / 100;
 
     await tx.receipt.create({
       data: {
         deliveryId: created.id,
         memberId: data.memberId,
         grossAmount: totalAmount,
-        loanDeduction,
+        // Always 0 on new receipts — kept on the model so historical receipts,
+        // issued while the automatic deduction existed, still print correctly.
+        loanDeduction: 0,
         cbu,
         membershipFee,
         supplies,
@@ -144,6 +140,21 @@ export async function explainDelivery(id) {
   const net = d.receipt ? Number(r.netAmount) : gross;
   const totalDeductions = round2(loan + cbu + membership + supplies + dayong);
 
+  // The loan row only appears on receipts issued while the automatic deduction
+  // existed. New deliveries never touch a loan, so showing a "less: loan ₱0.00"
+  // line would imply a deduction that no longer happens.
+  const loanStep =
+    loan > 0
+      ? [
+          {
+            label: "Less: Loan (legacy automatic deduction)",
+            formula: "− due loan installment(s)",
+            substitution: `− ₱${fmt(loan)}`,
+            result: `₱${fmt(loan)}`,
+          },
+        ]
+      : [];
+
   const steps = [
     {
       label: "Gross income (delivery total)",
@@ -157,12 +168,7 @@ export async function explainDelivery(id) {
       substitution: `− ₱${fmt(cbu)}`,
       result: `₱${fmt(cbu)}`,
     },
-    {
-      label: "Less: Loan (due installments, automatic)",
-      formula: loan > 0 ? "− due loan installment(s)" : "no active loan / nothing due",
-      substitution: `− ₱${fmt(loan)}`,
-      result: `₱${fmt(loan)}`,
-    },
+    ...loanStep,
     {
       label: "Less: Membership",
       formula: "− Membership fee",
@@ -183,7 +189,7 @@ export async function explainDelivery(id) {
     },
     {
       label: "Net income (receipt)",
-      formula: "gross − (CBU + loan + membership + acid/tapping knife + dayong)",
+      formula: "gross − (CBU + membership + acid/tapping knife + dayong)",
       substitution: `₱${fmt(gross)} − ₱${fmt(totalDeductions)}`,
       result: `₱${fmt(net)}`,
     },
@@ -193,7 +199,7 @@ export async function explainDelivery(id) {
     title: "Delivery Net Income Computation",
     description: `Delivery on ${new Date(d.deliveryDate).toISOString().slice(0, 10)} (Dry Rubber Content (DRC) ${
       d.drc != null ? `${d.drc}%` : "—"
-    }, recorded as quality only). Gross = price × total kilos, less CBU (Capital Build-Up), loan, membership, acid/tapping knife, and dayong = net income paid to the member.`,
+    }, recorded as quality only). Gross = price × total kilos, less CBU (Capital Build-Up), membership, acid/tapping knife, and dayong = net income paid to the member. Loan repayments are recorded separately, at the office.`,
     steps,
     result: { label: "Net income", value: `₱${fmt(net)}` },
   };
