@@ -17,7 +17,7 @@ import {
 import ShowComputation from "../../components/ShowComputation";
 import ReceiptDocument from "../../components/ReceiptDocument";
 import { formatDate } from "../../lib/format";
-import { Wallet, CalendarClock, Layers, Printer, Trash2, Plus } from "lucide-react";
+import { Wallet, CalendarClock, Layers, Printer, Trash2, Plus, History } from "lucide-react";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -25,6 +25,25 @@ const SCHED_COLOR = { PAID: "green", PARTIAL: "amber", PENDING: "slate" };
 
 const interestOf = (loan) => loan.schedule.reduce((s, r) => s + Number(r.interestDue), 0);
 const outstandingOf = (row) => round2(Number(row.totalDue) - Number(row.amountPaid));
+
+// The counter does not take token amounts. Mirrors MIN_PAYMENT in
+// backend/src/modules/finance/allocate.js, which is the authority.
+const MIN_PAYMENT = 200;
+
+// The floor relaxes when a loan has less than the floor left to pay, so a small
+// final remainder is still closable — a flat 200 plus the no-overpayment rule
+// would otherwise leave it stuck with no valid amount at all.
+function minPaymentFor(schedule, anchorPeriodNo) {
+  const outstanding = round2(
+    schedule
+      .filter((r) => r.status !== "PAID" && r.periodNo >= anchorPeriodNo)
+      .reduce((s, r) => s + outstandingOf(r), 0)
+  );
+  return outstanding > 0 ? Math.min(MIN_PAYMENT, outstanding) : 0;
+}
+
+// How many payments the card shows before the rest move behind the history modal.
+const PAYMENTS_SHOWN = 8;
 
 // Local date parts, not toISOString — the latter shifts the day for anyone east
 // of UTC, which would date an evening payment to tomorrow.
@@ -256,7 +275,6 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
   const [form, setForm] = useState(() => ({
     amount: String(outstandingOf(row)),
     paymentDate: today(),
-    referenceNo: "",
     remarks: "",
   }));
   const [busy, setBusy] = useState(false);
@@ -266,11 +284,19 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
   const amount = Number(form.amount);
   const preview = amount > 0 ? previewAllocation(loan.schedule, amount, row.periodNo) : null;
   const earlierUnpaid = loan.schedule.filter((r) => r.status !== "PAID" && r.periodNo < row.periodNo);
+  const minimum = minPaymentFor(loan.schedule, row.periodNo);
+  const belowMinimum = amount > 0 && amount < minimum;
 
   async function submit(e) {
     e.preventDefault();
     setError("");
     if (!(amount > 0)) return setError("Enter the amount the member paid.");
+    if (belowMinimum)
+      return setError(
+        minimum < MIN_PAYMENT
+          ? `Only ${peso(minimum)} is left on this loan — pay exactly that to close it.`
+          : `The smallest payment the cooperative accepts is ${peso(MIN_PAYMENT)}.`
+      );
     if (preview?.unapplied > 0)
       return setError(
         `This loan only has ${peso(amount - preview.unapplied)} outstanding from period ${row.periodNo} onward. Enter that amount or less.`
@@ -282,7 +308,6 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
         scheduleId: row.id,
         amount,
         paymentDate: form.paymentDate || null,
-        referenceNo: form.referenceNo || null,
         remarks: form.remarks || null,
       });
       toast.success(`Payment ${res.data.paymentNo} recorded`);
@@ -328,11 +353,16 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
           label="Amount received"
           type="number"
           step="0.01"
-          min="0"
+          min={minimum}
           required
           value={form.amount}
           onChange={(e) => setForm({ ...form, amount: e.target.value })}
-          hint="Anything above this period rolls into the next unpaid periods."
+          error={belowMinimum ? `Minimum ${peso(minimum)}` : undefined}
+          hint={
+            minimum < MIN_PAYMENT
+              ? `Only ${peso(minimum)} is left on this loan — pay exactly that to close it.`
+              : `Minimum ${peso(MIN_PAYMENT)}. Anything above this period rolls into the next unpaid periods.`
+          }
         />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -344,20 +374,15 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
             onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
           />
           <Input
-            label="Reference / OR no."
+            label="Remarks"
             placeholder="optional"
-            value={form.referenceNo}
-            onChange={(e) => setForm({ ...form, referenceNo: e.target.value })}
-            hint="The office's own receipt number, if issued."
+            value={form.remarks}
+            onChange={(e) => setForm({ ...form, remarks: e.target.value })}
           />
         </div>
 
-        <Input
-          label="Remarks"
-          placeholder="optional"
-          value={form.remarks}
-          onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-        />
+        {/* The reference number is not asked for: the LP- payment number is
+            generated on save and is what the slip prints as the reference. */}
 
         {preview && (
           <div className="rounded-[var(--radius-control)] border border-[var(--line)] px-3 py-2.5 text-sm">
@@ -388,7 +413,7 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
           <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button type="submit" disabled={busy || !(amount > 0) || preview?.unapplied > 0}>
+          <Button type="submit" disabled={busy || !(amount > 0) || belowMinimum || preview?.unapplied > 0}>
             {busy ? "Recording…" : "Record payment"}
           </Button>
         </div>
@@ -398,6 +423,14 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
 }
 
 function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Newest first, as the API returns them. The card shows a recent window; the
+  // rest stay one click away rather than turning the sidebar into a ledger.
+  const payments = loan.payments;
+  const recent = payments.slice(0, PAYMENTS_SHOWN);
+  const hidden = payments.length - recent.length;
+
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -468,19 +501,76 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
         </Card>
 
         <Card>
-          <h3 className="mb-3 text-sm font-semibold text-[var(--ink-body)]">Payments</h3>
+          <div className="mb-3 flex items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold text-[var(--ink-body)]">Payments</h3>
+            {payments.length > 0 && (
+              <span className="font-mono-meta text-[11px] text-[var(--ink-muted)]">
+                {payments.length} total
+              </span>
+            )}
+          </div>
           <div className="space-y-2">
-            {loan.payments.length === 0 && (
+            {payments.length === 0 && (
               <p className="text-sm text-[var(--ink-muted)]">
                 No payments recorded yet. Use “Record payment” on the installment the member is settling.
               </p>
             )}
-            {loan.payments.map((p) => (
+            {recent.map((p) => (
               <PaymentRow key={p.id} payment={p} loan={loan} onVoid={onVoid} onPrint={onPrint} />
             ))}
           </div>
+
+          {payments.length > 0 && (
+            <Button
+              variant="secondary"
+              className="mt-3 w-full"
+              onClick={() => setShowHistory(true)}
+            >
+              <History size={16} />
+              See all payment history
+              {hidden > 0 ? ` (${hidden} more)` : ""}
+            </Button>
+          )}
         </Card>
       </div>
+
+      {/* Every payment, with the same Print and Void actions as the card. The
+          list is driven by the same `loan` prop, so voiding from in here updates
+          it in place once the parent reloads. */}
+      <Modal
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        title={`Payment history — Loan ${index + 1}`}
+        wide
+      >
+        <p className="mb-3 text-sm text-[var(--ink-muted)]">
+          {payments.length} payment{payments.length !== 1 ? "s" : ""} totalling{" "}
+          <span className="font-medium text-[var(--ink-body)]">
+            {peso(payments.reduce((s, p) => s + Number(p.amount), 0))}
+          </span>{" "}
+          against this loan.
+        </p>
+        <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+          {payments.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">Nothing recorded yet.</p>
+          ) : (
+            payments.map((p) => (
+              <PaymentRow
+                key={p.id}
+                payment={p}
+                loan={loan}
+                onVoid={onVoid}
+                // Step out of the history before the slip opens: two stacked
+                // modals with two scrims is not a place to leave someone.
+                onPrint={(payment) => {
+                  setShowHistory(false);
+                  onPrint(payment);
+                }}
+              />
+            ))
+          )}
+        </div>
+      </Modal>
     </section>
   );
 }

@@ -4,6 +4,29 @@
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
+// The cooperative does not accept token amounts at the counter: a payment must
+// be at least this much.
+export const MIN_PAYMENT = 200;
+
+// What is still owed from a period onward — the ceiling on any one payment,
+// since spillover only travels forward.
+export function outstandingFrom(rows, anchorPeriodNo) {
+  return round2(
+    rows
+      .filter((r) => r.status !== "PAID" && r.periodNo >= anchorPeriodNo)
+      .reduce((s, r) => s + (Number(r.totalDue) - Number(r.amountPaid)), 0)
+  );
+}
+
+// The smallest payment this anchor will accept. Normally MIN_PAYMENT, but a loan
+// whose last period owes less than that has to stay closable — a flat floor plus
+// the no-overpayment rule would otherwise leave a ₱150 remainder unpayable
+// forever, with no amount at all satisfying both ends.
+export function minPaymentFor(rows, anchorPeriodNo) {
+  const outstanding = outstandingFrom(rows, anchorPeriodNo);
+  return outstanding > 0 ? Math.min(MIN_PAYMENT, outstanding) : 0;
+}
+
 // A schedule row's status is a function of what it has been paid — never a flag
 // set independently. Record and void both derive it from here, so a reversal
 // lands on exactly the status the row had before.

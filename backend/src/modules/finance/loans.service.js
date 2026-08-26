@@ -3,7 +3,7 @@ import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
 import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD, memberSearchWhere } from "../members/members.service.js";
-import { planAllocation, deriveLoanState, statusFor } from "./allocate.js";
+import { planAllocation, deriveLoanState, statusFor, minPaymentFor, MIN_PAYMENT } from "./allocate.js";
 import * as notifications from "../notifications/notifications.service.js";
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -198,19 +198,15 @@ export async function explainSchedule(loanId) {
 //      same operation over different rows, and neither can drift.
 // ---------------------------------------------------------------------------
 
-// Next "LP-0001"-style payment number, same shape as nextApplicationNo.
-async function nextPaymentNo(tx) {
-  const rows = await tx.loanPayment.findMany({
-    where: { paymentNo: { startsWith: "LP-" } },
-    select: { paymentNo: true },
-  });
-  let max = 0;
-  for (const r of rows) {
-    const n = parseInt(r.paymentNo.slice(3), 10);
-    if (!Number.isNaN(n) && n > max) max = n;
-  }
-  return `LP-${String(max + 1).padStart(4, "0")}`;
-}
+// The payment's own reference, printed on the acknowledgment slip. Staff never
+// type it — it is generated here.
+//
+// Derived from the row id rather than counting existing rows (the "APP-0001"
+// pattern used elsewhere). Voiding deletes the row, so a max+1 counter would
+// hand the next payment a number a voided slip is already printed with — two
+// different pieces of paper claiming to be LP-0005. Ids are never reused, so
+// this cannot collide. Gaps in the sequence are the correct outcome of a void.
+const paymentNoFor = (id) => `LP-${String(id).padStart(4, "0")}`;
 
 const paymentInclude = {
   recordedBy: { select: { username: true } },
@@ -268,6 +264,19 @@ export async function recordPayment(loanId, data, actorId) {
     if (!anchor) throw badRequest("That installment does not belong to this loan");
     if (anchor.status === "PAID") throw badRequest(`Period ${anchor.periodNo} is already fully paid`);
 
+    // Floor and ceiling. The floor is normally MIN_PAYMENT, but drops to the
+    // remaining balance when that is smaller, so a loan with a few pesos left is
+    // still closable — otherwise no amount would satisfy both this and the
+    // no-overpayment rule below.
+    const minimum = minPaymentFor(loan.schedule, anchor.periodNo);
+    if (amount < minimum) {
+      throw badRequest(
+        minimum < MIN_PAYMENT
+          ? `Only ₱${fmt(minimum)} is left on this loan — pay exactly that to close it.`
+          : `The smallest payment the cooperative accepts is ₱${fmt(MIN_PAYMENT)}.`
+      );
+    }
+
     const { plan, applied, unapplied } = planAllocation(loan.schedule, amount, anchor.periodNo);
 
     // Refuse rather than quietly keeping money the schedule has no room for.
@@ -286,12 +295,13 @@ export async function recordPayment(loanId, data, actorId) {
 
     const created = await tx.loanPayment.create({
       data: {
-        paymentNo: await nextPaymentNo(tx),
         loanId: loan.id,
         scheduleId: anchor.id,
         amount: applied,
         paymentDate: data.paymentDate ? new Date(data.paymentDate) : new Date(),
-        referenceNo: data.referenceNo?.trim() || null,
+        // No referenceNo: the payment number above IS the reference, generated
+        // here rather than typed in. The column survives for rows recorded while
+        // staff still entered one by hand.
         remarks: data.remarks?.trim() || null,
         recordedByUserId: actorId ?? null,
         allocations: plan.map((r) => ({
@@ -302,8 +312,15 @@ export async function recordPayment(loanId, data, actorId) {
       },
     });
 
+    // The number needs the id, so it is stamped on immediately after the insert,
+    // inside the same transaction — a payment is never visible without one.
+    const numbered = await tx.loanPayment.update({
+      where: { id: created.id },
+      data: { paymentNo: paymentNoFor(created.id) },
+    });
+
     await syncLoanState(tx, loan.id);
-    return created;
+    return numbered;
   });
 
   const full = await getPaymentById(payment.id);

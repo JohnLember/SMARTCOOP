@@ -58,11 +58,13 @@ export async function listCreditScores(_req, res, next) {
 
 // --- Manual loan payments (staff record what a member paid at the office) ---
 
+// No referenceNo: the reference is the generated payment number, so the field is
+// not accepted from the client at all. The ₱200 floor is enforced in the service
+// rather than here, because it relaxes for a loan with less than that left.
 const paymentSchema = z.object({
   scheduleId: z.number().int().positive(),
   amount: z.number().positive("Enter the amount the member paid"),
   paymentDate: z.string().optional().nullable(),
-  referenceNo: z.string().max(60).optional().nullable(),
   remarks: z.string().max(500).optional().nullable(),
 });
 

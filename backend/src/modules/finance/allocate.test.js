@@ -1,7 +1,14 @@
 // node --test src/modules/finance/allocate.test.js
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { planAllocation, deriveLoanState, statusFor } from "./allocate.js";
+import {
+  planAllocation,
+  deriveLoanState,
+  statusFor,
+  outstandingFrom,
+  minPaymentFor,
+  MIN_PAYMENT,
+} from "./allocate.js";
 
 // A 3-month, 30,000 loan at 1%/mo, diminishing interest — the shape buildSchedule
 // produces. Total of all payments: 30,600.
@@ -106,6 +113,43 @@ test("loan state is derived from the schedule", () => {
 
   const allPaid = apply(rows, planAllocation(rows, 30600, 1).plan);
   assert.deepEqual(deriveLoanState(allPaid, 30000), { remainingBalance: 0, status: "INACTIVE" });
+});
+
+test("outstanding is counted from the anchor forward only", () => {
+  const rows = fresh();
+  assert.equal(outstandingFrom(rows, 1), 30600);
+  assert.equal(outstandingFrom(rows, 3), 10100);
+
+  rows[1] = { ...rows[1], amountPaid: 200, status: "PARTIAL" };
+  assert.equal(outstandingFrom(rows, 2), 10000 + 10100);
+});
+
+test("the minimum payment is normally the flat floor", () => {
+  assert.equal(minPaymentFor(fresh(), 1), MIN_PAYMENT);
+  assert.equal(MIN_PAYMENT, 200);
+});
+
+// The deadlock a flat floor would create: overpayment is refused, so if the
+// floor stayed at 200 a loan with 150 left could never be closed by any amount.
+test("the minimum drops to the remainder when less than the floor is left", () => {
+  const rows = fresh().map((r) =>
+    r.periodNo === 3
+      ? { ...r, amountPaid: 9950, status: "PARTIAL" }
+      : { ...r, amountPaid: r.totalDue, status: "PAID" }
+  );
+  assert.equal(outstandingFrom(rows, 3), 150);
+  assert.equal(minPaymentFor(rows, 3), 150);
+
+  // And that exact amount closes the loan.
+  const { plan, unapplied } = planAllocation(rows, 150, 3);
+  assert.equal(unapplied, 0);
+  assert.equal(deriveLoanState(apply(rows, plan), 30000).status, "INACTIVE");
+});
+
+test("a fully paid loan has no minimum left to pay", () => {
+  const rows = fresh();
+  const settled = apply(rows, planAllocation(rows, 30600, 1).plan);
+  assert.equal(minPaymentFor(settled, 1), 0);
 });
 
 test("voiding the closing payment reopens the loan", () => {
