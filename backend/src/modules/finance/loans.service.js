@@ -1,5 +1,5 @@
 import prisma from "../../config/db.js";
-import { notFound, badRequest, internalError, unauthorized } from "../../utils/httpError.js";
+import { notFound, badRequest, internalError, forbidden } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { comparePassword } from "../../utils/password.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
@@ -549,9 +549,16 @@ export async function settle(loanId, actorId) {
 }
 
 // Reopening undoes a settlement, so it is the one staff action here that needs a
-// second pair of eyes: an ADMIN types their own credentials at the moment of the
-// reopen. Not a request/approval queue — the admin is standing right there.
-export async function reopen(loanId, { adminUsername, adminPassword }, actorId) {
+// second pair of eyes: an ADMIN types their password at the moment of the reopen.
+// Not a request/approval queue — the admin is standing right there.
+//
+// To the staff user this is just an "authorization" — the field, the hint and the
+// failure never say password or admin. The person typing it is an admin entering
+// their own password; the person watching learns neither whose credential this
+// is nor that a credential is what unlocks it.
+//
+// `authorization` here is a body field, nothing to do with the HTTP header.
+export async function reopen(loanId, { authorization }, actorId) {
   const loan = await prisma.loan.findUnique({
     where: { id: loanId },
     include: { member: { select: { memberNo: true } } },
@@ -559,19 +566,25 @@ export async function reopen(loanId, { adminUsername, adminPassword }, actorId) 
   if (!loan) throw notFound("Loan not found");
   if (!loan.settledAt) throw badRequest("This loan is not settled");
 
-  // One message for every way this can fail — unknown username, non-admin,
-  // deactivated account, wrong password. Anything more specific tells whoever is
-  // guessing which admin usernames are real, the same reasoning as auth login.
-  const admin = await prisma.user.findUnique({ where: { username: adminUsername } });
-  const approved =
-    admin &&
-    admin.role === "ADMIN" &&
-    admin.status === "ACTIVE" &&
-    (await comparePassword(adminPassword, admin.passwordHash));
+  // Password only — the approver does not name themselves, so it is checked
+  // against every active admin until one matches. Whoever matched is still
+  // recorded below, so the trail says who approved it.
+  // ponytail: one bcrypt compare per admin, sequential. Fine for a cooperative's
+  // handful of admins; ask for the username too if that list ever grows.
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN", status: "ACTIVE" } });
+  let admin = null;
+  for (const candidate of admins) {
+    if (await comparePassword(authorization, candidate.passwordHash)) {
+      admin = candidate;
+      break;
+    }
+  }
 
-  if (!approved) {
-    await logActivity(actorId, `Failed reopen of settled loan #${loanId} (admin approval rejected)`);
-    throw unauthorized("Admin username or password is incorrect");
+  if (!admin) {
+    await logActivity(actorId, `Failed reopen of settled loan #${loanId} (approval rejected)`);
+    // 403, never 401: the staff user's own session is perfectly valid, and the
+    // frontend signs a user out on any 401. See the note in frontend/src/lib/api.js.
+    throw forbidden("Authorization is incorrect");
   }
 
   const updated = await prisma.loan.update({

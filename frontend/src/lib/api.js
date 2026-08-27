@@ -12,6 +12,11 @@ api.interceptors.request.use((config) => {
 });
 
 // On 401, clear the session and bounce to login.
+//
+// So an endpoint that checks a credential carried IN THE PAYLOAD — the admin
+// password approving a loan reopen, say — must never answer 401: it would sign
+// the signed-in staff user out for mistyping someone else's password, and leave
+// them on a page with no token. Those answer 403.
 api.interceptors.response.use(
   (res) => res,
   (err) => {

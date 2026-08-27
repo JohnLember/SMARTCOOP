@@ -159,7 +159,7 @@ export default function MemberLoans() {
     await confirm({
       title: `Mark this loan as settled?`,
       description:
-        "The loan closes and moves to the Settled list. Its payments can no longer be voided — reopening it afterwards needs an administrator's password.",
+        "The loan closes and moves to the Settled list. Its payments can no longer be voided, and reopening it afterwards has to be authorized.",
       details: [
         { label: "Principal", value: peso(loan.principalAmount) },
         { label: "Total paid", value: peso(loan.totalPaid) },
@@ -522,15 +522,17 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
   );
 }
 
-// Reopening needs an administrator standing over the shoulder, so it collects
-// their credentials here and now rather than filing a request someone approves
-// later. Its own modal and not the shared ConfirmDialog: that dialog takes one
-// free-text note, and a password must be masked and paired with a username.
+// Reopening needs an administrator standing over the shoulder, so it collects the
+// approval here and now rather than filing a request someone signs off later.
+// Nothing on screen says "admin" or "password": the staff member watching should
+// learn neither whose credential reverses a settlement nor that a credential is
+// what does it. Its own modal rather than the shared ConfirmDialog, which takes
+// one unmasked free-text note.
 // Mounted only while open (rather than kept alive with an `open` prop), so every
 // reopen starts from blank state without an effect to clear it — a password left
 // in state is a password waiting on screen for whoever opens this next.
 function ReopenModal({ loan, onClose, onDone }) {
-  const [form, setForm] = useState({ adminUsername: "", adminPassword: "" });
+  const [authorization, setAuthorization] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -539,7 +541,7 @@ function ReopenModal({ loan, onClose, onDone }) {
     setBusy(true);
     setError("");
     try {
-      await api.post(`/finance/loans/${loan.id}/reopen`, form);
+      await api.post(`/finance/loans/${loan.id}/reopen`, { authorization });
       toast.success("Loan reopened");
       onDone();
     } catch (err) {
@@ -559,21 +561,17 @@ function ReopenModal({ loan, onClose, onDone }) {
         )}
         <p className="text-sm text-[var(--ink-muted)]">
           Reopening puts this loan back in the active list and allows its payments to be voided
-          again. An administrator must approve it by signing in below.
+          again. This action must be authorized before it can go through.
         </p>
+        {/* Masked, because what goes in here is a real credential — but the
+            label never says so. */}
         <Input
-          label="Admin username"
-          autoComplete="off"
-          value={form.adminUsername}
-          onChange={(e) => setForm({ ...form, adminUsername: e.target.value })}
-          required
-        />
-        <Input
-          label="Admin password"
+          label="Authorization"
           type="password"
           autoComplete="off"
-          value={form.adminPassword}
-          onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
+          hint="Ask an authorized approver to enter it."
+          value={authorization}
+          onChange={(e) => setAuthorization(e.target.value)}
           required
         />
         <div className="flex justify-end gap-2">

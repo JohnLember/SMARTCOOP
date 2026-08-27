@@ -73,10 +73,11 @@ export async function settleLoan(req, res, next) {
   }
 }
 
-// The admin's credentials are checked in the service and never logged or echoed.
+// Just `authorization` — the field name reaches the browser, so it says neither
+// whose credential this is nor that it is a password at all. Checked in the
+// service and never logged or echoed back.
 const reopenSchema = z.object({
-  adminUsername: z.string().min(1, "Enter the approving admin's username"),
-  adminPassword: z.string().min(1, "Enter the approving admin's password"),
+  authorization: z.string().min(1, "Authorization is required"),
 });
 
 export async function reopenLoan(req, res, next) {
