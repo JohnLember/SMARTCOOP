@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { toast } from "react-toastify";
-import { Card, Spinner, PageHeader, Badge, Button } from "../components/ui";
+import { Card, Spinner, PageHeader, Badge, Button, Pagination } from "../components/ui";
 import { useConfirm } from "../components/ConfirmDialog";
+import { usePagination } from "../lib/usePagination";
 import { formatDateTime } from "../lib/format";
 import { Check, CheckCheck, ChevronRight, CalendarClock, Trash2, X } from "lucide-react";
 
@@ -40,6 +41,11 @@ export default function Notifications() {
   // Ids mid-exit-animation: rendered, but already gone as far as the user cares.
   const [leaving, setLeaving] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  // The API already returns newest first, so page 1 is the latest ten. Select-all
+  // and the unread count stay whole-list on purpose — they are about the inbox,
+  // not about whichever ten rows happen to be on screen. Called before the
+  // loading guard below, because a hook cannot sit after an early return.
+  const { page, setPage, pageCount, pageItems } = usePagination(list, 10);
 
   async function load() {
     const res = await api.get("/notifications");
@@ -198,7 +204,7 @@ export default function Notifications() {
             <p className="text-center text-[#5F5E5A]">No notifications yet.</p>
           </Card>
         )}
-        {list.map((n, i) => (
+        {pageItems.map((n, i) => (
           <NotificationRow
             key={n.id}
             n={n}
@@ -210,6 +216,8 @@ export default function Notifications() {
           />
         ))}
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
     </div>
   );
 }
