@@ -49,11 +49,10 @@ export default function Dashboard() {
         <StatCard label="Open batches" value={stats.batches.open} icon={Boxes} accent="blue" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mt-4 grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Active members" value={stats.members.active} icon={Users} accent="emerald" />
         <StatCard label="Associates" value={stats.members.associates} icon={UserPlus} />
         <StatCard label="Regular members" value={stats.members.regulars} icon={UserCheck} accent="emerald" />
-        <StatCard label="Outstanding balance" value={peso(stats.loans.outstanding)} icon={Wallet} accent="blue" />
       </div>
 
       {/* Charts */}
