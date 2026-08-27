@@ -77,7 +77,9 @@ export default function MemberDashboard() {
 
   // A member can hold more than one approved loan at a time, so this is summed.
   const activeLoans = loans.filter((l) => l.status === "ACTIVE");
-  const loanBalance = activeLoans.reduce((sum, l) => sum + Number(l.remainingBalance), 0);
+  // What is still owed with interest, not the principal-only remainingBalance —
+  // the member is asked for this figure at the counter, so it is the one shown.
+  const loanBalance = activeLoans.reduce((sum, l) => sum + Number(l.totalOutstanding), 0);
   const pendingLoanApp = loanApps.find((a) => a.status === "PENDING");
   const chart = monthlySummary(deliveries);
   const hasChartData = hasVolume(chart);
@@ -290,22 +292,21 @@ export default function MemberDashboard() {
   );
 }
 
-// How far one loan has been repaid. This is PRINCIPAL repaid, not total paid:
-// remainingBalance falls only when a period is settled in full (deriveLoanState
-// in backend/src/modules/finance/allocate.js), so the bar is derived from the
-// same figure the balance above it comes from. Interest is deliberately not in
-// it — a bar mixing the two would never reach 100% on the member's own maths.
+// How far one loan has been repaid, counted the same way as the balance above it:
+// total paid against total payable, principal AND interest, both from
+// deriveTotals in backend/src/modules/finance/allocate.js. A principal-only bar
+// sitting under an interest-inclusive balance is exactly the mismatch that made
+// the two numbers on this card disagree.
 function LoanProgress({ loan }) {
-  const principal = Number(loan.principalAmount);
-  const repaid = Math.max(0, principal - Number(loan.remainingBalance));
-  const pct = principal > 0 ? Math.min(100, Math.round((repaid / principal) * 100)) : 0;
+  const due = Number(loan.totalDue);
+  const paid = Number(loan.totalPaid);
+  const pct = due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0;
 
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
         <span className="text-[#5F5E5A]">
-          <span className="font-medium text-[#2F3437]">{peso(repaid)}</span> of {peso(principal)}{" "}
-          principal repaid
+          <span className="font-medium text-[#2F3437]">{peso(paid)}</span> of {peso(due)} paid
         </span>
         <span className="font-medium text-[#346538]">{pct}%</span>
       </div>
@@ -314,7 +315,7 @@ function LoanProgress({ loan }) {
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Repaid ${pct}% of ${peso(principal)} principal`}
+        aria-label={`Paid ${pct}% of ${peso(due)} total`}
         className="h-2 w-full overflow-hidden rounded-full bg-[#F2F1ED]"
       >
         <div className="h-full rounded-full bg-[#346538]" style={{ width: `${pct}%` }} />

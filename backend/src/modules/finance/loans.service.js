@@ -9,6 +9,7 @@ import {
   statusFor,
   minPaymentFor,
   reconcile,
+  deriveTotals,
   MIN_PAYMENT,
 } from "./allocate.js";
 import * as notifications from "../notifications/notifications.service.js";
@@ -54,6 +55,28 @@ const loanInclude = {
   member: { select: { id: true, memberNo: true, firstName: true, lastName: true } },
 };
 
+// Folds totalDue / totalPaid / totalOutstanding onto each loan. The list does not
+// carry the schedule — a staff list of every loan times twelve periods is a lot
+// of rows to ship for three numbers — so the sums come from one grouped query.
+async function withTotals(loans) {
+  if (loans.length === 0) return loans;
+
+  const sums = await prisma.loanSchedule.groupBy({
+    by: ["loanId"],
+    where: { loanId: { in: loans.map((l) => l.id) } },
+    _sum: { totalDue: true, amountPaid: true },
+  });
+  const byLoan = new Map(sums.map((s) => [s.loanId, s._sum]));
+
+  return loans.map((l) => {
+    const s = byLoan.get(l.id) ?? {};
+    return {
+      ...l,
+      ...deriveTotals([{ totalDue: s.totalDue ?? 0, amountPaid: s.amountPaid ?? 0 }]),
+    };
+  });
+}
+
 export async function list({ memberId, search, barangayId } = {}) {
   const where = {};
   if (memberId) where.memberId = Number(memberId);
@@ -63,11 +86,13 @@ export async function list({ memberId, search, barangayId } = {}) {
   if (search) Object.assign(memberWhere, memberSearchWhere(search));
   if (Object.keys(memberWhere).length > 0) where.member = memberWhere;
 
-  return prisma.loan.findMany({
-    where,
-    orderBy: { dateIssued: "desc" },
-    include: { ...loanInclude, _count: { select: { schedule: true } } },
-  });
+  return withTotals(
+    await prisma.loan.findMany({
+      where,
+      orderBy: { dateIssued: "desc" },
+      include: { ...loanInclude, _count: { select: { schedule: true } } },
+    })
+  );
 }
 
 export async function getById(id) {
@@ -86,7 +111,8 @@ export async function getById(id) {
     },
   });
   if (!loan) throw notFound("Loan not found");
-  return loan;
+  // The schedule is right here, so no extra query — same three fields as the list.
+  return { ...loan, ...deriveTotals(loan.schedule) };
 }
 
 export async function create(data, actorId) {

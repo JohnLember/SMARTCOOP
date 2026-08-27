@@ -77,6 +77,21 @@ export function planAllocation(rows, amount, anchorPeriodNo) {
   return { plan, applied: round2(round2(amount) - remaining), unapplied: remaining };
 }
 
+// What the member is actually asked for, and what they have actually handed over
+// — interest included.
+//
+// `Loan.remainingBalance` is PRINCIPAL only: it drops a whole period at a time
+// and never counts interest (see deriveLoanState below), which makes it the
+// wrong figure to put in front of a member under the words "loan balance". These
+// three come from the schedule, where every peso the member owes is written down.
+//
+// rows: [{ totalDue, amountPaid }]
+export function deriveTotals(rows) {
+  const totalDue = round2(rows.reduce((s, r) => s + Number(r.totalDue), 0));
+  const totalPaid = round2(rows.reduce((s, r) => s + Number(r.amountPaid), 0));
+  return { totalDue, totalPaid, totalOutstanding: round2(Math.max(0, totalDue - totalPaid)) };
+}
+
 // Proves the schedule matches the payments that produced it. For every row:
 //
 //   row.amountPaid == Σ alloc.amount over every LIVE payment's allocations

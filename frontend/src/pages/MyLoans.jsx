@@ -121,7 +121,7 @@ export default function MyLoans() {
                       loan ? (
                         <span>
                           <span className="font-medium text-[#346538]">
-                            {peso(loan.remainingBalance)}
+                            {peso(loan.totalOutstanding)}
                           </span>{" "}
                           remaining · {title(loan.status)}
                           <span className="block text-xs text-[#5F5E5A]">
@@ -176,7 +176,10 @@ export default function MyLoans() {
 // Receipts, which lists them alongside delivery and membership receipts.
 function LoanRepayments({ loan }) {
   const nextDue = loan.schedule.find((r) => r.status !== "PAID");
-  const paid = loan.schedule.reduce((s, r) => s + Number(r.amountPaid), 0);
+  // totalPaid / totalOutstanding come from the loan payload (deriveTotals) and
+  // count interest, so this view agrees with the dashboard rather than showing a
+  // second, smaller "balance" for the same loan.
+  const paid = Number(loan.totalPaid);
 
   return (
     <div>
@@ -193,7 +196,8 @@ function LoanRepayments({ loan }) {
         <div className="text-right">
           <Badge color={loan.status === "ACTIVE" ? "green" : "slate"}>{title(loan.status)}</Badge>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Balance <span className="font-semibold text-[var(--ink)]">{peso(loan.remainingBalance)}</span>
+            Balance{" "}
+            <span className="font-semibold text-[var(--ink)]">{peso(loan.totalOutstanding)}</span>
           </p>
         </div>
       </div>

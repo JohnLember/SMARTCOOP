@@ -8,6 +8,7 @@ import {
   outstandingFrom,
   minPaymentFor,
   reconcile,
+  deriveTotals,
   MIN_PAYMENT,
 } from "./allocate.js";
 
@@ -151,6 +152,51 @@ test("a fully paid loan has no minimum left to pay", () => {
   const rows = fresh();
   const settled = apply(rows, planAllocation(rows, 30600, 1).plan);
   assert.equal(minPaymentFor(settled, 1), 0);
+});
+
+// --- deriveTotals: the interest-aware figures a member is shown ---------------
+
+test("totals cover the whole schedule, interest included", () => {
+  const t = deriveTotals(fresh());
+  // 10,300 + 10,200 + 10,100 — 30,000 principal plus 600 interest.
+  assert.deepEqual(t, { totalDue: 30600, totalPaid: 0, totalOutstanding: 30600 });
+});
+
+// The reason this exists: remainingBalance answers a different question, and
+// putting it under the words "loan balance" understates what is still owed.
+test("outstanding differs from the principal-only remaining balance", () => {
+  const rows = fresh();
+  const paidOne = apply(rows, planAllocation(rows, 10300, 1).plan);
+
+  assert.equal(deriveLoanState(paidOne, 30000).remainingBalance, 20000); // principal only
+  assert.deepEqual(deriveTotals(paidOne), {
+    totalDue: 30600,
+    totalPaid: 10300,
+    totalOutstanding: 20300, // the 300 of interest still ahead is counted
+  });
+});
+
+test("a partial payment moves the totals even though it moves no principal", () => {
+  const rows = fresh();
+  const partial = apply(rows, planAllocation(rows, 5000, 1).plan);
+  assert.equal(deriveLoanState(partial, 30000).remainingBalance, 30000, "principal is untouched");
+  assert.equal(deriveTotals(partial).totalPaid, 5000);
+  assert.equal(deriveTotals(partial).totalOutstanding, 25600);
+});
+
+test("a settled loan owes nothing and never goes negative", () => {
+  const settled = apply(fresh(), planAllocation(fresh(), 30600, 1).plan);
+  assert.deepEqual(deriveTotals(settled), {
+    totalDue: 30600,
+    totalPaid: 30600,
+    totalOutstanding: 0,
+  });
+  // An over-credited row must not report a negative balance to a member.
+  assert.equal(deriveTotals([{ totalDue: 100, amountPaid: 150 }]).totalOutstanding, 0);
+});
+
+test("a loan with no schedule totals zero rather than NaN", () => {
+  assert.deepEqual(deriveTotals([]), { totalDue: 0, totalPaid: 0, totalOutstanding: 0 });
 });
 
 // --- reconcile: the check that stands between a bad write and a commit -------
