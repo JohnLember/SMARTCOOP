@@ -170,7 +170,6 @@ export default function ReceiptDocument({ receipt }) {
 
       {kind === "loan" && (
         <div className="mt-2 space-y-1 text-xs">
-          <Row label="Remaining balance on this loan" value={peso(receipt.loan.remainingBalance)} />
           {receipt.remarks && (
             <p className="pt-1 text-[#5F5E5A]">
               Remarks: <span className="text-[#2F3437]">{receipt.remarks}</span>
