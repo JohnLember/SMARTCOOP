@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Card, Spinner, PageHeader, Badge, Select, Pagination, DataTable } from "../components/ui";
+import { Card, Spinner, PageHeader, Badge, Select, Pagination, DataTable, Modal } from "../components/ui";
 import { usePagination } from "../lib/usePagination";
 import { formatDate } from "../lib/format";
 
@@ -16,6 +16,8 @@ export default function MyLoans() {
   const [apps, setApps] = useState(null);
   const [loans, setLoans] = useState([]);
   const [status, setStatus] = useState("");
+  // The loan whose repayment schedule is open, picked by clicking its row.
+  const [openLoan, setOpenLoan] = useState(null);
 
   useEffect(() => {
     // Both endpoints scope themselves to the signed-in member. Applications carry
@@ -85,9 +87,29 @@ export default function MyLoans() {
           <tbody>
             {pageItems.map((a) => {
               const loan = loanFor(a);
+              // Only an approved application has a loan behind it to open.
+              const open = loan ? () => setOpenLoan(loan) : undefined;
               return (
-                <tr key={a.id} className="hover:bg-[#F7F6F3]">
-                  <td className="px-4 py-3 font-medium text-[#2F3437]">{a.applicationNo}</td>
+                <tr
+                  key={a.id}
+                  className={`hover:bg-[#F7F6F3] ${loan ? "cursor-pointer" : ""}`}
+                  onClick={open}
+                >
+                  <td className="px-4 py-3 font-medium text-[#2F3437]">
+                    {/* The row is the click target for a mouse; this button is the
+                        same action for a keyboard or a screen reader. */}
+                    {loan ? (
+                      <button
+                        type="button"
+                        className="focus-ring rounded text-[#346538] underline-offset-2 hover:underline"
+                        onClick={open}
+                      >
+                        {a.applicationNo}
+                      </button>
+                    ) : (
+                      a.applicationNo
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-[#787774]">{formatDate(a.createdAt)}</td>
                   <td className="px-4 py-3 text-[#2F3437]">{peso(a.principalAmount)}</td>
                   <td className="px-4 py-3 text-[#787774]">{a.termMonths} mo.</td>
@@ -140,20 +162,11 @@ export default function MyLoans() {
 
       {filtered.length > 0 && <Pagination page={page} pageCount={pageCount} onPage={setPage} />}
 
-      {loans.length > 0 && (
-        <section className="mt-8">
-          <h2 className="font-semibold text-[var(--ink)]">Repayments</h2>
-          <p className="mb-3 text-sm text-[var(--ink-muted)]">
-            What you have paid at the cooperative office, and what is still due.
-          </p>
-          <div className="space-y-4">
-            {loans.map((loan) => (
-              <LoanRepayments key={loan.id} loan={loan} />
-            ))}
-          </div>
-        </section>
-      )}
-
+      {/* Repayments belong to one loan, so they open from that loan's row rather
+          than stacking every loan's schedule under the table. */}
+      <Modal open={!!openLoan} onClose={() => setOpenLoan(null)} title="Repayments" wide>
+        {openLoan && <LoanRepayments loan={openLoan} />}
+      </Modal>
     </div>
   );
 }
@@ -166,8 +179,8 @@ function LoanRepayments({ loan }) {
   const paid = loan.schedule.reduce((s, r) => s + Number(r.amountPaid), 0);
 
   return (
-    <Card className="p-0">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pt-4">
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h3 className="font-semibold text-[var(--ink-body)]">
             {peso(loan.principalAmount)} over {loan.termMonths} months
@@ -186,15 +199,15 @@ function LoanRepayments({ loan }) {
       </div>
 
       {nextDue && (
-        <p className="mt-3 border-y border-[var(--line)] bg-[var(--sunken)] px-4 py-2 text-sm text-[var(--ink-body)]">
+        <p className="mt-3 rounded-[var(--radius-control)] border border-[var(--line)] bg-[var(--sunken)] px-3 py-2 text-sm text-[var(--ink-body)]">
           Next due:{" "}
           <span className="font-medium">{peso(Number(nextDue.totalDue) - Number(nextDue.amountPaid))}</span> on{" "}
           {formatDate(nextDue.dueDate)} (period {nextDue.periodNo})
         </p>
       )}
 
-      <div className="overflow-x-auto">
-        <DataTable className="mt-3">
+      <div className="mt-3 overflow-x-auto rounded-[var(--radius-control)] border border-[var(--line)]">
+        <DataTable>
           <thead>
             <tr>
               <th>#</th>
@@ -219,7 +232,6 @@ function LoanRepayments({ loan }) {
           </tbody>
         </DataTable>
       </div>
-
-    </Card>
+    </div>
   );
 }
