@@ -133,29 +133,28 @@ export default function MemberDashboard() {
           {activeLoans.length > 0 ? (
             <>
               <p className="text-2xl font-bold text-[#111111]">{peso(loanBalance)}</p>
-              {activeLoans.length === 1 ? (
-                <p className="text-sm text-[#787774]">
-                  of {peso(activeLoans[0].principalAmount)} ·{" "}
-                  {Number(activeLoans[0].interestRate)}%/mo · {activeLoans[0].termMonths} mo
-                </p>
-              ) : (
+              {activeLoans.length > 1 && (
                 <p className="text-sm text-[#787774]">across {activeLoans.length} active loans</p>
               )}
               <p className="mt-2 text-xs text-[#5F5E5A]">
                 Pay at the cooperative office — staff record each payment against your schedule
               </p>
-              <div className="mt-2 space-y-1">
+              {/* One block per loan: how far it has come, then its terms. The
+                  progress line carries the principal, so the old "of ₱X · rate ·
+                  term" summary above it would only have said it twice. */}
+              <div className="mt-3 space-y-3">
                 {activeLoans.map((l) => (
-                  <div key={l.id} className="flex items-center justify-between gap-2">
-                    {activeLoans.length > 1 && (
+                  <div key={l.id}>
+                    <LoanProgress loan={l} />
+                    <div className="mt-1 flex items-center justify-between gap-2">
                       <span className="text-xs text-[#787774]">
-                        {peso(l.remainingBalance)} of {peso(l.principalAmount)} · {l.termMonths} mo
+                        {Number(l.interestRate)}%/mo · {l.termMonths} mo
                       </span>
-                    )}
-                    <ShowComputation
-                      url={`/finance/loans/${l.id}/explain`}
-                      label={activeLoans.length > 1 ? "Amortization" : "Show amortization"}
-                    />
+                      <ShowComputation
+                        url={`/finance/loans/${l.id}/explain`}
+                        label={activeLoans.length > 1 ? "Amortization" : "Show amortization"}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -287,6 +286,39 @@ export default function MemberDashboard() {
           reloadLoanApps();
         }}
       />
+    </div>
+  );
+}
+
+// How far one loan has been repaid. This is PRINCIPAL repaid, not total paid:
+// remainingBalance falls only when a period is settled in full (deriveLoanState
+// in backend/src/modules/finance/allocate.js), so the bar is derived from the
+// same figure the balance above it comes from. Interest is deliberately not in
+// it — a bar mixing the two would never reach 100% on the member's own maths.
+function LoanProgress({ loan }) {
+  const principal = Number(loan.principalAmount);
+  const repaid = Math.max(0, principal - Number(loan.remainingBalance));
+  const pct = principal > 0 ? Math.min(100, Math.round((repaid / principal) * 100)) : 0;
+
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
+        <span className="text-[#5F5E5A]">
+          <span className="font-medium text-[#2F3437]">{peso(repaid)}</span> of {peso(principal)}{" "}
+          principal repaid
+        </span>
+        <span className="font-medium text-[#346538]">{pct}%</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Repaid ${pct}% of ${peso(principal)} principal`}
+        className="h-2 w-full overflow-hidden rounded-full bg-[#F2F1ED]"
+      >
+        <div className="h-full rounded-full bg-[#346538]" style={{ width: `${pct}%` }} />
+      </div>
     </div>
   );
 }
