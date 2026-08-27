@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Card, Spinner, PageHeader, Badge, Select, Pagination, DataTable, Modal, Button } from "../components/ui";
-import ReceiptDocument from "../components/ReceiptDocument";
+import { Card, Spinner, PageHeader, Badge, Select, Pagination, DataTable } from "../components/ui";
 import { usePagination } from "../lib/usePagination";
 import { formatDate } from "../lib/format";
-import { Printer } from "lucide-react";
 
 const peso = (n) =>
   `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -18,8 +16,6 @@ export default function MyLoans() {
   const [apps, setApps] = useState(null);
   const [loans, setLoans] = useState([]);
   const [status, setStatus] = useState("");
-  // The payment slip currently being viewed, for printing.
-  const [slip, setSlip] = useState(null);
 
   useEffect(() => {
     // Both endpoints scope themselves to the signed-in member. Applications carry
@@ -152,29 +148,20 @@ export default function MyLoans() {
           </p>
           <div className="space-y-4">
             {loans.map((loan) => (
-              <LoanRepayments key={loan.id} loan={loan} onPrint={setSlip} />
+              <LoanRepayments key={loan.id} loan={loan} />
             ))}
           </div>
         </section>
       )}
 
-      <Modal open={!!slip} onClose={() => setSlip(null)} title="Payment acknowledgment">
-        {slip && <ReceiptDocument receipt={slip} />}
-        <div className="no-print mt-4 flex justify-end">
-          <Button variant="secondary" onClick={() => window.print()}>
-            <Printer size={16} />
-            Print
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 }
 
-// A member read-only view of one loan: the amortization schedule and the
-// payments recorded against it. Recording and voiding are staff actions and are
-// deliberately absent here.
-function LoanRepayments({ loan, onPrint }) {
+// A member read-only view of one loan: the amortization schedule and what is
+// still due. The individual payments (and their printable slips) live on My
+// Receipts, which lists them alongside delivery and membership receipts.
+function LoanRepayments({ loan }) {
   const nextDue = loan.schedule.find((r) => r.status !== "PAID");
   const paid = loan.schedule.reduce((s, r) => s + Number(r.amountPaid), 0);
 
@@ -233,62 +220,6 @@ function LoanRepayments({ loan, onPrint }) {
         </DataTable>
       </div>
 
-      <div className="border-t border-[var(--line)] p-4">
-        <p className="mb-2 font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-          Payments received
-        </p>
-        {loan.payments.length === 0 ? (
-          <p className="text-sm text-[var(--ink-muted)]">
-            No payments recorded yet. Pay at the cooperative office and staff will record it here.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {loan.payments.map((p) => (
-              <div
-                key={p.id}
-                className={`flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm ${
-                  p.voidedAt
-                    ? "border-dashed border-[var(--line-strong)] bg-[var(--sunken)]"
-                    : "border-[#F2F1ED]"
-                }`}
-              >
-                <div className="min-w-0">
-                  <p
-                    className={`font-medium ${
-                      p.voidedAt ? "text-[var(--ink-faint)] line-through" : "text-[var(--brand)]"
-                    }`}
-                  >
-                    {peso(p.amount)}
-                  </p>
-                  <p className="text-xs text-[var(--ink-muted)]">
-                    {formatDate(p.paymentDate)}
-                    {p.paymentNo ? ` · ${p.paymentNo}` : " · from delivery (legacy)"}
-                    {p.referenceNo ? ` · ${p.referenceNo}` : ""}
-                  </p>
-                  {/* The reason the record was kept: a member holding the printed
-                      slip finds it here, saying why it no longer counts. */}
-                  {p.voidedAt && (
-                    <p className="mt-0.5 text-xs font-medium text-[var(--danger)]">
-                      Cancelled {formatDate(p.voidedAt)}
-                      {p.voidReason ? ` · ${p.voidReason}` : ""}
-                    </p>
-                  )}
-                </div>
-                {p.paymentNo && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onPrint({ ...p, loan: { ...loan, member: loan.member } })}
-                  >
-                    <Printer size={14} />
-                    Slip
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </Card>
   );
 }
