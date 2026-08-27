@@ -8,37 +8,32 @@ import { Truck, Wallet, Plus, Coins, Scale } from "lucide-react";
 import ShowComputation from "../components/ShowComputation";
 import {
   ResponsiveContainer,
-  LineChart,
+  ComposedChart,
+  BarChart,
+  Bar,
   Line,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
+  Legend,
 } from "recharts";
+import { monthlySummary, hasVolume, hasMoney } from "../lib/monthlySummary";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+const pesoAxis = (v) => `₱${Number(v).toLocaleString()}`;
 
-// Last 6 months of the member's own deliveries, oldest first. Built from the
-// deliveries already fetched rather than asking the API for another aggregate.
-function monthlyKg(deliveries) {
-  const months = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: d.toLocaleDateString("en-US", { month: "short" }),
-      kg: 0,
-    });
-  }
-  for (const d of deliveries) {
-    const dt = new Date(d.deliveryDate);
-    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-    const bucket = months.find((m) => m.key === key);
-    if (bucket) bucket.kg += Number(d.weightKg);
-  }
-  return months;
-}
+// What the gross of a month's deliveries turned into, in the order it reads on a
+// receipt: what the member took home first, then each line taken out of it.
+const MONEY_SERIES = [
+  { key: "net", label: "Take-home", color: "#346538" },
+  { key: "cbu", label: "CBU (your savings)", color: "#B9701F" },
+  { key: "dayong", label: "Dayong", color: "#1F6C9F" },
+  { key: "supplies", label: "Supplies", color: "#956400" },
+  { key: "membershipFee", label: "Membership fee", color: "#A3A29E" },
+];
+
+const CHART_AXIS = { tickLine: false, axisLine: false, stroke: "#A3A29E", fontSize: 12 };
 
 export default function MemberDashboard() {
   const { user } = useAuth();
@@ -84,8 +79,9 @@ export default function MemberDashboard() {
   const activeLoans = loans.filter((l) => l.status === "ACTIVE");
   const loanBalance = activeLoans.reduce((sum, l) => sum + Number(l.remainingBalance), 0);
   const pendingLoanApp = loanApps.find((a) => a.status === "PENDING");
-  const chart = monthlyKg(deliveries);
-  const hasChartData = chart.some((m) => m.kg > 0);
+  const chart = monthlySummary(deliveries);
+  const hasChartData = hasVolume(chart);
+  const hasMoneyData = hasMoney(chart);
 
   // Checked before `loading` so an unlinked account isn't left on a spinner
   // forever — there is nothing to fetch for it.
@@ -145,7 +141,9 @@ export default function MemberDashboard() {
               ) : (
                 <p className="text-sm text-[#787774]">across {activeLoans.length} active loans</p>
               )}
-              <p className="mt-2 text-xs text-[#5F5E5A]">Auto-deducted from your deliveries</p>
+              <p className="mt-2 text-xs text-[#5F5E5A]">
+                Pay at the cooperative office — staff record each payment against your schedule
+              </p>
               <div className="mt-2 space-y-1">
                 {activeLoans.map((l) => (
                   <div key={l.id} className="flex items-center justify-between gap-2">
@@ -193,27 +191,90 @@ export default function MemberDashboard() {
         </Card>
       </div>
 
-      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Deliveries — last 6 months</h3>
+      {/* Kilos and pesos on one chart: the two halves of the same question, and
+          the only place a member can see whether a heavier month actually paid
+          more. Separate axes because they are different units. */}
+      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">
+        Deliveries &amp; earnings — last 6 months
+      </h3>
       <Card>
         {hasChartData ? (
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid stroke="#F2F1ED" vertical={false} />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} stroke="#A3A29E" fontSize={12} />
-              <YAxis tickLine={false} axisLine={false} stroke="#A3A29E" fontSize={12} width={44} />
-              <Tooltip formatter={(v) => [`${Number(v).toLocaleString()} kg`, "Delivered"]} />
-              <Line
-                type="monotone"
-                dataKey="kg"
-                stroke="#346538"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "#346538" }}
+              <XAxis dataKey="label" {...CHART_AXIS} />
+              <YAxis yAxisId="kg" width={44} {...CHART_AXIS} />
+              <YAxis
+                yAxisId="peso"
+                orientation="right"
+                width={64}
+                tickFormatter={pesoAxis}
+                {...CHART_AXIS}
               />
-            </LineChart>
+              <Tooltip
+                formatter={(v, name) =>
+                  name === "Delivered" ? [`${Number(v).toLocaleString()} kg`, name] : [peso(v), name]
+                }
+              />
+              <Legend />
+              <Bar yAxisId="kg" dataKey="kg" name="Delivered" fill="#346538" maxBarSize={38} />
+              <Line
+                yAxisId="peso"
+                type="monotone"
+                dataKey="net"
+                name="Take-home"
+                stroke="#B9701F"
+                strokeWidth={2}
+                dot={{ r: 3, fill: "#B9701F" }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         ) : (
           <p className="py-10 text-center text-sm text-[#5F5E5A]">
             No deliveries in the last 6 months yet.
+          </p>
+        )}
+      </Card>
+
+      {/* The counter question this page could never answer: "my gross was ₱5,000,
+          why did I take home ₱4,300?". ShowComputation explains one receipt;
+          this shows the pattern across months. */}
+      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Where your delivery money went</h3>
+      <Card>
+        {hasMoneyData ? (
+          <>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart
+                data={chart}
+                layout="vertical"
+                margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+              >
+                <CartesianGrid stroke="#F2F1ED" horizontal={false} />
+                <XAxis type="number" tickFormatter={pesoAxis} {...CHART_AXIS} />
+                <YAxis type="category" dataKey="label" width={44} {...CHART_AXIS} />
+                <Tooltip formatter={(v, name) => [peso(v), name]} />
+                <Legend />
+                {MONEY_SERIES.map((s) => (
+                  <Bar
+                    key={s.key}
+                    dataKey={s.key}
+                    name={s.label}
+                    stackId="money"
+                    fill={s.color}
+                    maxBarSize={26}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+            {/* Said outright, because a legend alone reads every segment as a loss. */}
+            <p className="mt-2 text-xs text-[#5F5E5A]">
+              CBU is your own capital in the cooperative, not a fee — it builds toward Regular
+              membership.
+            </p>
+          </>
+        ) : (
+          <p className="py-10 text-center text-sm text-[#5F5E5A]">
+            No delivery payouts in the last 6 months yet.
           </p>
         )}
       </Card>
@@ -268,8 +329,9 @@ function LoanApplyModal({ open, onClose, onSubmitted }) {
           <div className="rounded-lg bg-[#FDEBEC] px-3 py-2 text-sm text-[#9F2F2D]">{error}</div>
         )}
         <p className="text-sm text-[#787774]">
-          Cooperative staff will review your request. Interest is charged at the standard 5% per
-          month on the diminishing balance, and repayments are auto-deducted from your deliveries.
+          Cooperative staff will review your request. Interest is charged monthly on the diminishing
+          balance at the rate set when your loan is approved, and repayments are paid in cash at the
+          cooperative office, where staff record them against your schedule.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
