@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { Card, Spinner, PageHeader, Badge, Button } from "../components/ui";
 import { useConfirm } from "../components/ConfirmDialog";
 import { formatDateTime } from "../lib/format";
-import { Check, ChevronRight, CalendarClock, Trash2, X } from "lucide-react";
+import { Check, CheckCheck, ChevronRight, CalendarClock, Trash2, X } from "lucide-react";
 
 // Notifications carry no link column, and every one produced today comes from the
 // loan-application flow. Route by audience: staff review applications on the queue
@@ -55,6 +55,25 @@ export default function Notifications() {
     await load();
     // Tell the sidebar badge to refresh its unread count right away.
     window.dispatchEvent(new Event("notifications:changed"));
+  }
+
+  // One request rather than a PATCH per row — the server does it in a single
+  // statement, scoped to this user's own list.
+  async function markAllRead() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await api.patch("/notifications/read-all");
+      await load();
+      window.dispatchEvent(new Event("notifications:changed"));
+      toast.success(
+        res.data.updated === 1 ? "Notification marked as read" : `${res.data.updated} marked as read`
+      );
+    } catch (err) {
+      toast.error(apiError(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   // Plays the exit animation first, then deletes. The rows are removed from
@@ -112,12 +131,21 @@ export default function Notifications() {
   if (!list) return <Spinner />;
 
   const allSelected = list.length > 0 && selected.size === list.length;
+  const unread = list.filter((n) => n.status === "UNREAD").length;
 
   return (
     <div>
       <PageHeader
         title="Notifications"
         subtitle="Announcements and messages. Select one or more to delete."
+        actions={
+          unread > 0 && (
+            <Button variant="secondary" onClick={markAllRead} disabled={busy}>
+              <CheckCheck size={16} />
+              Mark all as read ({unread})
+            </Button>
+          )
+        }
       />
 
       {list.length > 0 && (

@@ -7,6 +7,9 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/", controller.list);
+// Every role has a notification list, so every role can clear it. Specific route
+// before the parameterized one.
+router.patch("/read-all", controller.markAllRead);
 router.patch("/:id/read", controller.markRead);
 router.post("/delete", controller.remove);
 // Staff and MAO can broadcast announcements.

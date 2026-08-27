@@ -44,6 +44,17 @@ export async function removeMany(ids, user) {
   return { deleted: count };
 }
 
+// Marks everything in this user's list as read, in one statement. The audience
+// filter is part of the where clause for the same reason removeMany does it:
+// nothing outside what the user can see can be touched, whatever is sent.
+export async function markAllRead(user) {
+  const { count } = await prisma.notification.updateMany({
+    where: { status: "UNREAD", ...audienceWhere(user) },
+    data: { status: "READ" },
+  });
+  return { updated: count };
+}
+
 export async function markRead(id, user) {
   const notif = await prisma.notification.findUnique({ where: { id } });
   if (!notif) throw notFound("Notification not found");

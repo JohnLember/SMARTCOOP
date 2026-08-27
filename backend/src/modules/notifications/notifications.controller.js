@@ -47,6 +47,14 @@ export async function remove(req, res, next) {
   }
 }
 
+export async function markAllRead(req, res, next) {
+  try {
+    res.json(await service.markAllRead(req.user));
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function markRead(req, res, next) {
   try {
     res.json(await service.markRead(Number(req.params.id), req.user));
