@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as loans from "./loans.service.js";
 import * as credit from "./credit.service.js";
-import { forbidden, notFound, badRequest } from "../../utils/httpError.js";
+import { forbidden, notFound } from "../../utils/httpError.js";
 import { assertMemberAccess, memberScopeFor } from "../../utils/access.js";
 
 const isStaff = (user) => user.role === "ADMIN" || user.role === "STAFF";
@@ -112,14 +112,6 @@ export async function getLoanPayment(req, res, next) {
   }
 }
 
-export async function computeAllCreditScores(req, res, next) {
-  try {
-    res.json(await credit.evaluateAll(req.user.id));
-  } catch (err) {
-    next(err);
-  }
-}
-
 export async function getCreditScore(req, res, next) {
   try {
     const memberId = Number(req.params.memberId);
@@ -127,22 +119,6 @@ export async function getCreditScore(req, res, next) {
     const latest = await credit.currentForMember(memberId);
     const history = await credit.historyForMember(memberId);
     res.json({ latest, history });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function computeCreditScore(req, res, next) {
-  try {
-    if (!isStaff(req.user)) throw forbidden("Only staff can compute credit scores");
-    const result = await credit.evaluateAndSave(Number(req.params.memberId), req.user.id);
-    if (!result) throw notFound("Member not found");
-    if (result.insufficientActivity) {
-      throw badRequest(
-        "Not enough activity to assess yet — this member has no deliveries or loans on record."
-      );
-    }
-    res.status(201).json(result);
   } catch (err) {
     next(err);
   }

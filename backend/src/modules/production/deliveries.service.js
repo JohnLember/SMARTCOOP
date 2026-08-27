@@ -2,6 +2,7 @@ import prisma from "../../config/db.js";
 import { notFound, badRequest } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
+import * as credit from "../finance/credit.service.js";
 import { promoteIfEligible } from "../members/members.service.js";
 
 const deliveryInclude = {
@@ -98,8 +99,10 @@ export async function create(data, actorId) {
     `Recorded delivery: ${weightKg}kg for ${member.memberNo} (₱${totalAmount})`
   );
 
-  // Re-evaluate progression so priority score reflects the new volume.
+  // Re-evaluate progression so priority score reflects the new volume, and the
+  // credit score with it — production consistency is one of its three pillars.
   await evaluateAndSave(data.memberId).catch(() => {});
+  await credit.evaluateAndSave(data.memberId).catch(() => {});
   // Accumulated CBU may have crossed the Regular threshold.
   await promoteIfEligible(data.memberId).catch(() => {});
 

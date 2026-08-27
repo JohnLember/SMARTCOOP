@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import api, { apiError } from "../../lib/api";
-import { toast } from "react-toastify";
-import { Button, Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination, DataTable} from "../../components/ui";
+import api from "../../lib/api";
+import { Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination, DataTable } from "../../components/ui";
 import ShowComputation from "../../components/ShowComputation";
 import { formatDate } from "../../lib/format";
 import { usePagination } from "../../lib/usePagination";
-import { RefreshCw, ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 
 export default function CreditScoring() {
   const [rows, setRows] = useState(null);
-  const [busy, setBusy] = useState(false);
   const { page, setPage, pageCount, pageItems } = usePagination(rows);
 
+  // Scoring is automatic — recomputed when a delivery, loan or payment changes a
+  // member's inputs, and refreshed on read when it has gone stale. Loading this
+  // page IS the assessment, which is why there is nothing here to press.
   async function load() {
     const res = await api.get("/finance/credit-scores");
     setRows(res.data);
@@ -21,32 +22,6 @@ export default function CreditScoring() {
   useEffect(() => {
     load();
   }, []);
-
-  async function computeAll() {
-    setBusy(true);
-    try {
-      const res = await api.post("/finance/credit-scores/compute-all");
-      await load();
-      toast.success(`Computed ${res.data?.evaluated ?? "all"} credit scores`);
-    } catch (err) {
-      toast.error(apiError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function recompute(memberId) {
-    setBusy(true);
-    try {
-      await api.post(`/finance/credit-scores/${memberId}/compute`);
-      await load();
-      toast.success("Credit score recomputed");
-    } catch (err) {
-      toast.error(apiError(err));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (!rows) return <Spinner />;
 
@@ -65,13 +40,7 @@ export default function CreditScoring() {
     <div>
       <PageHeader
         title="Agricultural Credit Scoring"
-        subtitle="Algorithmic creditworthiness from repayment history, production consistency, and cooperative standing"
-        actions={
-          <Button onClick={computeAll} disabled={busy}>
-            <RefreshCw size={16} className={busy ? "animate-spin" : ""} />
-            Compute all
-          </Button>
-        }
+        subtitle="Algorithmic creditworthiness from repayment history, production consistency, and cooperative standing — assessed automatically as deliveries, loans and payments are recorded"
       />
 
       <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -119,9 +88,6 @@ export default function CreditScoring() {
                     {r.creditScore && (
                       <ShowComputation url={`/finance/credit-scores/${r.id}/explain`} label="Show computation" />
                     )}
-                    <Button variant="ghost" onClick={() => recompute(r.id)} disabled={busy}>
-                      Recompute
-                    </Button>
                   </div>
                 </td>
               </tr>

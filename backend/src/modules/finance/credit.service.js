@@ -207,23 +207,6 @@ export async function evaluateAndSave(memberId, actorId) {
   return { memberId, ...result, computedAt: saved.computedAt };
 }
 
-export async function evaluateAll(actorId) {
-  const members = await prisma.member.findMany({
-    where: { status: "ACTIVE" },
-    select: { id: true },
-  });
-  const bands = { LOW: 0, MEDIUM: 0, HIGH: 0 };
-  let scored = 0;
-  for (const m of members) {
-    const res = await evaluateAndSave(m.id, actorId);
-    if (res?.riskBand) {
-      bands[res.riskBand] += 1;
-      scored += 1;
-    }
-  }
-  return { evaluated: scored, skipped: members.length - scored, ...bands };
-}
-
 export async function latestForMember(memberId) {
   return prisma.creditScore.findFirst({
     where: { memberId },
@@ -231,22 +214,30 @@ export async function latestForMember(memberId) {
   });
 }
 
-// How long a saved score stays fresh before a read recomputes it.
+// How long a saved score stays fresh before a read recomputes it. The events
+// that move a score (a delivery, a loan, a payment recorded or voided) recompute
+// it on the spot, so this only catches drift with time — a loan going overdue
+// changes the score with nobody touching anything.
 const FRESH_FOR_MS = 24 * 60 * 60 * 1000;
 
-// The score a reader gets: assessed automatically when missing or stale, so no
-// one has to press "Assess credit". Runs without an actor — an automatic
-// assessment isn't someone's activity-log entry.
-// ponytail: recompute-on-read, no scheduler. If scoring ever gets expensive or
-// reads get hot, move it to a nightly job and serve the saved row here.
-export async function currentForMember(memberId) {
-  const latest = await latestForMember(memberId);
-  if (latest && Date.now() - new Date(latest.computedAt).getTime() < FRESH_FOR_MS) return latest;
+const isFresh = (score) =>
+  !!score && Date.now() - new Date(score.computedAt).getTime() < FRESH_FOR_MS;
 
+// Recomputes and returns the saved row, or keeps the old one when there is
+// nothing to score. Runs without an actor — an automatic assessment isn't
+// someone's activity-log entry.
+async function refresh(memberId, previous) {
   const result = await evaluateAndSave(memberId);
   // Member gone, or no deliveries/loans yet to score — keep whatever we had.
-  if (!result || result.insufficientActivity) return latest;
+  if (!result || result.insufficientActivity) return previous ?? null;
   return latestForMember(memberId);
+}
+
+// The score a reader gets: assessed automatically when missing or stale, so no
+// one has to press a button to see a current figure.
+export async function currentForMember(memberId) {
+  const latest = await latestForMember(memberId);
+  return isFresh(latest) ? latest : refresh(memberId, latest);
 }
 
 export async function historyForMember(memberId) {
@@ -358,6 +349,14 @@ export async function explain(memberId) {
 }
 
 // Latest credit score per active member (for the staff Credit Scoring page).
+//
+// Anything stale or never scored is assessed on the way out, the same rule
+// currentForMember applies to a single member — the page is current when it
+// loads instead of showing whatever was left behind until someone pressed
+// "Compute all". Fresh rows cost nothing, so this is a no-op on every read after
+// the first of the day.
+// ponytail: sequential recompute inside the request. Fine for a cooperative
+// roster; move it to a nightly job if this list ever gets slow to open.
 export async function listLatest() {
   const members = await prisma.member.findMany({
     where: { status: "ACTIVE" },
@@ -367,5 +366,13 @@ export async function listLatest() {
   const scores = await prisma.creditScore.findMany({ orderBy: { computedAt: "desc" } });
   const latest = new Map();
   for (const s of scores) if (!latest.has(s.memberId)) latest.set(s.memberId, s);
+
+  for (const m of members) {
+    if (isFresh(latest.get(m.id))) continue;
+    // One member failing to score must not blank the whole page.
+    const fresh = await refresh(m.id, latest.get(m.id)).catch(() => latest.get(m.id) ?? null);
+    if (fresh) latest.set(m.id, fresh);
+  }
+
   return members.map((m) => ({ ...m, creditScore: latest.get(m.id) ?? null }));
 }

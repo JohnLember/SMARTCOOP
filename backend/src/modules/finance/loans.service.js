@@ -2,6 +2,7 @@ import prisma from "../../config/db.js";
 import { notFound, badRequest, internalError } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
+import * as credit from "./credit.service.js";
 import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD, memberSearchWhere } from "../members/members.service.js";
 import {
   planAllocation,
@@ -154,8 +155,10 @@ export async function create(data, actorId) {
     `Issued loan ₱${data.principalAmount} (${data.termMonths} mo @ ${data.interestRate}%/mo) to ${member.memberNo}`
   );
 
-  // A new loan changes the member's Loan Score inputs — refresh categorization.
+  // A new loan changes the member's Loan Score inputs — refresh categorization
+  // and the credit score, so neither waits for someone to press a button.
   await evaluateAndSave(data.memberId).catch(() => {});
+  await credit.evaluateAndSave(data.memberId).catch(() => {});
   return loan;
 }
 
@@ -423,8 +426,11 @@ export async function recordPayment(loanId, data, actorId) {
     )
     .catch(() => {});
 
-  // Repayment feeds both the credit score and the activity category.
+  // Repayment feeds both the credit score and the activity category — this is
+  // the biggest single input to the repayment-history pillar, so it is scored now
+  // rather than at the next stale read.
   await evaluateAndSave(member.id).catch(() => {});
+  await credit.evaluateAndSave(member.id).catch(() => {});
 
   return full;
 }
@@ -486,5 +492,7 @@ export async function voidPayment(paymentId, actorId, reason) {
     `Voided loan payment ${voided.paymentNo} (₱${fmt(voided.amount)}) for ${voided.memberNo}`
   );
   await evaluateAndSave(voided.memberId).catch(() => {});
+  // A cancelled payment un-does what it did to the score too.
+  await credit.evaluateAndSave(voided.memberId).catch(() => {});
   return { voided: voided.paymentNo };
 }

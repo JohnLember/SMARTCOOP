@@ -21,12 +21,12 @@ router.post("/loan-payments/:paymentId/void", staff, controller.voidLoanPayment)
 router.get("/loan-payments", controller.listLoanPayments);
 router.get("/loan-payments/:paymentId", controller.getLoanPayment);
 
-// Agricultural Credit Scoring — staff compute/list; members read their own.
+// Agricultural Credit Scoring — read-only. Scoring is automatic: the events that
+// change a score recompute it, and a read refreshes anything stale, so there is
+// no compute endpoint to call and no button to press.
 // Specific routes before the parameterized ones.
 router.get("/credit-scores", staff, controller.listCreditScores);
-router.post("/credit-scores/compute-all", staff, controller.computeAllCreditScores);
 router.get("/credit-scores/:memberId/explain", controller.explainCreditScore);
 router.get("/credit-scores/:memberId", controller.getCreditScore);
-router.post("/credit-scores/:memberId/compute", staff, controller.computeCreditScore);
 
 export default router;
