@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as controller from "./finance.controller.js";
 import { authenticate } from "../../middleware/auth.js";
 import { requireRole } from "../../middleware/requireRole.js";
+import { approvalLimiter } from "../../middleware/rateLimit.js";
 
 const router = Router();
 const staff = requireRole("ADMIN", "STAFF");
@@ -9,9 +10,15 @@ router.use(authenticate);
 
 // Loans — staff write; members read their own (scoped in controller).
 router.get("/loans", controller.listLoans);
+// Before /loans/:id, or "counts" is read as a loan id.
+router.get("/loans/counts", staff, controller.loanCounts);
 router.post("/loans", controller.createLoan);
 router.get("/loans/:id/explain", controller.explainLoan);
 router.post("/loans/:id/payments", staff, controller.recordLoanPayment);
+// Closing a paid-off loan, and undoing that. Reopen verifies an admin password,
+// so it is rate limited like the sign-in endpoint.
+router.post("/loans/:id/settle", staff, controller.settleLoan);
+router.post("/loans/:id/reopen", staff, approvalLimiter, controller.reopenLoan);
 router.get("/loans/:id", controller.getLoan);
 
 // Manual loan payments. Recording and voiding move money on the schedule, so

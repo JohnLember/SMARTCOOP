@@ -16,12 +16,18 @@ const loanSchema = z.object({
   dateIssued: z.string().optional().nullable(),
 });
 
+// The Active / Settled toggle sends "1" or "0". Parsed rather than passed
+// through, because a query string is always text and "0" is truthy.
+const asFlag = (v) => (v === undefined ? undefined : v === "1" || v === "true");
+
 export async function listLoans(req, res, next) {
   try {
     // Staff see every loan; a member sees only their own; nobody else.
+    // A member is not filtered by settlement — their settled loans stay on their
+    // own list, marked, as the record of a debt they have finished paying.
     const scope = memberScopeFor(req.user);
     if (scope !== null) return res.json(await loans.list({ memberId: scope }));
-    res.json(await loans.list(req.query));
+    res.json(await loans.list({ ...req.query, settled: asFlag(req.query.settled) }));
   } catch (err) {
     next(err);
   }
@@ -51,6 +57,41 @@ export async function createLoan(req, res, next) {
 export async function listCreditScores(_req, res, next) {
   try {
     res.json(await credit.listLatest());
+  } catch (err) {
+    next(err);
+  }
+}
+
+// --- Settlement (closing a paid-off loan) ---
+
+export async function settleLoan(req, res, next) {
+  try {
+    if (!isStaff(req.user)) throw forbidden("Only staff can settle loans");
+    res.json(await loans.settle(Number(req.params.id), req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+// The admin's credentials are checked in the service and never logged or echoed.
+const reopenSchema = z.object({
+  adminUsername: z.string().min(1, "Enter the approving admin's username"),
+  adminPassword: z.string().min(1, "Enter the approving admin's password"),
+});
+
+export async function reopenLoan(req, res, next) {
+  try {
+    if (!isStaff(req.user)) throw forbidden("Only staff can reopen loans");
+    const body = reopenSchema.parse(req.body ?? {});
+    res.json(await loans.reopen(Number(req.params.id), body, req.user.id));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function loanCounts(_req, res, next) {
+  try {
+    res.json(await loans.counts());
   } catch (err) {
     next(err);
   }

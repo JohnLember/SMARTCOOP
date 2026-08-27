@@ -266,6 +266,15 @@ model Loan {
   remainingBalance Decimal    @map("remaining_balance") @db.Decimal(12, 2)
   status           LoanStatus @default(ACTIVE)
   dateIssued       DateTime   @default(now()) @map("date_issued")
+  // Closing a paid-off loan is a deliberate act, not the same thing as `status`
+  // going INACTIVE — syncLoanState rewrites that field from the schedule after
+  // every payment and void, so a status value would be clobbered. Once stamped:
+  // payments can no longer be voided, and the loan leaves the working list for
+  // the Settled view. Reopening (admin-approved) clears it back to null.
+  settledAt        DateTime?  @map("settled_at")
+  // Plain column, no relation — same call as LoanPayment.voidedByUserId above:
+  // who settled and who approved a reopen is in the ActivityLog.
+  settledByUserId  Int?       @map("settled_by_user_id")
 
   payments LoanPayment[]
   schedule LoanSchedule[]

@@ -19,6 +19,19 @@ export const loginLimiter = rateLimit({
   message: { message: "Too many sign-in attempts. Please wait a few minutes and try again." },
 });
 
+// Reopening a settled loan asks a staff user to type an ADMIN's password. That
+// makes the endpoint a password oracle sitting behind an ordinary staff login,
+// so it gets the same treatment as the front door: a rolling window, failures
+// only, and no lockout that would let one person freeze an admin out.
+export const approvalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { message: "Too many approval attempts. Please wait a few minutes and try again." },
+});
+
 // The public membership application form: unauthenticated and it writes rows,
 // so it is the obvious spam target.
 export const publicWriteLimiter = rateLimit({

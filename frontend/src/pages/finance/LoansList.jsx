@@ -38,6 +38,10 @@ export default function LoansList() {
   const [assessment, setAssessment] = useState(null);
   const [search, setSearch] = useState("");
   const [barangayId, setBarangayId] = useState("");
+  // "0" = still open (including paid-off loans nobody has settled yet, which have
+  // to stay visible so staff can settle them), "1" = the settled archive.
+  const [settled, setSettled] = useState("0");
+  const [tallies, setTallies] = useState({ active: 0, settled: 0 });
 
   // One row per member, not per loan: a member holding two loans was listed
   // twice with no indication the two belonged together. Figures are summed here;
@@ -62,11 +66,16 @@ export default function LoansList() {
   async function load(overrides = {}) {
     const s = overrides.search ?? search;
     const b = overrides.barangayId ?? barangayId;
-    const params = {};
+    const params = { settled: overrides.settled ?? settled };
     if (s) params.search = s;
     if (b) params.barangayId = b;
-    const res = await api.get("/finance/loans", { params });
+    const [res, counts] = await Promise.all([
+      api.get("/finance/loans", { params }),
+      // Both tab labels carry a number, and the list only ever holds one side.
+      api.get("/finance/loans/counts").catch(() => null),
+    ]);
     setLoans(res.data);
+    if (counts) setTallies(counts.data);
     setPage(1);
   }
 
@@ -209,6 +218,35 @@ export default function LoansList() {
         </form>
       </Modal>
 
+      {/* Active / Settled. Settling is what moves a loan across, so this is an
+          archive switch rather than a filter — the two never mix. */}
+      <div className="mb-4 inline-flex rounded-[var(--radius-control)] border border-[var(--line)] p-1">
+        {[
+          { key: "0", label: "Active", count: tallies.active },
+          { key: "1", label: "Settled", count: tallies.settled },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            aria-pressed={settled === tab.key}
+            onClick={() => {
+              setSettled(tab.key);
+              load({ settled: tab.key });
+            }}
+            className={`focus-ring touch-target rounded-[6px] px-3 py-1.5 text-sm font-medium ${
+              settled === tab.key
+                ? "bg-[var(--brand)] text-white"
+                : "text-[var(--ink-muted)] hover:bg-[var(--sunken)]"
+            }`}
+          >
+            {tab.label}{" "}
+            <span className={settled === tab.key ? "text-white/75" : "text-[var(--ink-faint)]"}>
+              ({tab.count})
+            </span>
+          </button>
+        ))}
+      </div>
+
       <Card className="mb-4">
         <form
           onSubmit={(e) => {
@@ -302,7 +340,11 @@ export default function LoansList() {
               ))}
               {byMember.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-[#5F5E5A]">No loans yet.</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-[#5F5E5A]">
+                    {settled === "1"
+                      ? "No settled loans yet. A loan lands here once staff mark it settled."
+                      : "No active loans."}
+                  </td>
                 </tr>
               )}
             </tbody>

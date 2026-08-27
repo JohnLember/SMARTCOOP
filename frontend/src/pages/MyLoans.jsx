@@ -123,7 +123,7 @@ export default function MyLoans() {
                           <span className="font-medium text-[#346538]">
                             {peso(loan.totalOutstanding)}
                           </span>{" "}
-                          remaining · {title(loan.status)}
+                          remaining · {loan.settledAt ? "Settled" : title(loan.status)}
                           <span className="block text-xs text-[#5F5E5A]">
                             Issued {formatDate(loan.dateIssued)}
                           </span>
@@ -194,7 +194,11 @@ function LoanRepayments({ loan }) {
           </p>
         </div>
         <div className="text-right">
-          <Badge color={loan.status === "ACTIVE" ? "green" : "slate"}>{title(loan.status)}</Badge>
+          {/* A settled loan stays on the member's list — it is their record of a
+              debt paid off — so it says so plainly instead of "Inactive". */}
+          <Badge color={loan.settledAt ? "blue" : loan.status === "ACTIVE" ? "green" : "slate"}>
+            {loan.settledAt ? "Settled" : title(loan.status)}
+          </Badge>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
             Balance{" "}
             <span className="font-semibold text-[var(--ink)]">{peso(loan.totalOutstanding)}</span>

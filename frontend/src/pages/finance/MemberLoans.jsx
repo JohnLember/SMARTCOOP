@@ -18,7 +18,17 @@ import ShowComputation from "../../components/ShowComputation";
 import ReceiptDocument from "../../components/ReceiptDocument";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { formatDate } from "../../lib/format";
-import { Wallet, CalendarClock, Layers, Printer, Trash2, Plus, History } from "lucide-react";
+import {
+  Wallet,
+  CalendarClock,
+  Layers,
+  Printer,
+  Trash2,
+  Plus,
+  History,
+  CheckCheck,
+  LockOpen,
+} from "lucide-react";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -141,6 +151,29 @@ export default function MemberLoans() {
     });
   }
 
+  // Closing a paid-off loan. Spelled out in the dialog, because the freeze on
+  // voiding is the part staff will not expect from the words "mark as settled".
+  async function settle(loan) {
+    await confirm({
+      title: `Mark this loan as settled?`,
+      description:
+        "The loan closes and moves to the Settled list. Its payments can no longer be voided — reopening it afterwards needs an administrator's password.",
+      details: [
+        { label: "Principal", value: peso(loan.principalAmount) },
+        { label: "Total paid", value: peso(loan.totalPaid) },
+        { label: "Periods", value: `${loan.schedule.length} of ${loan.schedule.length} paid` },
+      ],
+      tone: "default",
+      confirmLabel: "Mark as settled",
+      busyLabel: "Settling…",
+      onConfirm: async () => {
+        await api.post(`/finance/loans/${loan.id}/settle`);
+        toast.success("Loan settled");
+        await load();
+      },
+    });
+  }
+
   if (!loans) return <Spinner />;
 
   if (loans.length === 0)
@@ -216,6 +249,8 @@ export default function MemberLoans() {
             onPay={(row) => setPaying({ loan, row })}
             onVoid={voidPayment}
             onPrint={setSlip}
+            onSettle={settle}
+            onReopened={load}
           />
         ))}
       </div>
@@ -437,8 +472,78 @@ function RecordPaymentModal({ paying, onClose, onRecorded }) {
   );
 }
 
-function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
+// Reopening needs an administrator standing over the shoulder, so it collects
+// their credentials here and now rather than filing a request someone approves
+// later. Its own modal and not the shared ConfirmDialog: that dialog takes one
+// free-text note, and a password must be masked and paired with a username.
+// Mounted only while open (rather than kept alive with an `open` prop), so every
+// reopen starts from blank state without an effect to clear it — a password left
+// in state is a password waiting on screen for whoever opens this next.
+function ReopenModal({ loan, onClose, onDone }) {
+  const [form, setForm] = useState({ adminUsername: "", adminPassword: "" });
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api.post(`/finance/loans/${loan.id}/reopen`, form);
+      toast.success("Loan reopened");
+      onDone();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Reopen settled loan" dismissible={false}>
+      <form onSubmit={submit} className="space-y-4">
+        {error && (
+          <div className="rounded-[var(--radius-control)] bg-[var(--danger-tint)] px-3 py-2 text-sm text-[var(--danger)]">
+            {error}
+          </div>
+        )}
+        <p className="text-sm text-[var(--ink-muted)]">
+          Reopening puts this loan back in the active list and allows its payments to be voided
+          again. An administrator must approve it by signing in below.
+        </p>
+        <Input
+          label="Admin username"
+          autoComplete="off"
+          value={form.adminUsername}
+          onChange={(e) => setForm({ ...form, adminUsername: e.target.value })}
+          required
+        />
+        <Input
+          label="Admin password"
+          type="password"
+          autoComplete="off"
+          value={form.adminPassword}
+          onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
+          required
+        />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="danger" disabled={busy}>
+            {busy ? "Reopening…" : "Reopen loan"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function LoanSection({ loan, index, onPay, onVoid, onPrint, onSettle, onReopened }) {
   const [showHistory, setShowHistory] = useState(false);
+  const [reopening, setReopening] = useState(false);
+  // Fully paid and not yet closed: the moment settling is offered.
+  const settleable = !loan.settledAt && Number(loan.totalOutstanding) === 0;
 
   // Newest first, as the API returns them. The card shows a recent window; the
   // rest stay one click away rather than turning the sidebar into a ledger.
@@ -469,9 +574,34 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint }) {
             label="Show formula"
             variant="secondary"
           />
-          <Badge color={loan.status === "ACTIVE" ? "green" : "slate"}>{loan.status}</Badge>
+          {settleable && (
+            <Button variant="secondary" onClick={() => onSettle(loan)}>
+              <CheckCheck size={16} />
+              Mark as settled
+            </Button>
+          )}
+          {loan.settledAt && (
+            <Button variant="ghost" onClick={() => setReopening(true)}>
+              <LockOpen size={16} />
+              Reopen
+            </Button>
+          )}
+          <Badge color={loan.settledAt ? "blue" : loan.status === "ACTIVE" ? "green" : "slate"}>
+            {loan.settledAt ? `Settled ${formatDate(loan.settledAt)}` : loan.status}
+          </Badge>
         </div>
       </div>
+
+      {reopening && (
+        <ReopenModal
+          loan={loan}
+          onClose={() => setReopening(false)}
+          onDone={() => {
+            setReopening(false);
+            onReopened();
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="p-0 lg:col-span-2">
@@ -645,8 +775,10 @@ function PaymentRow({ payment, loan, onVoid, onPrint }) {
             Print
           </Button>
           {/* Print stays on a voided payment — the slip is the whole reason the
-              record was kept — but there is nothing left to void. */}
-          {!voided && (
+              record was kept — but there is nothing left to void. A settled loan
+              freezes every payment on it; the server refuses either way, this
+              just stops offering a button that cannot work. */}
+          {!voided && !loan.settledAt && (
             <Button
               size="sm"
               variant="ghost"

@@ -1,6 +1,7 @@
 import prisma from "../../config/db.js";
-import { notFound, badRequest, internalError } from "../../utils/httpError.js";
+import { notFound, badRequest, internalError, unauthorized } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
+import { comparePassword } from "../../utils/password.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
 import * as credit from "./credit.service.js";
 import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD, memberSearchWhere } from "../members/members.service.js";
@@ -78,8 +79,13 @@ async function withTotals(loans) {
   });
 }
 
-export async function list({ memberId, search, barangayId } = {}) {
+export async function list({ memberId, search, barangayId, settled } = {}) {
+  // The Loans page splits Active / Settled with this flag. Left undefined it
+  // returns both, on purpose: the member's own pages still list their settled
+  // loans, and the per-member drill-down has to show one to reopen it — a
+  // default that hid them would strand a settled loan with no way back.
   const where = {};
+  if (settled !== undefined) where.settledAt = settled ? { not: null } : null;
   if (memberId) where.memberId = Number(memberId);
 
   const memberWhere = {};
@@ -340,6 +346,11 @@ export async function recordPayment(loanId, data, actorId) {
       include: { schedule: { orderBy: { periodNo: "asc" } } },
     });
     if (!loan) throw notFound("Loan not found");
+    // A settled loan is closed. It has nothing owing anyway, so this only
+    // replaces a confusing "no room on the schedule" error with the real reason.
+    if (loan.settledAt) {
+      throw badRequest("This loan has been settled. Reopen it before recording a payment.");
+    }
 
     const anchor = loan.schedule.find((r) => r.id === Number(data.scheduleId));
     if (!anchor) throw badRequest("That installment does not belong to this loan");
@@ -453,6 +464,11 @@ export async function voidPayment(paymentId, actorId, reason) {
     if (!payment.paymentNo) {
       throw badRequest("This is a legacy delivery deduction and cannot be voided here");
     }
+    // The point of settling: a closed loan's payments are frozen. Reversing one
+    // would silently reopen a balance on a loan everyone has agreed is finished.
+    if (payment.loan.settledAt) {
+      throw badRequest("This loan has been settled. Reopen it before voiding a payment.");
+    }
     // Voiding twice would replay the same allocation a second time and subtract
     // the amount from the schedule again. Impossible back when this deleted the
     // row; very possible now that it survives.
@@ -495,4 +511,86 @@ export async function voidPayment(paymentId, actorId, reason) {
   // A cancelled payment un-does what it did to the score too.
   await credit.evaluateAndSave(voided.memberId).catch(() => {});
   return { voided: voided.paymentNo };
+}
+
+// ---------------------------------------------------------------------------
+// Settlement — closing a loan that has been paid off
+// ---------------------------------------------------------------------------
+// `status` going INACTIVE is derived and can flip back the moment a payment is
+// voided. Settling is a decision: staff say this loan is finished, and from then
+// on its payments are frozen and it leaves the working list. Reopening exists
+// for the mistake case, but costs an admin password.
+
+// Marks a fully-paid loan as settled.
+export async function settle(loanId, actorId) {
+  const loan = await prisma.loan.findUnique({
+    where: { id: loanId },
+    include: { schedule: true, member: { select: { memberNo: true } } },
+  });
+  if (!loan) throw notFound("Loan not found");
+  if (loan.settledAt) throw badRequest("This loan is already settled");
+
+  // The same figures the member is shown, so "fully paid" here means what it
+  // means everywhere else — interest included, not just principal.
+  const { totalOutstanding } = deriveTotals(loan.schedule);
+  if (totalOutstanding > 0) {
+    throw badRequest(
+      `This loan still has ₱${fmt(totalOutstanding)} outstanding. Settle it once the whole schedule is paid.`
+    );
+  }
+
+  const updated = await prisma.loan.update({
+    where: { id: loanId },
+    data: { settledAt: new Date(), settledByUserId: actorId ?? null },
+  });
+
+  await logActivity(actorId, `Settled loan #${loanId} for ${loan.member.memberNo}`);
+  return updated;
+}
+
+// Reopening undoes a settlement, so it is the one staff action here that needs a
+// second pair of eyes: an ADMIN types their own credentials at the moment of the
+// reopen. Not a request/approval queue — the admin is standing right there.
+export async function reopen(loanId, { adminUsername, adminPassword }, actorId) {
+  const loan = await prisma.loan.findUnique({
+    where: { id: loanId },
+    include: { member: { select: { memberNo: true } } },
+  });
+  if (!loan) throw notFound("Loan not found");
+  if (!loan.settledAt) throw badRequest("This loan is not settled");
+
+  // One message for every way this can fail — unknown username, non-admin,
+  // deactivated account, wrong password. Anything more specific tells whoever is
+  // guessing which admin usernames are real, the same reasoning as auth login.
+  const admin = await prisma.user.findUnique({ where: { username: adminUsername } });
+  const approved =
+    admin &&
+    admin.role === "ADMIN" &&
+    admin.status === "ACTIVE" &&
+    (await comparePassword(adminPassword, admin.passwordHash));
+
+  if (!approved) {
+    await logActivity(actorId, `Failed reopen of settled loan #${loanId} (admin approval rejected)`);
+    throw unauthorized("Admin username or password is incorrect");
+  }
+
+  const updated = await prisma.loan.update({
+    where: { id: loanId },
+    data: { settledAt: null, settledByUserId: null },
+  });
+
+  await logActivity(
+    actorId,
+    `Reopened settled loan #${loanId} for ${loan.member.memberNo} (approved by admin ${admin.username})`
+  );
+  return updated;
+}
+
+// Drives the Active / Settled toggle on the loans page.
+export async function counts() {
+  const [active, settled] = await Promise.all([
+    prisma.loan.count({ where: { settledAt: null } }),
+    prisma.loan.count({ where: { settledAt: { not: null } } }),
+  ]);
+  return { active, settled };
 }
