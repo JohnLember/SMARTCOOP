@@ -105,6 +105,8 @@ export default function MemberLoans() {
   const [paying, setPaying] = useState(null);
   // The payment to show as a printable acknowledgment slip.
   const [slip, setSlip] = useState(null);
+  // The settled loan being reopened, picked from the Loans breakdown modal.
+  const [reopening, setReopening] = useState(null);
 
   const load = useCallback(() => {
     // The list endpoint carries no schedule, so each loan is then fetched in
@@ -194,6 +196,11 @@ export default function MemberLoans() {
     interest: loans.reduce((s, l) => s + interestOf(l), 0),
   };
   const active = loans.filter((l) => l.status === "ACTIVE").length;
+  // A settled loan is closed business: its schedule and payments come off the
+  // page entirely. It stays reachable through the Loans card, which is where it
+  // can be reopened.
+  const settledCount = loans.filter((l) => l.settledAt).length;
+  const openLoans = loans.filter((l) => !l.settledAt);
 
   return (
     <div>
@@ -213,7 +220,9 @@ export default function MemberLoans() {
         <StatCard
           label="Loans"
           value={totals.count}
-          hint={`${active} active`}
+          // Names the settled ones, because they are not on the page any more and
+          // this card is the way back to them.
+          hint={settledCount > 0 ? `${active} active · ${settledCount} settled` : `${active} active`}
           icon={Layers}
           onClick={() => setMetric("count")}
         />
@@ -239,20 +248,32 @@ export default function MemberLoans() {
         />
       </div>
 
-      {/* One section per loan — each keeps its own amortization schedule. */}
+      {/* One section per loan — each keeps its own amortization schedule. Settled
+          loans are not here at all; the numbering still comes from the full list
+          so "Loan 2" means the same thing here and in the breakdown modal. */}
       <div className="space-y-6">
-        {loans.map((loan, i) => (
-          <LoanSection
-            key={loan.id}
-            loan={loan}
-            index={i}
-            onPay={(row) => setPaying({ loan, row })}
-            onVoid={voidPayment}
-            onPrint={setSlip}
-            onSettle={settle}
-            onReopened={load}
-          />
-        ))}
+        {loans.map((loan, i) =>
+          loan.settledAt ? null : (
+            <LoanSection
+              key={loan.id}
+              loan={loan}
+              index={i}
+              onPay={(row) => setPaying({ loan, row })}
+              onVoid={voidPayment}
+              onPrint={setSlip}
+              onSettle={settle}
+            />
+          )
+        )}
+        {openLoans.length === 0 && (
+          <Card>
+            <p className="text-[var(--ink-muted)]">
+              Every loan on this member's record has been settled. Open the{" "}
+              <span className="font-medium text-[var(--ink-body)]">Loans</span> card above to see
+              them or to reopen one.
+            </p>
+          </Card>
+        )}
       </div>
 
       <Modal
@@ -274,18 +295,47 @@ export default function MemberLoans() {
                   Issued {formatDate(loan.dateIssued)} · {Number(loan.interestRate)}%/mo
                 </p>
               </div>
-              <div className="flex flex-none items-center gap-3">
+              <div className="flex flex-none items-center gap-2">
                 {metric && METRICS[metric].per(loan) && (
                   <span className="tabular text-sm font-semibold text-[var(--ink)]">
                     {METRICS[metric].per(loan)}
                   </span>
                 )}
-                <Badge color={loan.status === "ACTIVE" ? "green" : "slate"}>{loan.status}</Badge>
+                <Badge color={loan.settledAt ? "blue" : loan.status === "ACTIVE" ? "green" : "slate"}>
+                  {loan.settledAt ? `Settled ${formatDate(loan.settledAt)}` : loan.status}
+                </Badge>
+                {/* This list is the only place a settled loan still appears, so
+                    it is where reopening one belongs. Opening the password form
+                    closes this modal rather than stacking a second one on it. */}
+                {loan.settledAt && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setMetric(null);
+                      setReopening(loan);
+                    }}
+                  >
+                    <LockOpen size={14} />
+                    Reopen
+                  </Button>
+                )}
               </div>
             </div>
           ))}
         </div>
       </Modal>
+
+      {reopening && (
+        <ReopenModal
+          loan={reopening}
+          onClose={() => setReopening(null)}
+          onDone={() => {
+            setReopening(null);
+            load();
+          }}
+        />
+      )}
 
       {/* Keyed by the installment: picking a different period remounts the form
           rather than syncing it in an effect. */}
@@ -539,11 +589,12 @@ function ReopenModal({ loan, onClose, onDone }) {
   );
 }
 
-function LoanSection({ loan, index, onPay, onVoid, onPrint, onSettle, onReopened }) {
+// Only ever rendered for an unsettled loan — a settled one is off the page, and
+// reopening it happens from the Loans breakdown modal.
+function LoanSection({ loan, index, onPay, onVoid, onPrint, onSettle }) {
   const [showHistory, setShowHistory] = useState(false);
-  const [reopening, setReopening] = useState(false);
-  // Fully paid and not yet closed: the moment settling is offered.
-  const settleable = !loan.settledAt && Number(loan.totalOutstanding) === 0;
+  // Fully paid and still open: the moment settling is offered.
+  const settleable = Number(loan.totalOutstanding) === 0;
 
   // Newest first, as the API returns them. The card shows a recent window; the
   // rest stay one click away rather than turning the sidebar into a ledger.
@@ -580,28 +631,9 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint, onSettle, onReopened
               Mark as settled
             </Button>
           )}
-          {loan.settledAt && (
-            <Button variant="ghost" onClick={() => setReopening(true)}>
-              <LockOpen size={16} />
-              Reopen
-            </Button>
-          )}
-          <Badge color={loan.settledAt ? "blue" : loan.status === "ACTIVE" ? "green" : "slate"}>
-            {loan.settledAt ? `Settled ${formatDate(loan.settledAt)}` : loan.status}
-          </Badge>
+          <Badge color={loan.status === "ACTIVE" ? "green" : "slate"}>{loan.status}</Badge>
         </div>
       </div>
-
-      {reopening && (
-        <ReopenModal
-          loan={loan}
-          onClose={() => setReopening(false)}
-          onDone={() => {
-            setReopening(false);
-            onReopened();
-          }}
-        />
-      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="p-0 lg:col-span-2">
@@ -775,10 +807,10 @@ function PaymentRow({ payment, loan, onVoid, onPrint }) {
             Print
           </Button>
           {/* Print stays on a voided payment — the slip is the whole reason the
-              record was kept — but there is nothing left to void. A settled loan
-              freezes every payment on it; the server refuses either way, this
-              just stops offering a button that cannot work. */}
-          {!voided && !loan.settledAt && (
+              record was kept — but there is nothing left to void. Settled loans
+              need no check here: the whole section is gone by then, and the
+              server refuses the void regardless. */}
+          {!voided && (
             <Button
               size="sm"
               variant="ghost"
