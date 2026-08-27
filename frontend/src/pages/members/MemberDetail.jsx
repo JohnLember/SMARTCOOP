@@ -13,13 +13,17 @@ import {
   Badge,
   BackButton,
   Modal,
-  Avatar, DataTable
+  Avatar,
+  DataTable,
+  EmptyRow,
+  Pagination,
 } from "../../components/ui";
-import { KeyRound, Eye, Printer } from "lucide-react";
+import { KeyRound, Eye, Printer, Truck, ReceiptText, ChevronRight } from "lucide-react";
 import CreditScoreCard from "../../components/CreditScoreCard";
 import MemberCategoryCard from "../../components/MemberCategoryCard";
 import ReceiptDocument from "../../components/ReceiptDocument";
-import { buildReceiptRows } from "../../lib/receiptRows";
+import { buildReceiptRows, countsByType, RECEIPT_TYPES } from "../../lib/receiptRows";
+import { usePagination } from "../../lib/usePagination";
 import { formatDate } from "../../lib/format";
 
 const RECEIPT_TYPE_COLOR = { Delivery: "green", Membership: "amber", "Loan payment": "blue" };
@@ -35,6 +39,146 @@ function Field({ label, value }) {
   );
 }
 
+// A summary that opens the full list. A real <button> rather than a div with an
+// onClick, so it is reachable by keyboard and announced as something to press.
+function HistoryCard({ icon: Icon, title, count, unit, lines, onClick }) {
+  return (
+    <button type="button" onClick={onClick} className="focus-ring w-full text-left">
+      <Card className="h-full transition hover:border-[#8FB392] hover:shadow">
+        <div className="mb-2 flex items-center gap-2 text-[#346538]">
+          <Icon size={20} />
+          <span className="text-sm font-semibold text-[#2F3437]">{title}</span>
+        </div>
+        <p className="text-2xl font-bold text-[#111111]">
+          {count.toLocaleString()}{" "}
+          <span className="text-sm font-medium text-[#787774]">{unit}</span>
+        </p>
+        {lines.map((l) => (
+          <p key={l} className="text-sm text-[#787774]">
+            {l}
+          </p>
+        ))}
+        <p className="mt-2 inline-flex items-center text-xs font-medium text-[#346538]">
+          View all
+          <ChevronRight size={13} />
+        </p>
+      </Card>
+    </button>
+  );
+}
+
+const PAGE_SIZE = 10;
+
+function DeliveriesTable({ deliveries }) {
+  const { page, setPage, pageCount, pageItems } = usePagination(deliveries, PAGE_SIZE);
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <DataTable>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Batch</th>
+              <th className="num">Weight (kg)</th>
+              <th className="num">DRC</th>
+              <th className="num">Gross</th>
+              <th className="num">Net (receipt)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageItems.map((d) => (
+              <tr key={d.id}>
+                <td className="text-[var(--ink-muted)]">{formatDate(d.deliveryDate)}</td>
+                <td>
+                  <Badge color="blue">{d.batch.periodType}</Badge>{" "}
+                  <span className="text-[var(--ink-muted)]">{d.batch.barangay?.name}</span>
+                </td>
+                <td className="num text-[var(--ink-body)]">
+                  {Number(d.weightKg).toLocaleString()}
+                </td>
+                <td className="num text-[var(--ink-muted)]">
+                  {d.drc != null ? `${d.drc}%` : "—"}
+                </td>
+                <td className="num text-[var(--ink-muted)]">{peso(d.totalAmount)}</td>
+                <td className="num font-medium text-[var(--brand)]">
+                  {d.receipt ? peso(d.receipt.netAmount) : "—"}
+                </td>
+              </tr>
+            ))}
+            {deliveries.length === 0 && (
+              <EmptyRow
+                colSpan={6}
+                title="No deliveries recorded yet."
+                hint="Deliveries appear here once staff record them against an open batch."
+              />
+            )}
+          </tbody>
+        </DataTable>
+      </div>
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
+    </>
+  );
+}
+
+function ReceiptsTable({ rows, onView }) {
+  const { page, setPage, pageCount, pageItems } = usePagination(rows, PAGE_SIZE);
+
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <DataTable>
+          <thead>
+            <tr>
+              <th>Receipt No.</th>
+              <th>Date</th>
+              <th>Type</th>
+              <th className="num">Received</th>
+              <th className="num">Paid</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageItems.map((r) => (
+              <tr key={r.key} className={r.voidedAt ? "text-[var(--ink-faint)]" : undefined}>
+                <td className={`font-medium ${r.voidedAt ? "line-through" : "text-[var(--ink-body)]"}`}>
+                  {r.no}
+                </td>
+                <td className="text-[var(--ink-muted)]">{formatDate(r.date)}</td>
+                <td>
+                  <Badge color={r.voidedAt ? "slate" : RECEIPT_TYPE_COLOR[r.type]}>{r.type}</Badge>
+                </td>
+                <td className="num font-medium text-[var(--brand)]">
+                  {r.received != null ? peso(r.received) : "—"}
+                </td>
+                <td className="num">
+                  {r.voidedAt ? (
+                    <span className="font-mono-meta text-[11px] uppercase tracking-[0.12em]">
+                      Voided
+                    </span>
+                  ) : r.paid != null ? (
+                    <span className="font-medium text-[var(--ink-body)]">{peso(r.paid)}</span>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+                <td className="text-right">
+                  <Button variant="ghost" onClick={() => onView(r.doc)}>
+                    <Eye size={16} />
+                    View
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && <EmptyRow colSpan={6} title="No receipts yet." />}
+          </tbody>
+        </DataTable>
+      </div>
+      <Pagination page={page} pageCount={pageCount} onPage={setPage} />
+    </>
+  );
+}
+
 export default function MemberDetail() {
   const { id } = useParams();
   const [member, setMember] = useState(null);
@@ -46,6 +190,8 @@ export default function MemberDetail() {
   const [deliveries, setDeliveries] = useState([]);
   const [receipts, setReceipts] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  // Which history list is open: "deliveries" | "receipts" | null.
+  const [openList, setOpenList] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -108,6 +254,16 @@ export default function MemberDetail() {
 
   if (loading) return <Spinner />;
   if (!member) return <p>Member not found.</p>;
+
+  // What the two summary cards show instead of the tables they replaced.
+  const totals = deliveries.reduce(
+    (acc, d) => ({
+      kg: acc.kg + Number(d.weightKg),
+      net: acc.net + (d.receipt ? Number(d.receipt.netAmount) : 0),
+    }),
+    { kg: 0, net: 0 }
+  );
+  const receiptCounts = countsByType(receipts);
 
   return (
     <div>
@@ -211,101 +367,54 @@ export default function MemberDetail() {
         </div>
       </div>
 
-      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Delivery History</h3>
-      <Card className="p-0">
-        <DataTable>
-          <thead>
-            <tr>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Batch</th>
-              <th className="px-4 py-3 font-medium">Weight (kg)</th>
-              <th className="px-4 py-3 font-medium">DRC</th>
-              <th className="px-4 py-3 font-medium">Gross</th>
-              <th className="px-4 py-3 font-medium">Net (receipt)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deliveries.map((d) => (
-              <tr key={d.id} className="hover:bg-[#F7F6F3]">
-                <td className="px-4 py-3 text-[#787774]">{formatDate(d.deliveryDate)}</td>
-                <td className="px-4 py-3">
-                  <Badge color="blue">{d.batch.periodType}</Badge>{" "}
-                  <span className="text-[#787774]">{d.batch.barangay?.name}</span>
-                </td>
-                <td className="px-4 py-3 text-[#787774]">{Number(d.weightKg).toLocaleString()}</td>
-                <td className="px-4 py-3 text-[#787774]">{d.drc != null ? `${d.drc}%` : "—"}</td>
-                <td className="px-4 py-3 text-[#787774]">{peso(d.totalAmount)}</td>
-                <td className="px-4 py-3 font-medium text-[#346538]">
-                  {d.receipt ? peso(d.receipt.netAmount) : "—"}
-                </td>
-              </tr>
-            ))}
-            {deliveries.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">
-                  No deliveries recorded yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </DataTable>
-      </Card>
+      {/* Two long tables used to sit open on this page, so the profile above them
+          scrolled away. They are summaries now, and the full list — paged, ten at
+          a time — opens in a modal on click. */}
+      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">History</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <HistoryCard
+          icon={Truck}
+          title="Delivery history"
+          count={deliveries.length}
+          unit={deliveries.length === 1 ? "delivery" : "deliveries"}
+          lines={[
+            `${totals.kg.toLocaleString()} kg delivered`,
+            `${peso(totals.net)} net across ${deliveries.length} receipts`,
+          ]}
+          onClick={() => setOpenList("deliveries")}
+        />
+        <HistoryCard
+          icon={ReceiptText}
+          title="Receipts"
+          count={receipts.length}
+          unit={receipts.length === 1 ? "document" : "documents"}
+          lines={RECEIPT_TYPES.map((t) => `${receiptCounts[t]} ${t.toLowerCase()}`)}
+          onClick={() => setOpenList("receipts")}
+        />
+      </div>
 
-      <h3 className="mb-3 mt-6 font-semibold text-[#2F3437]">Receipts</h3>
-      <Card className="p-0">
+      <Modal
+        open={openList === "deliveries"}
+        onClose={() => setOpenList(null)}
+        title="Delivery history"
+        wide
+      >
+        <DeliveriesTable deliveries={deliveries} />
+      </Modal>
+
+      <Modal open={openList === "receipts"} onClose={() => setOpenList(null)} title="Receipts" wide>
         {/* Deliveries, membership fees and loan payments together — the same
             list the member sees on My Receipts, built by the same helper. */}
-        <div className="overflow-x-auto">
-          <DataTable>
-            <thead>
-              <tr>
-                <th>Receipt No.</th>
-                <th>Date</th>
-                <th>Type</th>
-                <th className="num">Received</th>
-                <th className="num">Paid</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {receipts.map((r) => (
-                <tr key={r.key} className={r.voidedAt ? "text-[var(--ink-faint)]" : undefined}>
-                  <td className={`font-medium ${r.voidedAt ? "line-through" : "text-[var(--ink-body)]"}`}>
-                    {r.no}
-                  </td>
-                  <td className="text-[var(--ink-muted)]">{formatDate(r.date)}</td>
-                  <td>
-                    <Badge color={r.voidedAt ? "slate" : RECEIPT_TYPE_COLOR[r.type]}>{r.type}</Badge>
-                  </td>
-                  <td className="num font-medium text-[var(--brand)]">
-                    {r.received != null ? peso(r.received) : "—"}
-                  </td>
-                  <td className="num">
-                    {r.voidedAt ? (
-                      <span className="font-mono-meta text-[11px] uppercase tracking-[0.12em]">Voided</span>
-                    ) : r.paid != null ? (
-                      <span className="font-medium text-[var(--ink-body)]">{peso(r.paid)}</span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="text-right">
-                    <Button variant="ghost" onClick={() => setSelectedReceipt(r.doc)}>
-                      <Eye size={16} />
-                      View
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {receipts.length === 0 && (
-                <tr>
-                  <td colSpan={6}>No receipts yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </DataTable>
-        </div>
-      </Card>
+        <ReceiptsTable
+          rows={receipts}
+          onView={(doc) => {
+            // Swap rather than stack: two open modals would both answer Escape
+            // and both fight over the print styles.
+            setOpenList(null);
+            setSelectedReceipt(doc);
+          }}
+        />
+      </Modal>
 
       <Modal open={!!selectedReceipt} onClose={() => setSelectedReceipt(null)} title="Receipt">
         {selectedReceipt && (
