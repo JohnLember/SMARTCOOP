@@ -1,9 +1,16 @@
 import prisma from "../../config/db.js";
-import { notFound, badRequest } from "../../utils/httpError.js";
+import { notFound, badRequest, internalError } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 import { evaluateAndSave } from "../progression/progression.service.js";
 import { promoteIfEligible, REGULAR_PROMOTION_THRESHOLD, memberSearchWhere } from "../members/members.service.js";
-import { planAllocation, deriveLoanState, statusFor, minPaymentFor, MIN_PAYMENT } from "./allocate.js";
+import {
+  planAllocation,
+  deriveLoanState,
+  statusFor,
+  minPaymentFor,
+  reconcile,
+  MIN_PAYMENT,
+} from "./allocate.js";
 import * as notifications from "../notifications/notifications.service.js";
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -260,6 +267,36 @@ async function syncLoanState(tx, loanId) {
   return state;
 }
 
+// Proves the schedule still matches the payments behind it, INSIDE the caller's
+// transaction. Throwing here rolls the whole thing back, so a write that would
+// corrupt a loan cannot commit at all — as opposed to committing and being wrong
+// quietly, which is what a bad amountPaid does.
+//
+// Read -> decide -> write is not atomic on its own (the voidedAt guard above is
+// exactly that shape, and only safe today by accident of MySQL's REPEATABLE READ
+// snapshot). This is the backstop that does not depend on the isolation level.
+async function assertReconciles(tx, loanId) {
+  const schedule = await tx.loanSchedule.findMany({ where: { loanId }, orderBy: { periodNo: "asc" } });
+  const payments = await tx.loanPayment.findMany({
+    where: { loanId },
+    select: { paymentNo: true, voidedAt: true, allocations: true },
+  });
+
+  // Legacy rows are the payments the removed automatic delivery deduction made:
+  // they moved amountPaid without ever recording an allocation, so such a loan
+  // can never reconcile. There are none in the database and no code path can
+  // create another — the skip exists only so old data cannot lock staff out.
+  if (payments.some((p) => p.paymentNo == null)) return;
+
+  const problems = reconcile(schedule, payments);
+  if (problems.length === 0) return;
+
+  const periods = [...new Set(problems.map((p) => p.periodNo))].join(", ");
+  throw internalError(
+    `Integrity check failed on this loan (period ${periods}) — nothing was changed and no payment was saved. Please report this to the administrator.`
+  );
+}
+
 // Records a payment against one period of the amortization schedule. Anything
 // above that period's outstanding spills forward into the next unpaid periods
 // (see planAllocation) - a member settling three months at once is one payment,
@@ -335,6 +372,7 @@ export async function recordPayment(loanId, data, actorId) {
     });
 
     await syncLoanState(tx, loan.id);
+    await assertReconciles(tx, loan.id);
     return numbered;
   });
 
@@ -407,6 +445,7 @@ export async function voidPayment(paymentId, actorId, reason) {
       },
     });
     await syncLoanState(tx, payment.loanId);
+    await assertReconciles(tx, payment.loanId);
 
     return {
       memberNo: payment.loan.member.memberNo,

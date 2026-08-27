@@ -7,6 +7,7 @@ import {
   statusFor,
   outstandingFrom,
   minPaymentFor,
+  reconcile,
   MIN_PAYMENT,
 } from "./allocate.js";
 
@@ -150,6 +151,99 @@ test("a fully paid loan has no minimum left to pay", () => {
   const rows = fresh();
   const settled = apply(rows, planAllocation(rows, 30600, 1).plan);
   assert.equal(minPaymentFor(settled, 1), 0);
+});
+
+// --- reconcile: the check that stands between a bad write and a commit -------
+
+// A payment record as the DB holds it: what it did, stored at the time it did it.
+const paymentOf = (plan, extra = {}) => ({
+  voidedAt: null,
+  allocations: plan.map((p) => ({ scheduleId: p.scheduleId, periodNo: p.periodNo, amount: p.amount })),
+  ...extra,
+});
+
+test("a healthy loan reconciles clean", () => {
+  const rows = fresh();
+  const { plan } = planAllocation(rows, 15450, 1);
+  assert.deepEqual(reconcile(apply(rows, plan), [paymentOf(plan)]), []);
+});
+
+test("two payments on one loan reconcile clean", () => {
+  const rows = fresh();
+  const first = planAllocation(rows, 10300, 1).plan;
+  const afterFirst = apply(rows, first);
+  const second = planAllocation(afterFirst, 5000, 2).plan;
+  assert.deepEqual(reconcile(apply(afterFirst, second), [paymentOf(first), paymentOf(second)]), []);
+});
+
+test("a row short by one allocation is caught", () => {
+  const rows = fresh();
+  const { plan } = planAllocation(rows, 10300, 1);
+  const applied = apply(rows, plan);
+  // The write landed on the schedule but the payment row never recorded it.
+  const problems = reconcile(applied, []);
+  assert.equal(problems.length, 1);
+  assert.equal(problems[0].periodNo, 1);
+  assert.equal(problems[0].expected, 0);
+  assert.equal(problems[0].actual, 10300);
+});
+
+// The exact near-miss this exists for: replaying a stored allocation twice.
+test("a double-subtracted row is caught", () => {
+  const rows = fresh();
+  const { plan } = planAllocation(rows, 15450, 1);
+  const applied = apply(rows, plan);
+  const doubleVoided = reverse(reverse(applied, plan), plan);
+  const problems = reconcile(doubleVoided, [paymentOf(plan, { voidedAt: new Date() })]);
+  // Period 1 is now -10,300 against an expectation of 0: wrong sum AND negative.
+  assert.ok(problems.some((p) => p.periodNo === 1 && p.actual < 0));
+  assert.ok(problems.some((p) => p.reason.includes("negative")));
+});
+
+test("a voided payment's allocation is excluded from what is expected", () => {
+  const rows = fresh();
+  const { plan } = planAllocation(rows, 15450, 1);
+  const voided = paymentOf(plan, { voidedAt: new Date() });
+
+  // Reversed on the schedule and marked voided: healthy.
+  assert.deepEqual(reconcile(reverse(apply(rows, plan), plan), [voided]), []);
+  // Marked voided but the schedule never gave the money back: caught.
+  assert.equal(reconcile(apply(rows, plan), [voided]).length, 2);
+});
+
+test("bounds catch a row paid past what it is due", () => {
+  const rows = fresh();
+  const over = rows.map((r) => (r.periodNo === 1 ? { ...r, amountPaid: 11000 } : r));
+  const problems = reconcile(over, [
+    { voidedAt: null, allocations: [{ scheduleId: 1, periodNo: 1, amount: 11000 }] },
+  ]);
+  // The sum agrees — only the bound catches this one.
+  assert.equal(problems.length, 1);
+  assert.match(problems[0].reason, /exceeds/);
+});
+
+test("bounds catch a negative row the sum agrees with", () => {
+  const rows = fresh().map((r) => (r.periodNo === 2 ? { ...r, amountPaid: -50 } : r));
+  const problems = reconcile(rows, [
+    { voidedAt: null, allocations: [{ scheduleId: 2, periodNo: 2, amount: -50 }] },
+  ]);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0].reason, /negative/);
+});
+
+test("payments carrying no allocations leave the schedule alone", () => {
+  // A legacy row's shape. The service skips these loans outright; reconcile
+  // treats a missing allocation list as contributing nothing rather than throwing.
+  assert.deepEqual(reconcile(fresh(), [{ voidedAt: null, allocations: null }]), []);
+  assert.deepEqual(reconcile(fresh(), []), []);
+});
+
+test("centavo dust is not a discrepancy", () => {
+  const rows = fresh().map((r) => (r.periodNo === 1 ? { ...r, amountPaid: 10300.001 } : r));
+  assert.deepEqual(
+    reconcile(rows, [{ voidedAt: null, allocations: [{ scheduleId: 1, periodNo: 1, amount: 10300 }] }]),
+    []
+  );
 });
 
 test("voiding the closing payment reopens the loan", () => {

@@ -77,6 +77,58 @@ export function planAllocation(rows, amount, anchorPeriodNo) {
   return { plan, applied: round2(round2(amount) - remaining), unapplied: remaining };
 }
 
+// Proves the schedule matches the payments that produced it. For every row:
+//
+//   row.amountPaid == Σ alloc.amount over every LIVE payment's allocations
+//
+// A wrong number in amountPaid is silent — nothing crashes, nothing looks broken,
+// and the balance is simply wrong forever. So the write path re-derives the
+// schedule from the allocations before committing and refuses to commit if the
+// two disagree, which catches the whole allocation path including mistakes
+// nobody anticipated (a double-void, say) rather than one guarded case.
+//
+// Pure on purpose: the service is a thin wrapper that fetches rows and throws,
+// and the same function is what a reconciliation audit over every loan would call.
+//
+// scheduleRows: [{ id, periodNo, totalDue, amountPaid }]
+// livePayments: [{ voidedAt, allocations: [{ scheduleId, amount }] }]
+// -> [{ scheduleId, periodNo, expected, actual, reason }], empty when healthy
+export function reconcile(scheduleRows, livePayments) {
+  const expected = new Map();
+  for (const payment of livePayments) {
+    // Callers pass live payments, but a voided one contributes nothing by
+    // definition — skipping it here means a caller that forgets cannot corrupt
+    // the check that exists to catch corruption.
+    if (payment.voidedAt) continue;
+    for (const alloc of payment.allocations ?? []) {
+      const key = Number(alloc.scheduleId);
+      expected.set(key, round2((expected.get(key) ?? 0) + Number(alloc.amount)));
+    }
+  }
+
+  const problems = [];
+  for (const row of scheduleRows) {
+    const actual = round2(Number(row.amountPaid));
+    const want = round2(expected.get(Number(row.id)) ?? 0);
+    const at = { scheduleId: row.id, periodNo: row.periodNo, expected: want, actual };
+
+    // Half a centavo of tolerance: both sides are 2dp money, so anything bigger
+    // is a real discrepancy and anything smaller is float dust.
+    if (Math.abs(actual - want) > 0.005) {
+      problems.push({ ...at, reason: "amountPaid does not match the payments recorded against it" });
+    }
+
+    // Bounds, on the same pass. These catch a row that is wrong in a way the sum
+    // agrees with — an allocation that itself overshot the period, say.
+    if (actual < 0) {
+      problems.push({ ...at, reason: "amountPaid is negative" });
+    } else if (actual - Number(row.totalDue) > 0.005) {
+      problems.push({ ...at, reason: `amountPaid exceeds the ${round2(Number(row.totalDue))} due` });
+    }
+  }
+  return problems;
+}
+
 // The loan's own state is DERIVED from its schedule, never decremented as
 // payments come in. Accumulated arithmetic drifts and, worse, has to be undone
 // separately on a void; recomputing from the rows is correct in both directions.
