@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { farmers } from "./farmers.data.js";
 
 const prisma = new PrismaClient();
 
@@ -77,10 +78,28 @@ async function main() {
     });
   }
 
-  // The cooperative's farmer roster (backend/farmers.js.txt) is deliberately NOT
-  // seeded as members: those farmers enter through MembershipApplication and
-  // become members only when staff approves them. Importing them here created a
-  // member for every pending applicant and a duplicate on approval.
+  // The cooperative's farmer roster (backend/prisma/farmers.data.js) is
+  // deliberately NOT seeded as members: those farmers enter through
+  // MembershipApplication and become members only when staff approves them.
+  // Importing them as members here created a duplicate on approval.
+  const existingApplicationCount = await prisma.membershipApplication.count();
+  if (existingApplicationCount === 0) {
+    let nextNo = 1;
+    for (const [firstName, lastName, middleName] of farmers) {
+      await prisma.membershipApplication.create({
+        data: {
+          applicationNo: `APP-${String(nextNo).padStart(4, "0")}`,
+          firstName,
+          lastName,
+          middleName: middleName || null,
+          membershipType: "ASSOCIATE",
+          status: "PENDING",
+        },
+      });
+      nextNo += 1;
+    }
+    console.log(`  Seeded ${farmers.length} pending membership applications from farmer roster.`);
+  }
 
   // --- Link a member login to the first member ---
   // Skipped when M-0001 already has a login — a member can only have one, so
