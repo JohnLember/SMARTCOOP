@@ -43,7 +43,6 @@ export default function MyDeliveries() {
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Batch</th>
               <th className="px-4 py-3 font-medium">Weight (kg)</th>
-              <th className="px-4 py-3 font-medium">DRC</th>
               <th className="px-4 py-3 font-medium">Price/kg</th>
               <th className="px-4 py-3 font-medium">Gross</th>
               <th className="px-4 py-3 font-medium">Net (receipt)</th>
@@ -59,7 +58,6 @@ export default function MyDeliveries() {
                   <span className="text-[#787774]">{d.batch.barangay?.name}</span>
                 </td>
                 <td className="px-4 py-3 text-[#787774]">{Number(d.weightKg).toLocaleString()}</td>
-                <td className="px-4 py-3 text-[#787774]">{d.drc != null ? `${d.drc}%` : "—"}</td>
                 <td className="px-4 py-3 text-[#787774]">{peso(d.pricePerKg)}</td>
                 <td className="px-4 py-3 text-[#787774]">{peso(d.totalAmount)}</td>
                 <td className="px-4 py-3 font-medium text-[#346538]">
@@ -72,7 +70,7 @@ export default function MyDeliveries() {
             ))}
             {deliveries.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-[#5F5E5A]">
+                <td colSpan={7} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No deliveries recorded yet.
                 </td>
               </tr>

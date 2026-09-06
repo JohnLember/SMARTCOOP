@@ -12,7 +12,6 @@ const receipt = (netAmount, extra = {}) => ({
   cbu: 0,
   dayong: 0,
   supplies: 0,
-  membershipFee: 0,
   ...extra,
 });
 
@@ -63,18 +62,14 @@ test("a delivery outside the window is ignored entirely", () => {
 test("every deduction lands on its own key", () => {
   const rows = monthlySummary(
     [
-      delivery(
-        "2026-08-05",
-        120,
-        receipt(4300, { cbu: 200, dayong: 300, supplies: 150, membershipFee: 50 })
-      ),
+      delivery("2026-08-05", 120, receipt(4300, { cbu: 200, dayong: 300, supplies: 150 })),
     ],
     NOW
   );
   const aug = rows.at(-1);
   assert.deepEqual(
     MONEY_KEYS.map((k) => aug[k]),
-    [4300, 200, 300, 150, 50]
+    [4300, 200, 300, 150]
   );
 });
 

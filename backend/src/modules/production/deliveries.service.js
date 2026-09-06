@@ -52,7 +52,6 @@ export async function create(data, actorId) {
   // auto-deduct due installments out of the proceeds, which is not how this
   // cooperative collects.
   const cbu = Number(data.cbu ?? 0);
-  const membershipFee = Number(data.membershipFee ?? 0);
   const supplies = Number(data.supplies ?? 0); // acid / tapping knife
   const dayong = Number(data.dayong ?? 0);
 
@@ -64,16 +63,16 @@ export async function create(data, actorId) {
         memberId: data.memberId,
         batchId: data.batchId,
         weightKg,
-        drc: data.drc != null ? Number(data.drc) : null,
         pricePerKg,
         totalAmount,
         deliveryDate,
       },
     });
 
-    // Automated receipt: gross − (CBU + membership + supplies + dayong) = net.
-    const netAmount =
-      Math.round((totalAmount - cbu - membershipFee - supplies - dayong) * 100) / 100;
+    // Automated receipt: gross − (CBU + supplies + dayong) = net. The membership
+    // fee is collected on the membership application, not on a delivery, so it
+    // is left at its 0 default here.
+    const netAmount = Math.round((totalAmount - cbu - supplies - dayong) * 100) / 100;
 
     await tx.receipt.create({
       data: {
@@ -84,7 +83,6 @@ export async function create(data, actorId) {
         // issued while the automatic deduction existed, still print correctly.
         loanDeduction: 0,
         cbu,
-        membershipFee,
         supplies,
         dayong,
         netAmount,
@@ -117,7 +115,7 @@ const fmt = (n) =>
     maximumFractionDigits: 2,
   });
 
-const DEFAULT_DEDUCTIONS = { cbu: 50, membershipFee: 0, supplies: 0, dayong: 20 };
+const DEFAULT_DEDUCTIONS = { cbu: 50, supplies: 0, dayong: 20 };
 
 // Suggested default deduction amounts (prefilled in the delivery form).
 export async function getDeductionDefaults() {
@@ -137,11 +135,10 @@ export async function explainDelivery(id) {
   const gross = Number(d.totalAmount);
   const loan = Number(r.loanDeduction ?? 0);
   const cbu = Number(r.cbu ?? 0);
-  const membership = Number(r.membershipFee ?? 0);
   const supplies = Number(r.supplies ?? 0);
   const dayong = Number(r.dayong ?? 0);
   const net = d.receipt ? Number(r.netAmount) : gross;
-  const totalDeductions = round2(loan + cbu + membership + supplies + dayong);
+  const totalDeductions = round2(loan + cbu + supplies + dayong);
 
   // The loan row only appears on receipts issued while the automatic deduction
   // existed. New deliveries never touch a loan, so showing a "less: loan ₱0.00"
@@ -173,12 +170,6 @@ export async function explainDelivery(id) {
     },
     ...loanStep,
     {
-      label: "Less: Membership",
-      formula: "− Membership fee",
-      substitution: `− ₱${fmt(membership)}`,
-      result: `₱${fmt(membership)}`,
-    },
-    {
       label: "Less: Acid / Tapping Knife",
       formula: "− supplies",
       substitution: `− ₱${fmt(supplies)}`,
@@ -192,7 +183,7 @@ export async function explainDelivery(id) {
     },
     {
       label: "Net income (receipt)",
-      formula: "gross − (CBU + membership + acid/tapping knife + dayong)",
+      formula: "gross − (CBU + acid/tapping knife + dayong)",
       substitution: `₱${fmt(gross)} − ₱${fmt(totalDeductions)}`,
       result: `₱${fmt(net)}`,
     },
@@ -200,9 +191,9 @@ export async function explainDelivery(id) {
 
   return {
     title: "Delivery Net Income Computation",
-    description: `Delivery on ${new Date(d.deliveryDate).toISOString().slice(0, 10)} (Dry Rubber Content (DRC) ${
-      d.drc != null ? `${d.drc}%` : "—"
-    }, recorded as quality only). Gross = price × total kilos, less CBU (Capital Build-Up), membership, acid/tapping knife, and dayong = net income paid to the member. Loan repayments are recorded separately, at the office.`,
+    description: `Delivery on ${new Date(d.deliveryDate)
+      .toISOString()
+      .slice(0, 10)}. Gross = price × total kilos, less CBU (Capital Build-Up), acid/tapping knife, and dayong = net income paid to the member. Loan repayments are recorded separately, at the office. Membership fees are collected on the membership application, not here.`,
     steps,
     result: { label: "Net income", value: `₱${fmt(net)}` },
   };

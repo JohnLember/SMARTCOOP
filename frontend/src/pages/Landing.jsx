@@ -516,8 +516,8 @@ function FeatureCard({ icon: Icon, title, body, wide, stat }) {
 function Features() {
   const feats = [
     { icon: IconUsers, title: "Membership & categorization", body: "Regular and associate records with a dynamic algorithm that ranks members Active, Moderate, or Inactive from delivery and repayment behaviour.", wide: true, stat: { data: [82, 54, 28], labels: ["Active", "Moderate", "Inactive"] } },
-    { icon: IconScale, title: "DRC-graded deliveries", body: "Dry-rubber content, per-kilo pricing, and running totals for every Kinsina and Katapusan batch." },
-    { icon: IconReceipt, title: "Automated receipts", body: "Gross less CBU, loan, membership, supplies, and dayong. Net income computed and printed per delivery." },
+    { icon: IconScale, title: "Weighed deliveries", body: "Per-kilo pricing and running totals for every Kinsina and Katapusan batch." },
+    { icon: IconReceipt, title: "Automated receipts", body: "Gross less CBU, acid/tapping knife, and dayong. Net income computed and printed per delivery." },
     { icon: IconWallet, title: "Diminishing-interest loans", body: "Amortization on the remaining balance, repaid automatically from deliveries." },
     { icon: IconCoins, title: "Dividends & patronage", body: "Year-end settlements split by share capital and by delivery volume, with a full breakdown." },
     { icon: IconShield, title: "Agricultural credit scoring", body: "Creditworthiness from repayment history, production consistency, and farm characteristics." },

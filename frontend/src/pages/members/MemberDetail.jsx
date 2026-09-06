@@ -81,7 +81,6 @@ function DeliveriesTable({ deliveries }) {
               <th>Date</th>
               <th>Batch</th>
               <th className="num">Weight (kg)</th>
-              <th className="num">DRC</th>
               <th className="num">Gross</th>
               <th className="num">Net (receipt)</th>
             </tr>
@@ -97,9 +96,6 @@ function DeliveriesTable({ deliveries }) {
                 <td className="num text-[var(--ink-body)]">
                   {Number(d.weightKg).toLocaleString()}
                 </td>
-                <td className="num text-[var(--ink-muted)]">
-                  {d.drc != null ? `${d.drc}%` : "—"}
-                </td>
                 <td className="num text-[var(--ink-muted)]">{peso(d.totalAmount)}</td>
                 <td className="num font-medium text-[var(--brand)]">
                   {d.receipt ? peso(d.receipt.netAmount) : "—"}
@@ -108,7 +104,7 @@ function DeliveriesTable({ deliveries }) {
             ))}
             {deliveries.length === 0 && (
               <EmptyRow
-                colSpan={6}
+                colSpan={5}
                 title="No deliveries recorded yet."
                 hint="Deliveries appear here once staff record them against an open batch."
               />

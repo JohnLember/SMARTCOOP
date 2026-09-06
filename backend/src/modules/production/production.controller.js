@@ -65,12 +65,10 @@ const deliverySchema = z.object({
   memberId: z.number().int().positive(),
   batchId: z.number().int().positive(),
   weightKg: z.number().positive(),
-  drc: z.number().min(0).max(100).optional().nullable(),
   pricePerKg: z.number().nonnegative(),
   deliveryDate: z.string().optional().nullable(),
   // Net-income deductions (loan is automatic); default 0.
   cbu: z.number().nonnegative().optional(),
-  membershipFee: z.number().nonnegative().optional(),
   supplies: z.number().nonnegative().optional(),
   dayong: z.number().nonnegative().optional(),
 });

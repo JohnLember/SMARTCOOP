@@ -30,7 +30,6 @@ const MONEY_SERIES = [
   { key: "cbu", label: "CBU (your savings)", color: "#B9701F" },
   { key: "dayong", label: "Dayong", color: "#1F6C9F" },
   { key: "supplies", label: "Supplies", color: "#956400" },
-  { key: "membershipFee", label: "Membership fee", color: "#A3A29E" },
 ];
 
 const CHART_AXIS = { tickLine: false, axisLine: false, stroke: "#A3A29E", fontSize: 12 };

@@ -55,7 +55,6 @@ export default function ReceiptDocument({ receipt }) {
       ? 0
       : Number(receipt.cbu) +
         Number(receipt.loanDeduction) +
-        Number(receipt.membershipFee) +
         Number(receipt.supplies) +
         Number(receipt.dayong);
 
@@ -138,7 +137,6 @@ export default function ReceiptDocument({ receipt }) {
             <Row label="Delivery date" value={formatDate(d.deliveryDate)} />
             <Row label="Loading period" value={d.batch?.periodType ?? "—"} />
             <Row label="Weight" value={`${Number(d.weightKg).toLocaleString()} kg`} />
-            <Row label="Dry Rubber Content" value={d.drc != null ? `${d.drc}%` : "—"} />
             <Row label="Price per kg" value={peso(d.pricePerKg)} />
           </div>
 
@@ -152,7 +150,6 @@ export default function ReceiptDocument({ receipt }) {
             {Number(receipt.loanDeduction) > 0 && (
               <Row label="Loan payment" value={peso(receipt.loanDeduction)} />
             )}
-            <Row label="Membership" value={peso(receipt.membershipFee)} />
             <Row label="Acid / Tapping Knife" value={peso(receipt.supplies)} />
             <Row label="Dayong" value={peso(receipt.dayong)} />
             <div className="mt-1 border-t border-dashed border-[#EAEAEA] pt-1">

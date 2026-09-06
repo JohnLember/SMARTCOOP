@@ -29,20 +29,18 @@ export default function BatchDetail() {
   const [members, setMembers] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [defaults, setDefaults] = useState({ cbu: 0, membershipFee: 0, supplies: 0, dayong: 0 });
+  const [defaults, setDefaults] = useState({ cbu: 0, supplies: 0, dayong: 0 });
   const emptyForm = () => ({
     memberId: "",
     weightKg: "",
-    drc: "",
     pricePerKg: "",
     cbu: String(defaults.cbu),
-    membershipFee: String(defaults.membershipFee),
     supplies: String(defaults.supplies),
     dayong: String(defaults.dayong),
   });
   const [form, setForm] = useState({
-    memberId: "", weightKg: "", drc: "", pricePerKg: "",
-    cbu: "", membershipFee: "", supplies: "", dayong: "",
+    memberId: "", weightKg: "", pricePerKg: "",
+    cbu: "", supplies: "", dayong: "",
   });
 
   async function load() {
@@ -59,7 +57,6 @@ export default function BatchDetail() {
       setForm((f) => ({
         ...f,
         cbu: String(res.data.cbu),
-        membershipFee: String(res.data.membershipFee),
         supplies: String(res.data.supplies),
         dayong: String(res.data.dayong),
       }));
@@ -81,11 +78,10 @@ export default function BatchDetail() {
     if (previewTotal == null) return null;
     const d =
       (parseFloat(form.cbu) || 0) +
-      (parseFloat(form.membershipFee) || 0) +
       (parseFloat(form.supplies) || 0) +
       (parseFloat(form.dayong) || 0);
     return previewTotal - d;
-  }, [previewTotal, form.cbu, form.membershipFee, form.supplies, form.dayong]);
+  }, [previewTotal, form.cbu, form.supplies, form.dayong]);
 
   async function recordDelivery(e) {
     e.preventDefault();
@@ -100,10 +96,8 @@ export default function BatchDetail() {
         memberId: Number(form.memberId),
         batchId: Number(id),
         weightKg: parseFloat(form.weightKg),
-        drc: form.drc ? parseFloat(form.drc) : null,
         pricePerKg: parseFloat(form.pricePerKg),
         cbu: parseFloat(form.cbu) || 0,
-        membershipFee: parseFloat(form.membershipFee) || 0,
         supplies: parseFloat(form.supplies) || 0,
         dayong: parseFloat(form.dayong) || 0,
       });
@@ -175,8 +169,8 @@ export default function BatchDetail() {
       {isOpen && (
         <Card className="mb-4">
           <h3 className="mb-3 font-semibold text-[#2F3437]">Record delivery</h3>
-          <form onSubmit={recordDelivery} className="grid grid-cols-5 items-end gap-3">
-            {error && <p className="col-span-5 text-sm text-[#9F2F2D]">{error}</p>}
+          <form onSubmit={recordDelivery} className="grid grid-cols-4 items-end gap-3">
+            {error && <p className="col-span-4 text-sm text-[#9F2F2D]">{error}</p>}
             <MemberCombobox
               label="Member"
               members={members}
@@ -190,13 +184,6 @@ export default function BatchDetail() {
               value={form.weightKg}
               onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
               required
-            />
-            <Input
-              label="DRC (%)"
-              type="number"
-              step="0.01"
-              value={form.drc}
-              onChange={(e) => setForm({ ...form, drc: e.target.value })}
             />
             <Input
               label="Price / kg (₱)"
@@ -222,13 +209,6 @@ export default function BatchDetail() {
               onChange={(e) => setForm({ ...form, cbu: e.target.value })}
             />
             <Input
-              label="Membership (₱)"
-              type="number"
-              step="0.01"
-              value={form.membershipFee}
-              onChange={(e) => setForm({ ...form, membershipFee: e.target.value })}
-            />
-            <Input
               label="Acid / Tapping Knife (₱)"
               type="number"
               step="0.01"
@@ -249,7 +229,7 @@ export default function BatchDetail() {
               </div>
             </div>
 
-            <div className="col-span-5 flex justify-end">
+            <div className="col-span-4 flex justify-end">
               <Button type="submit" disabled={busy}>
                 <Plus size={16} />
                 Add delivery
@@ -265,7 +245,6 @@ export default function BatchDetail() {
             <tr>
               <th className="px-4 py-3 font-medium">Member</th>
               <th className="px-4 py-3 font-medium">Weight (kg)</th>
-              <th className="px-4 py-3 font-medium">DRC</th>
               <th className="px-4 py-3 font-medium">Price/kg</th>
               <th className="px-4 py-3 font-medium">Total</th>
               <th className="px-4 py-3 font-medium">Net (receipt)</th>
@@ -280,7 +259,6 @@ export default function BatchDetail() {
                   {d.member.memberNo} — {d.member.firstName} {d.member.lastName}
                 </td>
                 <td className="px-4 py-3 text-[#787774]">{Number(d.weightKg).toLocaleString()}</td>
-                <td className="px-4 py-3 text-[#787774]">{d.drc != null ? `${d.drc}%` : "—"}</td>
                 <td className="px-4 py-3 text-[#787774]">{peso(d.pricePerKg)}</td>
                 <td className="px-4 py-3 font-medium text-[#2F3437]">{peso(d.totalAmount)}</td>
                 <td className="px-4 py-3 text-[#346538]">{d.receipt ? peso(d.receipt.netAmount) : "—"}</td>
@@ -295,7 +273,7 @@ export default function BatchDetail() {
             ))}
             {batch.deliveries.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-[#5F5E5A]">
+                <td colSpan={7} className="px-4 py-10 text-center text-[#5F5E5A]">
                   No deliveries recorded for this batch yet.
                 </td>
               </tr>

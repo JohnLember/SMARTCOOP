@@ -8,7 +8,7 @@
 
 // The receipt fields that together account for the gross: what the member took
 // home, plus every line deducted from it.
-export const MONEY_KEYS = ["net", "cbu", "dayong", "supplies", "membershipFee"];
+export const MONEY_KEYS = ["net", "cbu", "dayong", "supplies"];
 
 // The receipt column each key reads. `net` is netAmount; the rest match 1:1.
 const RECEIPT_FIELD = { net: "netAmount" };
