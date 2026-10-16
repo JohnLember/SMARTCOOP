@@ -12,3 +12,7 @@ build/
 
 # Local setup notes — kept out of the repo (they list the seeded demo logins).
 SETUP.md
+
+.obsidian
+graphify-out
+CLAUDE.md
