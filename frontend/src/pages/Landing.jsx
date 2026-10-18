@@ -1,4 +1,4 @@
-import { Suspense, lazy, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -12,9 +12,7 @@ import { IconLeaf } from "../components/brand";
 import heroBandPhoto from "../assets/Hero_band_photo.jpg";
 import aboutPhoto from "../assets/about_photo.jpg";
 import incentivesPhoto from "../assets/incentives_photo.jpg";
-
-// Three.js is ~530 KB; split it out so only desktop landing visitors download it.
-const HeroObject = lazy(() => import("../components/HeroObject"));
+import heroLoop from "../assets/video/hero-loop.mp4";
 
 gsap.registerPlugin(ScrollTrigger, CustomEase);
 // Same curves as --ease-out / --ease-in-out in index.css, so GSAP and CSS motion match.
@@ -206,7 +204,10 @@ function Nav({ user, dashboardHref }) {
 function Hero({ user, dashboardHref }) {
   const lines = ["Tapped before sunrise.", "Counted to the peso."];
   // shortcut: checked once at render, so resizing across 1024px won't add or remove it; fine for a landing page.
-  const showCup = matchMedia("(min-width: 1024px)").matches;
+  // Desktop only, so phones never download the 12 MB loop.
+  const showVideo = matchMedia("(min-width: 1024px)").matches;
+  // Reduced motion: no autoplay, one frame stays as a still.
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   return (
     <section id="top" className="relative isolate overflow-hidden px-6" style={{ background: C.canopy }}>
       <div data-hero="photo" aria-hidden="true" className="absolute inset-0 -z-10">
@@ -216,8 +217,8 @@ function Hero({ user, dashboardHref }) {
         <div className="absolute inset-0 hidden md:block" style={{ background: "linear-gradient(90deg, rgba(16,23,15,0.94) 0%, rgba(16,23,15,0.75) 45%, rgba(16,23,15,0) 85%)" }} />
         <div className="absolute inset-x-0 bottom-0 h-40" style={{ background: `linear-gradient(180deg, rgba(16,23,15,0), ${C.canopy})` }} />
       </div>
-      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl items-center gap-10 py-20 lg:grid-cols-12">
-        <div className="max-w-2xl lg:col-span-7">
+      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl items-center gap-10 py-20 lg:grid-cols-2">
+        <div className="max-w-2xl">
           <p data-hero="eyebrow" className="font-tap-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: C.amberSoft }}>
             San Luis Rubber Producer&apos;s Cooperative
           </p>
@@ -243,11 +244,26 @@ function Hero({ user, dashboardHref }) {
             </a>
           </div>
         </div>
-        {showCup && (
-          <div className="h-[540px] lg:col-span-5">
-            <Suspense fallback={null}>
-              <HeroObject />
-            </Suspense>
+        {showVideo && (
+          <div data-hero="fade">
+            {/* Decorative loop: no controls, no PiP, and pointer-events-none so hover and right-click
+                never surface the browser's video UI. Muted + playsInline are required for autoplay. */}
+            <video
+              // the loop opens on an empty frame (the bowl drops in), so the reduced-motion still starts at 3s
+              src={reduceMotion ? `${heroLoop}#t=3` : heroLoop}
+              autoPlay={!reduceMotion}
+              loop
+              muted
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload nofullscreen noplaybackrate noremoteplayback"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="pointer-events-none aspect-square w-full select-none rounded-sm object-cover"
+              style={{ border: `1px solid ${C.canopyLine}` }}
+            />
           </div>
         )}
       </div>
