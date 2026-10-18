@@ -203,8 +203,8 @@ function Nav({ user, dashboardHref }) {
 /* ------------------------------------------------------------------ */
 function Hero({ user, dashboardHref }) {
   const lines = ["Tapped before sunrise.", "Counted to the peso."];
-  // shortcut: checked once at render, so resizing across 1024px won't add or remove it; fine for a landing page.
-  // Desktop only, so phones never download the 12 MB loop.
+  // Phones never mount the video (no 12 MB download); the CSS breakpoint on its wrapper also hides it
+  // if a desktop window is narrowed after load. shortcut: widening a phone-sized window won't add it until reload.
   const showVideo = matchMedia("(min-width: 1024px)").matches;
   // Reduced motion: no autoplay, one frame stays as a still.
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -245,7 +245,7 @@ function Hero({ user, dashboardHref }) {
           </div>
         </div>
         {showVideo && (
-          <div data-hero="fade">
+          <div data-hero="fade" className="hidden lg:block">
             {/* Decorative loop: no controls, no PiP, and pointer-events-none so hover and right-click
                 never surface the browser's video UI. Muted + playsInline are required for autoplay. */}
             <video
