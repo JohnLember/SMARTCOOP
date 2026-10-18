@@ -44,7 +44,7 @@ export default function Barangays() {
         title="Barangays"
         subtitle={`${assigned} member${assigned === 1 ? "" : "s"} assigned across ${data.length} barangay${data.length === 1 ? "" : "s"}`}
       />
-      <BarangayBrowser data={data} page={page} onPage={setPage} />
+      <BarangayBrowser data={data} page={page} onPage={setPage} linkMembers />
     </div>
   );
 }

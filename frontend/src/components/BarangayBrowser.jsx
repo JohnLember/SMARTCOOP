@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { Card, Button, Input, Select, Badge, MembershipBadge, DataTable, Pagination } from "./ui";
 import { usePagination } from "../lib/usePagination";
 import { formatDate } from "../lib/format";
@@ -15,7 +16,8 @@ const PAGE_SIZES = [10, 30, 50, 100];
 //                                   membershipType, dateJoined }] }]
 // `page` / `onPage` are owned by the parent so the page can also act on the
 // barangay currently on screen (the MAO report offers to export just that one).
-export default function BarangayBrowser({ data, page, onPage }) {
+// `linkMembers` is staff-only: MAO must not reach individual member records.
+export default function BarangayBrowser({ data, page, onPage, linkMembers = false }) {
   // Carried between barangays; the search box is not (see goBarangay).
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState("");
@@ -129,7 +131,15 @@ export default function BarangayBrowser({ data, page, onPage }) {
           <tbody>
             {rows.map((m) => (
               <tr key={m.id}>
-                <td className="text-[#2F3437]">{m.memberNo}</td>
+                <td className="text-[#2F3437]">
+                  {linkMembers ? (
+                    <Link to={`/members/${m.id}`} className="font-medium text-[#346538] hover:underline">
+                      {m.memberNo}
+                    </Link>
+                  ) : (
+                    m.memberNo
+                  )}
+                </td>
                 <td className="text-[#2F3437]">
                   {m.firstName} {m.lastName}
                 </td>
