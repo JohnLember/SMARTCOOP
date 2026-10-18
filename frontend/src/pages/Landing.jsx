@@ -12,7 +12,7 @@ import { IconLeaf } from "../components/brand";
 import heroBandPhoto from "../assets/Hero_band_photo.jpg";
 import aboutPhoto from "../assets/about_photo.jpg";
 import incentivesPhoto from "../assets/incentives_photo.jpg";
-import heroLoop from "../assets/video/hero-loop.mp4";
+import heroLoop from "../assets/video/smartcoop-hero-square-alpha.webm";
 
 gsap.registerPlugin(ScrollTrigger, CustomEase);
 // Same curves as --ease-out / --ease-in-out in index.css, so GSAP and CSS motion match.
