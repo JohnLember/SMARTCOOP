@@ -155,12 +155,23 @@ function MembershipTable({ rows, status, onOpen }) {
             <th className="px-4 py-3 font-medium">Contact</th>
             <th className="px-4 py-3 font-medium">Submitted</th>
             <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
         <tbody>
           {rows.map((a) => (
-            <tr key={a.id} className="hover:bg-[#F7F6F3]">
+            <tr
+              key={a.id}
+              tabIndex={0}
+              aria-label={`Open application ${a.applicationNo}`}
+              onClick={() => onOpen(a)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpen(a);
+                }
+              }}
+              className="focus-ring cursor-pointer hover:bg-[#F7F6F3]"
+            >
               <td className="px-4 py-3 font-medium text-[#346538]">{a.applicationNo}</td>
               <td className="px-4 py-3 font-medium text-[#2F3437]">
                 {a.firstName} {a.lastName}
@@ -171,16 +182,11 @@ function MembershipTable({ rows, status, onOpen }) {
               <td className="px-4 py-3">
                 <Badge color={STATUS_COLOR[a.status]}>{a.status}</Badge>
               </td>
-              <td className="px-4 py-3 text-right">
-                <Button variant="ghost" onClick={() => onOpen(a)}>
-                  {a.status === "PENDING" ? "Review" : "View"}
-                </Button>
-              </td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-4 py-10 text-center text-[#5F5E5A]">
+              <td colSpan={6} className="px-4 py-10 text-center text-[#5F5E5A]">
                 No {status ? status.toLowerCase() : ""} applications.
               </td>
             </tr>
