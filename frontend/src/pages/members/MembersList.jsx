@@ -7,7 +7,7 @@ import {
   Card,
   Input,
   Select,
-  Spinner,
+  TableSkeleton,
   PageHeader,
   MembershipBadge,
   CategoryBadge,
@@ -158,7 +158,7 @@ export default function MembersList() {
       </Card>
 
       {loading ? (
-        <Spinner />
+        <TableSkeleton />
       ) : (
         <Card className="overflow-hidden p-0">
           <DataTable>

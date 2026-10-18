@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import api, { apiError } from "../../lib/api";
 import {
   Card,
-  Spinner,
+  PageSkeleton,
   PageHeader,
   Badge,
   StatCard,
@@ -176,7 +176,7 @@ export default function MemberLoans() {
     });
   }
 
-  if (!loans) return <Spinner />;
+  if (!loans) return <PageSkeleton variant="detail" />;
 
   if (loans.length === 0)
     return (

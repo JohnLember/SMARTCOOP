@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Card, Spinner, PageHeader, StatCard, Badge, DataTable} from "../components/ui";
+import { Card, PageSkeleton, PageHeader, StatCard, Badge, DataTable} from "../components/ui";
 import ShowComputation from "../components/ShowComputation";
 import { formatDate } from "../lib/format";
 import { Scale, Wallet, Boxes } from "lucide-react";
@@ -15,7 +15,7 @@ export default function MyDeliveries() {
     api.get("/production/deliveries").then((res) => setDeliveries(res.data));
   }, []);
 
-  if (!deliveries) return <Spinner />;
+  if (!deliveries) return <PageSkeleton variant="list" />;
 
   const totals = deliveries.reduce(
     (acc, d) => {

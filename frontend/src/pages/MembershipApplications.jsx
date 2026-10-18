@@ -5,7 +5,7 @@ import {
   Card,
   Input,
   Select,
-  Spinner,
+  TableSkeleton,
   PageHeader,
   Badge,
   Modal,
@@ -124,7 +124,7 @@ export default function MembershipApplications() {
       </Card>
 
       {!rows ? (
-        <Spinner />
+        <TableSkeleton />
       ) : (
         <MembershipTable rows={pageItems} status={status} onOpen={setActive} />
       )}

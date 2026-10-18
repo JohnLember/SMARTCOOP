@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import {
   Card,
-  Spinner,
+  PageSkeleton,
   PageHeader,
   MembershipBadge,
   Badge,
@@ -82,7 +82,7 @@ export default function MemberSelfView() {
     0
   );
 
-  if (loading) return <Spinner />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!member)
     return (
       <Card>

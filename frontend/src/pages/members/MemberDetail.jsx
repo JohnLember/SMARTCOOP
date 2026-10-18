@@ -7,7 +7,7 @@ import {
   Card,
   Input,
   Select,
-  Spinner,
+  PageSkeleton,
   PageHeader,
   MembershipBadge,
   Badge,
@@ -248,7 +248,7 @@ export default function MemberDetail() {
     }
   }
 
-  if (loading) return <Spinner />;
+  if (loading) return <PageSkeleton variant="detail" />;
   if (!member) return <p>Member not found.</p>;
 
   // What the two summary cards show instead of the tables they replaced.

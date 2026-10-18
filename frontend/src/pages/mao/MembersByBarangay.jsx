@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../../lib/api";
-import { Spinner, PageHeader, Button, Modal, Select } from "../../components/ui";
+import { PageSkeleton, PageHeader, Button, Modal, Select } from "../../components/ui";
 import BarangayBrowser from "../../components/BarangayBrowser";
 import { FileDown } from "lucide-react";
 
@@ -66,7 +66,7 @@ export default function MembersByBarangay() {
     api.get("/mao/members-by-barangay").then((res) => setData(res.data));
   }, []);
 
-  if (!data) return <Spinner />;
+  if (!data) return <PageSkeleton variant="table" />;
 
   const totalMembers = data.reduce((s, b) => s + b.members.length, 0);
   const barangay = data[Math.min(page, data.length) - 1];

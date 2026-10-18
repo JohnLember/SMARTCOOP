@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Select, Input, Spinner, PageHeader, Badge, Modal, DataTable} from "../../components/ui";
+import { Button, Card, Select, Input, TableSkeleton, PageHeader, Badge, Modal, DataTable} from "../../components/ui";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { formatDate } from "../../lib/format";
 import { Plus, Trash2 } from "lucide-react";
@@ -155,7 +155,7 @@ export default function BatchesList() {
       </Modal>
 
       {!batches ? (
-        <Spinner />
+        <TableSkeleton />
       ) : (
         <Card className="p-0">
           <DataTable>

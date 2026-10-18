@@ -166,7 +166,7 @@ export default function Layout() {
           <Menu size={20} />
         </button>
         <NavLink to="/" className="flex min-w-0 items-center gap-2">
-          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[var(--radius-control)] bg-[var(--ink)] text-white">
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[var(--radius-control)] bg-[var(--accent)] text-[#10170F]">
             <Leaf size={16} />
           </span>
           <span className="font-serif-display truncate text-[15px] font-light tracking-tight text-[var(--ink)]">
@@ -188,7 +188,7 @@ export default function Layout() {
       {/* Drawer scrim — click anywhere off the menu to dismiss it. */}
       {navOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          className="drawer-scrim fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setNavOpen(false)}
           aria-hidden="true"
         />
@@ -208,7 +208,9 @@ export default function Layout() {
           <X size={20} />
         </button>
         <NavLink to="/" className="flex items-center gap-2.5 px-6 py-5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111111] text-white">
+          {/* Same amber mark as the public site and the logo files, so signing in
+              doesn't swap the brand for a different black tile. */}
+          <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] bg-[var(--accent)] text-[#10170F]">
             <Leaf size={18} />
           </span>
           <div>
@@ -284,7 +286,8 @@ export default function Layout() {
       {/* min-w-0 lets wide tables scroll inside their own card instead of
           stretching the flex row and pushing the page sideways. */}
       <main className="min-w-0 flex-1 pt-14 lg:pt-0">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+        {/* Keyed on the path so each page change replays the short settle-in. */}
+        <div key={location.pathname} className="route-in mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
           <Outlet />
         </div>
       </main>

@@ -7,7 +7,9 @@ import {
   Input,
   Select,
   Textarea,
-  Spinner,
+  PageSkeleton,
+  TextSkeleton,
+  EmptyState,
   PageHeader,
   StatCard,
   Badge,
@@ -24,7 +26,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { Scale, Users, Wallet, Boxes, Plus, AlertTriangle, Megaphone } from "lucide-react";
+import { Scale, Users, Wallet, Boxes, Plus, AlertTriangle, Megaphone, ChartLine, ChartColumn } from "lucide-react";
 import { formatDate } from "../../lib/format";
 
 const SEVERITY_COLOR = { LOW: "slate", MODERATE: "amber", HIGH: "red", CRITICAL: "red" };
@@ -56,7 +58,7 @@ export default function MaoDashboard() {
     loadAll().finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Spinner />;
+  if (loading) return <PageSkeleton variant="dashboard" />;
 
   return (
     <div>
@@ -67,24 +69,27 @@ export default function MaoDashboard() {
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="stagger grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total volume (kg)" value={stats.totalVolumeKg.toLocaleString()} icon={Scale} />
         <StatCard label="Total value (₱)" value={stats.totalValue.toLocaleString()} icon={Wallet} accent="blue" />
         <StatCard label="Deliveries" value={stats.totalDeliveries.toLocaleString()} icon={Boxes} accent="amber" />
         <StatCard label="Active members" value={stats.activeMembers} icon={Users} accent="emerald" />
       </div>
 
-      {stats.totalDeliveries === 0 && (
-        <div className="mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm text-blue-700">
-          No rubber delivery data yet — production charts populate once the Production module records deliveries.
-        </div>
-      )}
-
-      {/* Charts */}
+      {/* Charts. With no deliveries yet, each says so in place instead of drawing
+          empty axes under a separate banner. */}
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Trend</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Monthly production (kg)</h3>
+          {stats.totalDeliveries === 0 ? (
+            <EmptyState
+              icon={ChartLine}
+              title="No deliveries recorded yet"
+              hint="Monthly volume appears once the cooperative records its first delivery."
+              className="h-[240px]"
+            />
+          ) : (
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={stats.monthlyTrend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
@@ -94,10 +99,19 @@ export default function MaoDashboard() {
               <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
             </LineChart>
           </ResponsiveContainer>
+          )}
         </Card>
         <Card>
           <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">By barangay</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Production by barangay (kg)</h3>
+          {stats.totalDeliveries === 0 ? (
+            <EmptyState
+              icon={ChartColumn}
+              title="No production to compare yet"
+              hint="Each barangay's volume shows here once deliveries come in."
+              className="h-[240px]"
+            />
+          ) : (
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={stats.byBarangay}>
               <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
@@ -107,11 +121,14 @@ export default function MaoDashboard() {
               <Bar dataKey="totalKg" fill="#B9701F" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </Card>
       </div>
 
-      {/* Support programs + Affected areas + Announcement */}
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Support programs + Affected areas + Announcement. items-start: each card
+          is as tall as its content, so a short program list doesn't stretch into
+          an empty box beside the taller form column. */}
+      <div className="mt-6 grid grid-cols-1 items-start sm:grid-cols-2 gap-4">
         <SupportPrograms programs={programs} barangays={barangays} members={members} onChange={loadAll} />
         <div className="space-y-4">
           <AffectedAreas tags={tags} barangays={barangays} onChange={loadAll} />
@@ -326,7 +343,7 @@ function ProgramDetailModal({ programId, members, onClose, onChange }) {
   return (
     <Modal open onClose={onClose} title={program?.name || "Support program"} wide>
       {!program ? (
-        <Spinner />
+        <TextSkeleton />
       ) : (
         <div className="space-y-4">
           {error && <p className="text-sm text-[#9F2F2D]">{error}</p>}

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import api, { apiError } from "../../lib/api";
 import { toast } from "react-toastify";
-import { Button, Card, Input, Select, PageHeader, Spinner } from "../../components/ui";
+import { Button, Card, Input, Select, PageHeader, PageSkeleton } from "../../components/ui";
 
 export default function MemberForm() {
   const { id } = useParams();
@@ -71,7 +71,7 @@ export default function MemberForm() {
     }
   }
 
-  if (loading) return <Spinner />;
+  if (loading) return <PageSkeleton variant="detail" />;
 
   return (
     <div>

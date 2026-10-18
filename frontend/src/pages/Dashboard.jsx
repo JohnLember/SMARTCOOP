@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { Card, Spinner, PageHeader, StatCard, Badge } from "../components/ui";
+import { Card, PageSkeleton, PageHeader, StatCard, EmptyState } from "../components/ui";
 import { formatDate } from "../lib/format";
-import { Users, UserPlus, UserCheck, FileText, FileCheck, Wallet, Boxes, ChevronRight } from "lucide-react";
+import { Users, UserPlus, UserCheck, FileText, FileCheck, Wallet, Boxes, ChevronRight, ChartLine } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -31,7 +31,7 @@ export default function Dashboard() {
     api.get("/dashboard/stats").then((res) => setStats(res.data)).catch(() => {});
   }, []);
 
-  if (!stats) return <Spinner />;
+  if (!stats) return <PageSkeleton variant="dashboard" />;
 
   return (
     <div>
@@ -42,14 +42,14 @@ export default function Dashboard() {
       />
 
       {/* Queues waiting on staff — highlighted first. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="stagger grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Pending membership apps" value={stats.pending.applications} icon={FileText} accent="amber" />
         <StatCard label="Pending loan apps" value={stats.pending.loanApplications} icon={FileCheck} accent="amber" />
         <StatCard label="Active loans" value={stats.loans.active} icon={Wallet} accent="blue" />
         <StatCard label="Open batches" value={stats.batches.open} icon={Boxes} accent="blue" />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="stagger mt-4 grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Active members" value={stats.members.active} icon={Users} accent="emerald" />
         <StatCard label="Associates" value={stats.members.associates} icon={UserPlus} />
         <StatCard label="Regular members" value={stats.members.regulars} icon={UserCheck} accent="emerald" />
@@ -60,17 +60,23 @@ export default function Dashboard() {
         <Card className="col-span-2">
           <p className="font-mono-meta text-[11px] uppercase tracking-[0.14em] text-[#5F5E5A]">Trend</p>
           <h3 className="mt-1 mb-4 font-semibold text-[#2F3437]">Monthly rubber production (kg)</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={stats.monthlyProduction}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
-              <XAxis dataKey="month" fontSize={12} stroke="#A3A29E" />
-              <YAxis fontSize={12} stroke="#A3A29E" />
-              <Tooltip contentStyle={TOOLTIP_STYLE} />
-              <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
-            </LineChart>
-          </ResponsiveContainer>
-          {stats.monthlyProduction.length === 0 && (
-            <p className="mt-2 text-center text-sm text-[#5F5E5A]">No delivery data in the last 12 months.</p>
+          {stats.monthlyProduction.length === 0 ? (
+            <EmptyState
+              icon={ChartLine}
+              title="No deliveries in the last 12 months"
+              hint="The trend fills in as deliveries are recorded in Loading & Deliveries."
+              className="h-[240px]"
+            />
+          ) : (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={stats.monthlyProduction}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EAEAEA" />
+                <XAxis dataKey="month" fontSize={12} stroke="#A3A29E" />
+                <YAxis fontSize={12} stroke="#A3A29E" />
+                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <Line type="monotone" dataKey="totalKg" stroke="#346538" strokeWidth={2.5} dot={{ r: 3, fill: "#346538" }} />
+              </LineChart>
+            </ResponsiveContainer>
           )}
         </Card>
         <Card>
@@ -128,31 +134,42 @@ export default function Dashboard() {
   );
 }
 
+// A work queue reads as one list, not a stack of cards inside a card: rows on
+// hairlines, the date as quiet tabular text rather than a badge on every row.
 function QueueCard({ title, to, rows, empty }) {
   return (
-    <Card>
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-semibold text-[#2F3437]">{title}</h3>
-        <Link to={to} className="inline-flex items-center gap-1 text-sm font-medium text-[#346538] hover:underline">
+    <Card className="overflow-hidden p-0!">
+      <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-4 sm:px-5 sm:pt-5">
+        <h3 className="font-semibold text-[var(--ink)]">
+          {title}
+          {rows.length > 0 && (
+            <span className="tabular ml-2 text-sm font-normal text-[var(--ink-muted)]">{rows.length}</span>
+          )}
+        </h3>
+        <Link to={to} className="focus-ring inline-flex items-center gap-1 rounded text-sm font-medium text-[var(--brand)] hover:underline">
           View all <ChevronRight size={15} />
         </Link>
       </div>
-      <div className="space-y-2">
-        {rows.length === 0 && <p className="text-sm text-[#5F5E5A]">{empty}</p>}
-        {rows.map((r) => (
-          <Link
-            key={r.id}
-            to={to}
-            className="flex items-center justify-between rounded-lg border border-[#F2F1ED] px-3 py-2 transition hover:border-[#8FB392] hover:bg-[#EDF3EC]/40"
-          >
-            <div>
-              <p className="text-sm font-medium text-[#2F3437]">{r.primary}</p>
-              <p className="text-xs text-[#5F5E5A]">{r.meta}</p>
-            </div>
-            <Badge color="amber">{formatDate(r.date)}</Badge>
-          </Link>
-        ))}
-      </div>
+      {rows.length === 0 ? (
+        <p className="px-4 pb-5 pt-1 text-sm text-[var(--ink-muted)] sm:px-5">{empty}</p>
+      ) : (
+        <ul className="divide-y divide-[#F2F1ED] border-t border-[#F2F1ED]">
+          {rows.map((r) => (
+            <li key={r.id}>
+              <Link
+                to={to}
+                className="focus-ring flex items-center justify-between gap-4 px-4 py-3 transition-colors duration-150 hover:bg-[var(--sunken)] sm:px-5"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--ink)]">{r.primary}</p>
+                  <p className="tabular truncate text-xs text-[var(--ink-muted)]">{r.meta}</p>
+                </div>
+                <span className="tabular flex-none text-xs text-[var(--ink-muted)]">{formatDate(r.date)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }

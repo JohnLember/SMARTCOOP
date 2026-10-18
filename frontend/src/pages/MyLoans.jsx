@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Card, Spinner, PageHeader, Badge, Select, Pagination, DataTable, Modal } from "../components/ui";
+import { Card, PageSkeleton, PageHeader, Badge, Select, Pagination, DataTable, Modal } from "../components/ui";
 import { usePagination } from "../lib/usePagination";
 import { formatDate } from "../lib/format";
 
@@ -40,7 +40,7 @@ export default function MyLoans() {
   const filtered = (apps ?? []).filter((a) => !status || a.status === status);
   const { page, setPage, pageCount, pageItems } = usePagination(filtered, 10);
 
-  if (!apps) return <Spinner />;
+  if (!apps) return <PageSkeleton variant="list" />;
 
   const loanFor = (app) => loans.find((l) => l.id === app.loanId);
   const counts = STATUSES.reduce(

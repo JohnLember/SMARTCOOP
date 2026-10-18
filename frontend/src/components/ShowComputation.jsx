@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api, { apiError } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { Modal, Button, Spinner } from "./ui";
+import { Modal, Button, TextSkeleton } from "./ui";
 import { Calculator } from "lucide-react";
 
 // A button that opens a modal explaining a computation step-by-step.
@@ -39,7 +39,7 @@ export default function ShowComputation({ url, label = "Show computation", varia
       </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title={data?.title || "Computation"} wide>
-        {loading && <Spinner />}
+        {loading && <TextSkeleton />}
         {error && <p className="text-sm text-[#9F2F2D]">{error}</p>}
         {data && <ComputationSteps data={data} />}
       </Modal>

@@ -5,7 +5,7 @@ import {
   Card,
   Input,
   Select,
-  Spinner,
+  TableSkeleton,
   PageHeader,
   Badge,
   Modal,
@@ -123,7 +123,7 @@ export default function LoanApplications() {
       </Card>
 
       {!rows ? (
-        <Spinner />
+        <TableSkeleton />
       ) : (
         <LoanTable rows={pageItems} status={status} onOpen={setActive} />
       )}

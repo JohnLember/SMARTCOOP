@@ -6,7 +6,7 @@ import {
   Button,
   Card,
   Input,
-  Spinner,
+  PageSkeleton,
   PageHeader,
   Badge,
   StatCard,
@@ -124,7 +124,7 @@ export default function BatchDetail() {
     }
   }
 
-  if (!batch) return <Spinner />;
+  if (!batch) return <PageSkeleton variant="detail" />;
   const isOpen = batch.status === "OPEN";
 
   return (

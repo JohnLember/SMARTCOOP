@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Button, Card, Spinner, PageHeader, Badge, Modal, Select, Pagination, DataTable } from "../components/ui";
+import { Button, Card, PageSkeleton, PageHeader, Badge, Modal, Select, Pagination, DataTable } from "../components/ui";
 import ReceiptDocument from "../components/ReceiptDocument";
 import { buildReceiptRows, countsByType, RECEIPT_TYPES } from "../lib/receiptRows";
 import { usePagination } from "../lib/usePagination";
@@ -28,7 +28,7 @@ export default function MyReceipts() {
   const filtered = type ? all.filter((r) => r.type === type) : all;
   const { page, setPage, pageCount, pageItems } = usePagination(filtered, 15);
 
-  if (!rows) return <Spinner />;
+  if (!rows) return <PageSkeleton variant="list" />;
 
   const counts = countsByType(all);
   // Voided payments never count toward what the member has actually paid.

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api from "../../lib/api";
-import { Card, Spinner, PageHeader, RiskBadge, StatCard, Pagination, DataTable } from "../../components/ui";
+import { Card, PageSkeleton, PageHeader, RiskBadge, StatCard, Pagination, DataTable } from "../../components/ui";
 import ShowComputation from "../../components/ShowComputation";
 import { formatDate } from "../../lib/format";
 import { usePagination } from "../../lib/usePagination";
@@ -23,7 +23,7 @@ export default function CreditScoring() {
     load();
   }, []);
 
-  if (!rows) return <Spinner />;
+  if (!rows) return <PageSkeleton variant="table" />;
 
   const counts = rows.reduce(
     (acc, r) => {

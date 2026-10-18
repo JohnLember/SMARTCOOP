@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { toast } from "react-toastify";
-import { Card, Spinner, PageHeader, Badge, Button, Pagination } from "../components/ui";
+import { Card, PageSkeleton, PageHeader, Badge, Button, Pagination } from "../components/ui";
 import { useConfirm } from "../components/ConfirmDialog";
 import { usePagination } from "../lib/usePagination";
 import { formatDateTime } from "../lib/format";
@@ -134,7 +134,7 @@ export default function Notifications() {
     });
   }
 
-  if (!list) return <Spinner />;
+  if (!list) return <PageSkeleton variant="list" />;
 
   const allSelected = list.length > 0 && selected.size === list.length;
   const unread = list.filter((n) => n.status === "UNREAD").length;

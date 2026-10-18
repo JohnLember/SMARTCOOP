@@ -7,7 +7,7 @@ import {
   Card,
   Input,
   Select,
-  Spinner,
+  TableSkeleton,
   PageHeader,
   Badge,
   RiskBadge,
@@ -294,7 +294,7 @@ export default function LoansList() {
       </Card>
 
       {!loans ? (
-        <Spinner />
+        <TableSkeleton />
       ) : (
         <Card className="p-0">
           <DataTable>

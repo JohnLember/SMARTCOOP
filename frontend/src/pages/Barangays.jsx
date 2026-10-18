@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
-import { Spinner, PageHeader } from "../components/ui";
+import { PageSkeleton, PageHeader } from "../components/ui";
 import BarangayBrowser from "../components/BarangayBrowser";
 
 export default function Barangays() {
@@ -34,7 +34,7 @@ export default function Barangays() {
     );
   }, []);
 
-  if (!data) return <Spinner />;
+  if (!data) return <PageSkeleton variant="table" />;
 
   const assigned = data.reduce((s, b) => s + b.members.length, 0);
 

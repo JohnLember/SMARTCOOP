@@ -1,5 +1,6 @@
 // Small Tailwind-based design system shared across SMARTCOOP.
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, ArrowLeft, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useNavigate } from "react-router";
 
@@ -66,9 +67,11 @@ export function Modal({ open, onClose, title, children, wide = false, dismissibl
   }, [open, onClose, dismissible]);
 
   if (!open) return null;
-  return (
+  // Portal to <body>: an animated/transformed ancestor in the page column would
+  // otherwise trap `fixed` and clip the scrim to that column.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
+      className="modal-scrim fixed inset-0 z-50 flex items-end justify-center bg-black/45 sm:items-center sm:p-4"
       onClick={dismissible ? onClose : undefined}
       role="presentation"
     >
@@ -76,7 +79,7 @@ export function Modal({ open, onClose, title, children, wide = false, dismissibl
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? title : undefined}
-        className={`flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--radius-surface)] border border-[var(--line)] bg-white shadow-[var(--shadow-overlay)] sm:max-h-[85vh] sm:rounded-[var(--radius-surface)] ${
+        className={`modal-panel flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[var(--radius-surface)] border border-[var(--line)] bg-white shadow-[var(--shadow-overlay)] sm:max-h-[85vh] sm:rounded-[var(--radius-surface)] ${
           wide ? "sm:max-w-3xl" : "sm:max-w-xl"
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -95,7 +98,8 @@ export function Modal({ open, onClose, title, children, wide = false, dismissibl
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -314,7 +318,7 @@ export function MemberCombobox({ label, members, value, onChange, placeholder = 
 // Without this the right-hand columns are simply unreachable on a phone.
 export function DataTable({ children, className = "" }) {
   return (
-    <div className="overflow-x-auto overscroll-x-contain">
+    <div className="fade-in overflow-x-auto overscroll-x-contain">
       <table className={`data-table ${className}`}>{children}</table>
     </div>
   );
@@ -334,20 +338,14 @@ export function EmptyRow({ colSpan, title, hint, action }) {
   );
 }
 
-// Loading placeholder shaped like the table that's coming, so the page doesn't
-// jump when the data lands.
-export function TableSkeleton({ rows = 6, cols = 5 }) {
+// Rows shaped like a data table's body, fading out toward the bottom.
+function TableRowsSkeleton({ rows, cols }) {
   return (
-    <div className="p-4" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading…</span>
+    <div className="px-4">
       {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="flex gap-3 py-2.5" style={{ opacity: 1 - r * 0.1 }}>
+        <div key={r} className="flex gap-4 border-t border-[#F2F1ED] py-3.5 first:border-t-0" style={{ opacity: 1 - r * 0.08 }}>
           {Array.from({ length: cols }).map((_, c) => (
-            <div
-              key={c}
-              className="skeleton h-4 flex-1"
-              style={c === 0 ? { maxWidth: 120 } : undefined}
-            />
+            <div key={c} className="skeleton h-4 flex-1" style={c === 0 ? { maxWidth: 96 } : undefined} />
           ))}
         </div>
       ))}
@@ -355,32 +353,189 @@ export function TableSkeleton({ rows = 6, cols = 5 }) {
   );
 }
 
+// Stand-in for a table card (header strip + rows) while its data loads, so the
+// page doesn't jump when the data lands.
+export function TableSkeleton({ rows = 8, cols = 5 }) {
+  return (
+    <Busy>
+      <Card className="overflow-hidden p-0">
+        <div className="h-10 border-b border-[var(--line)] bg-[var(--sunken)]" />
+        <TableRowsSkeleton rows={rows} cols={cols} />
+      </Card>
+    </Busy>
+  );
+}
+
+// Status tags. Squared-off (not pills) and drawn from the shell's own tint
+// tokens, so an amber "Associate" and an amber warning are the same amber.
 export function Badge({ children, color = "slate" }) {
   const colors = {
-    slate: "bg-[#F2F1ED] text-[#2F3437]",
-    green: "bg-[#EDF3EC] text-[#346538]",
-    amber: "bg-amber-100 text-amber-700",
-    red: "bg-[#FDEBEC] text-[#8a2725]",
-    blue: "bg-blue-100 text-blue-700",
+    slate: "bg-[#F2F1ED] text-[var(--ink-body)]",
+    green: "bg-[var(--brand-tint)] text-[var(--brand)]",
+    amber: "bg-[var(--warning-tint)] text-[var(--warning)]",
+    red: "bg-[var(--danger-tint)] text-[var(--danger)]",
+    blue: "bg-[var(--info-tint)] text-[var(--info)]",
   };
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[color]}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded-[5px] px-2 py-0.5 text-xs font-medium ${colors[color] ?? colors.slate}`}>
       {children}
     </span>
   );
 }
 
-export function Spinner() {
+// --- Loading placeholders --------------------------------------------------
+// Every skeleton is drawn in the shape of what it stands in for, so the page
+// doesn't jump when the data lands and the user already knows where to look.
+export function Skeleton({ className = "" }) {
+  return <div aria-hidden="true" className={`skeleton ${className}`} />;
+}
+
+// Wraps any placeholder with the one announcement screen readers need.
+function Busy({ children, className = "" }) {
   return (
-    <div className="flex items-center justify-center p-8">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#EAEAEA] border-t-[#346538]" />
+    <div aria-busy="true" aria-live="polite" className={className}>
+      <span className="sr-only">Loading…</span>
+      {children}
+    </div>
+  );
+}
+
+function SkeletonHeader() {
+  return (
+    <div className="mb-6 sm:mb-8">
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="mt-3 h-8 w-72 max-w-full" />
+      <Skeleton className="mt-3 h-4 w-[28rem] max-w-full" />
+    </div>
+  );
+}
+
+function StatSkeleton() {
+  return (
+    <Card className="flex h-full flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <Skeleton className="h-3.5 w-24" />
+        <Skeleton className="h-8 w-8 flex-none" />
+      </div>
+      <Skeleton className="h-7 w-28" />
+    </Card>
+  );
+}
+
+// Full-page placeholders for the four page shapes the shell has.
+const PAGE_BODIES = {
+  dashboard: (
+    <>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <StatSkeleton key={i} />)}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="mt-5 h-56 w-full" />
+        </Card>
+        <Card>
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="mx-auto mt-6 h-44 w-44 rounded-full!" />
+        </Card>
+      </div>
+    </>
+  ),
+  table: (
+    <>
+      <Card className="mb-4 flex flex-wrap gap-3">
+        <Skeleton className="h-9 min-w-48 flex-1" />
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-9 w-24" />
+      </Card>
+      <Card className="overflow-hidden p-0">
+        <div className="h-10 border-b border-[var(--line)] bg-[var(--sunken)]" />
+        <TableRowsSkeleton rows={8} cols={5} />
+      </Card>
+    </>
+  ),
+  detail: (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <Card className="lg:col-span-2">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-14 w-14 flex-none rounded-full!" />
+          <div className="flex-1">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="mt-2 h-3.5 w-32" />
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i}>
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="mt-2 h-4 w-28" />
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card>
+        <Skeleton className="h-4 w-32" />
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="mt-4 h-10 w-full" />)}
+      </Card>
+    </div>
+  ),
+  list: (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Card key={i} className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 flex-none" />
+          <div className="flex-1">
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="mt-2 h-3.5 w-3/5" />
+          </div>
+          <Skeleton className="h-5 w-20 flex-none" />
+        </Card>
+      ))}
+    </div>
+  ),
+};
+
+export function PageSkeleton({ variant = "table" }) {
+  return (
+    <Busy>
+      <SkeletonHeader />
+      {PAGE_BODIES[variant] ?? PAGE_BODIES.table}
+    </Busy>
+  );
+}
+
+// A few lines of text-shaped placeholder, for a dialog body that is fetching.
+export function TextSkeleton({ lines = 4 }) {
+  return (
+    <Busy className="space-y-3 py-2">
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} className={`h-4 ${i === lines - 1 ? "w-3/5" : "w-full"}`} />
+      ))}
+    </Busy>
+  );
+}
+
+// What an empty chart or panel shows instead of bare axes: what would be here,
+// and what puts it there.
+export function EmptyState({ icon: Icon, title, hint, className = "" }) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center rounded-[var(--radius-control)] border border-dashed border-[var(--line-strong)] bg-[var(--canvas)] px-6 py-10 text-center ${className}`}
+    >
+      {Icon && (
+        <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--sunken)] text-[var(--ink-muted)]">
+          <Icon size={18} />
+        </span>
+      )}
+      <p className="text-sm font-medium text-[var(--ink-body)]">{title}</p>
+      {hint && <p className="mt-1 max-w-xs text-sm leading-relaxed text-[var(--ink-muted)]">{hint}</p>}
     </div>
   );
 }
 
 export function PageHeader({ eyebrow, title, subtitle, actions }) {
   return (
-    <div className="page-head mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+    <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
         {eyebrow && (
           <p className="font-mono-meta mb-1.5 text-[11px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">
@@ -410,47 +565,47 @@ const ACCENTS = {
   red: "bg-[#FDEBEC] text-[#9F2F2D]",
 };
 
-// The figure is the point: label above in muted small caps, value large and
-// tabular so a column of these lines up. Icon is a quiet marker, not the hero.
+// The figure is the point. The label gets its own full-width line so it wraps
+// instead of truncating ("Loan balan…" on a phone is a money label nobody can
+// read), and the value sits large and tabular underneath so a row of these
+// lines up. The icon is a quiet marker in the corner, not the hero.
 // Pass `onClick` to make the whole tile a button — used where a merged total
 // can be broken back down into the records behind it.
 export function StatCard({ label, value, hint, icon: Icon, accent = "emerald", onClick }) {
   const inner = (
     <Card
-      className={`flex items-center gap-3 sm:gap-4 ${
-        onClick
-          ? "card-lift h-full cursor-pointer text-left hover:border-[var(--line-strong)]"
-          : ""
+      className={`flex h-full flex-col gap-3 ${
+        onClick ? "card-lift cursor-pointer text-left hover:border-[var(--line-strong)]" : ""
       }`}
     >
-      {Icon && (
-        <div
-          aria-hidden="true"
-          className={`flex h-10 w-10 flex-none items-center justify-center rounded-[var(--radius-control)] ${
-            ACCENTS[accent] ?? ACCENTS.emerald
-          }`}
-        >
-          <Icon size={19} />
-        </div>
-      )}
-      <div className="min-w-0">
-        <p className="truncate text-xs font-medium uppercase tracking-[0.04em] text-[var(--ink-muted)]">
-          {label}
-        </p>
-        <p className="tabular mt-0.5 truncate text-xl font-semibold text-[var(--ink)] sm:text-2xl">
-          {value}
-        </p>
-        {hint && <p className="mt-0.5 truncate text-xs text-[var(--ink-faint)]">{hint}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[13px] font-medium leading-snug text-[var(--ink-muted)]">{label}</p>
+        {Icon && (
+          <span
+            aria-hidden="true"
+            className={`flex h-8 w-8 flex-none items-center justify-center rounded-[var(--radius-control)] ${
+              ACCENTS[accent] ?? ACCENTS.emerald
+            }`}
+          >
+            <Icon size={16} />
+          </span>
+        )}
       </div>
-      {onClick && (
-        <ChevronRight size={16} className="ml-auto flex-none text-[var(--ink-disabled)]" />
-      )}
+      <div className="mt-auto flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <p className="tabular break-words text-xl font-semibold leading-none tracking-tight text-[var(--ink)] sm:text-[26px]">
+            {value}
+          </p>
+          {hint && <p className="mt-1.5 text-xs text-[var(--ink-faint)]">{hint}</p>}
+        </div>
+        {onClick && <ChevronRight size={16} className="flex-none text-[var(--ink-disabled)]" />}
+      </div>
     </Card>
   );
 
   if (!onClick) return inner;
   return (
-    <button type="button" onClick={onClick} className="focus-ring block w-full rounded-[var(--radius-surface)] text-left">
+    <button type="button" onClick={onClick} className="focus-ring block h-full w-full rounded-[var(--radius-surface)] text-left">
       {inner}
     </button>
   );

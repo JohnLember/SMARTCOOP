@@ -7,7 +7,7 @@ import {
   Card,
   Input,
   Select,
-  Spinner,
+  TableSkeleton,
   PageHeader,
   Badge,
   Modal, DataTable
@@ -145,7 +145,7 @@ export default function UsersList() {
       </Card>
 
       {!users ? (
-        <Spinner />
+        <TableSkeleton />
       ) : (
         <Card className="p-0">
           <DataTable>

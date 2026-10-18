@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-import { Card, Spinner, PageHeader, StatCard, Button, Input, Modal } from "../components/ui";
+import { Card, PageSkeleton, PageHeader, StatCard, Button, Input, Modal, EmptyState } from "../components/ui";
 import { Truck, Wallet, Plus, Coins, Scale } from "lucide-react";
 import ShowComputation from "../components/ShowComputation";
 import {
@@ -94,7 +94,7 @@ export default function MemberDashboard() {
         </p>
       </Card>
     );
-  if (loading) return <Spinner />;
+  if (loading) return <PageSkeleton variant="dashboard" />;
 
   return (
     <div>
@@ -103,7 +103,7 @@ export default function MemberDashboard() {
         subtitle="Your deliveries, earnings and loans at a glance"
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="stagger grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total delivered" value={`${summary.kg.toLocaleString()} kg`} icon={Scale} accent="emerald" />
         <StatCard label="Total earned" value={peso(summary.net)} icon={Coins} accent="green" />
         <StatCard label="CBU total" value={peso(summary.cbu)} icon={Wallet} accent="blue" />
@@ -230,9 +230,11 @@ export default function MemberDashboard() {
             </ComposedChart>
           </ResponsiveContainer>
         ) : (
-          <p className="py-10 text-center text-sm text-[#5F5E5A]">
-            No deliveries in the last 6 months yet.
-          </p>
+          <EmptyState
+            icon={Truck}
+            title="No deliveries in the last 6 months"
+            hint="Each delivery you bring to the collection point shows up here with what it paid."
+          />
         )}
       </Card>
 
@@ -273,9 +275,11 @@ export default function MemberDashboard() {
             </p>
           </>
         ) : (
-          <p className="py-10 text-center text-sm text-[#5F5E5A]">
-            No delivery payouts in the last 6 months yet.
-          </p>
+          <EmptyState
+            icon={Coins}
+            title="No delivery payouts yet"
+            hint="Once you are paid for a delivery, this breaks down your net, CBU, supplies and dayong."
+          />
         )}
       </Card>
 
