@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { BRAND as C } from "../lib/brandTokens";
-import { IconLeaf } from "../components/brand";
 import heroBandPhoto from "../assets/Hero_band_photo.jpg";
 import aboutPhoto from "../assets/about_photo.jpg";
 import incentivesPhoto from "../assets/incentives_photo.jpg";
@@ -166,9 +165,7 @@ function Nav({ user, dashboardHref }) {
     <header className="sticky top-0 z-40 backdrop-blur-md" style={{ background: "rgba(16,23,15,0.94)", borderBottom: `1px solid ${C.canopyLine}` }}>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <a href="#top" className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-sm" style={{ background: C.amber, color: C.canopy }}>
-            <IconLeaf size={16} />
-          </span>
+          <img src="/smartcoop-mark.png" alt="" className="h-8 w-8" />
           <span className="font-tap-display text-[15px] font-medium tracking-tight" style={{ color: C.latex }}>SMARTCOOP</span>
         </a>
         <nav className="hidden items-center gap-8 md:flex">
@@ -262,7 +259,6 @@ function Hero({ user, dashboardHref }) {
               tabIndex={-1}
               aria-hidden="true"
               className="pointer-events-none aspect-square w-full select-none rounded-sm object-cover"
-              style={{ border: `1px solid ${C.canopyLine}` }}
             />
           </div>
         )}
@@ -631,9 +627,7 @@ function Footer() {
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-sm" style={{ background: C.amber, color: C.canopy }}>
-                <IconLeaf size={16} />
-              </span>
+              <img src="/smartcoop-mark.png" alt="" className="h-8 w-8" />
               <span className="font-tap-display text-[15px] font-medium tracking-tight" style={{ color: C.latex }}>SMARTCOOP</span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-[1.6]" style={{ color: latexA(0.6) }}>

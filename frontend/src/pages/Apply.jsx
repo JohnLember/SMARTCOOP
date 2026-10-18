@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import api, { apiError } from "../lib/api";
 import { Button, Input, Select, Textarea } from "../components/ui";
-import { IconLeaf, Herringbone } from "../components/brand";
+import { Herringbone } from "../components/brand";
 import { BRAND } from "../lib/brandTokens";
 import { ArrowLeft, Check } from "lucide-react";
 import aboutPhoto from "../assets/about_photo.jpg";
@@ -82,12 +82,7 @@ export default function Apply() {
 
         <div className="relative flex h-full flex-col justify-between p-10">
           <Link to="/" className="inline-flex items-center gap-2.5">
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-              style={{ background: "#111111" }}
-            >
-              <IconLeaf size={16} />
-            </span>
+            <img src="/smartcoop-mark.png" alt="" className="h-8 w-8" />
             <span className="font-tap-display text-[15px] font-medium tracking-tight" style={{ color: BRAND.latex }}>
               SMARTCOOP
             </span>
@@ -125,12 +120,7 @@ export default function Apply() {
             Back to home
           </Link>
 
-          <span
-            className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg text-white lg:hidden"
-            style={{ background: "#111111" }}
-          >
-            <IconLeaf size={22} />
-          </span>
+          <img src="/smartcoop-mark.png" alt="SMARTCOOP" className="mb-4 block h-11 w-11 lg:hidden" />
 
           <h1 className="font-tap-display text-4xl font-light" style={{ color: BRAND.ink }}>
             Apply for membership

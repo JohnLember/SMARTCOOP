@@ -17,13 +17,6 @@ export const Ic = ({ children, size = 22 }) => (
   </svg>
 );
 
-export const IconLeaf = (p) => (
-  <Ic {...p}>
-    <path d="M11 20A7 7 0 0 1 4 13c0-5 5-9 15-9 0 8-4 13-8 13Z" />
-    <path d="M6 21c0-4 3-8 8-10" />
-  </Ic>
-);
-
 // The tapping-cut motif. Horizontal for stacked-section seams, vertical for
 // the split-pane seam on auth pages.
 export function Herringbone({ orientation = "horizontal", stroke = BRAND.amber, size = 14 }) {

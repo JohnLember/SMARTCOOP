@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext";
 import { apiError } from "../lib/api";
 import { Button, Input } from "../components/ui";
-import { IconLeaf, Herringbone } from "../components/brand";
+import { Herringbone } from "../components/brand";
 import { BRAND } from "../lib/brandTokens";
 import { ArrowLeft } from "lucide-react";
 import heroBandPhoto from "../assets/Hero_band_photo.jpg";
@@ -56,12 +56,7 @@ export default function Login() {
 
         <div className="relative flex h-full flex-col justify-between p-10">
           <Link to="/" className="inline-flex items-center gap-2.5">
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
-              style={{ background: "#111111" }}
-            >
-              <IconLeaf size={16} />
-            </span>
+            <img src="/smartcoop-mark.png" alt="" className="h-8 w-8" />
             <span className="font-tap-display text-[15px] font-medium tracking-tight" style={{ color: BRAND.latex }}>
               SMARTCOOP
             </span>
@@ -98,12 +93,7 @@ export default function Login() {
           </div>
 
           <div className="mb-7 lg:hidden">
-            <span
-              className="mb-4 flex h-11 w-11 items-center justify-center rounded-lg text-white"
-              style={{ background: "#111111" }}
-            >
-              <IconLeaf size={22} />
-            </span>
+            <img src="/smartcoop-mark.png" alt="SMARTCOOP" className="mb-4 block h-11 w-11" />
           </div>
 
           <h1 className="font-tap-display text-3xl font-light" style={{ color: BRAND.ink }}>

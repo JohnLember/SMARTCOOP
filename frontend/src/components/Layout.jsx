@@ -11,7 +11,6 @@ import {
   LayoutDashboard,
   Bell,
   LogOut,
-  Leaf,
   UserCircle,
   Truck,
   Wallet,
@@ -166,9 +165,7 @@ export default function Layout() {
           <Menu size={20} />
         </button>
         <NavLink to="/" className="flex min-w-0 items-center gap-2">
-          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-[var(--radius-control)] bg-[var(--accent)] text-[#10170F]">
-            <Leaf size={16} />
-          </span>
+          <img src="/smartcoop-mark.png" alt="" className="h-8 w-8 flex-none" />
           <span className="font-serif-display truncate text-[15px] font-light tracking-tight text-[var(--ink)]">
             SMARTCOOP
           </span>
@@ -210,9 +207,7 @@ export default function Layout() {
         <NavLink to="/" className="flex items-center gap-2.5 px-6 py-5">
           {/* Same amber mark as the public site and the logo files, so signing in
               doesn't swap the brand for a different black tile. */}
-          <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] bg-[var(--accent)] text-[#10170F]">
-            <Leaf size={18} />
-          </span>
+          <img src="/smartcoop-mark.png" alt="" className="h-9 w-9" />
           <div>
             <p className="font-serif-display text-[17px] font-light tracking-tight text-[#111111]">SMARTCOOP</p>
             <p className="text-xs text-[#787774]">Rubber Cooperative</p>
