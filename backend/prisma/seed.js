@@ -89,8 +89,35 @@ async function main() {
   // Importing them as members here created a duplicate on approval.
   const existingApplicationCount = await prisma.membershipApplication.count();
   if (existingApplicationCount === 0) {
+    // Made-up contact details, from a fixed random seed so every reset gives the same values.
+    const rng = (seed) => () => {
+      seed = (seed + 0x6d2b79f5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const rand = rng(20260);
+    const pick = (n) => Math.floor(rand() * n);
+    // Submitted: random moments from Aug 27 to Oct 17, 2026 (Philippine time), sorted so
+    // APP numbers follow submission order. Own stream, so the other values don't shift.
+    const randSubmitted = rng(827);
+    const from = Date.parse("2026-08-27T00:00:00+08:00");
+    const to = Date.parse("2026-10-18T00:00:00+08:00");
+    const submitted = farmers.map(() => from + Math.floor(randSubmitted() * (to - from))).sort((a, b) => a - b);
+    // Ages 26–49 today: born after (today − 50 years) and on or before (today − 26 years).
+    const today = new Date();
+    const utc = (yearsBack, dayShift = 0) =>
+      Date.UTC(today.getFullYear() - yearsBack, today.getMonth(), today.getDate() + dayShift);
+    const oldest = utc(50, 1);
+    const youngest = utc(26);
+    const DAY = 86400000;
+    const emailCount = {};
+
     let nextNo = 1;
     for (const [firstName, lastName, middleName] of farmers) {
+      // "Dela Cruz" → delacruz, "Ruth-Personal" → ruthpersonal; a repeated name gets 2, 3, …
+      const base = `${firstName}${lastName}`.normalize("NFD").toLowerCase().replace(/[^a-z]/g, "");
+      emailCount[base] = (emailCount[base] ?? 0) + 1;
       await prisma.membershipApplication.create({
         data: {
           applicationNo: `APP-${String(nextNo).padStart(4, "0")}`,
@@ -99,6 +126,11 @@ async function main() {
           middleName: middleName || null,
           membershipType: "ASSOCIATE",
           status: "PENDING",
+          barangayId: barangays[barangayNames[pick(barangayNames.length)]],
+          contactNo: "09" + String(pick(1e9)).padStart(9, "0"),
+          email: `${base}${emailCount[base] > 1 ? emailCount[base] : ""}@gmail.com`,
+          birthdate: new Date(oldest + pick((youngest - oldest) / DAY + 1) * DAY),
+          createdAt: new Date(submitted[nextNo - 1]),
         },
       });
       nextNo += 1;

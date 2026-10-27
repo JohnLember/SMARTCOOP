@@ -6,18 +6,21 @@ import {
   Button,
   Card,
   Input,
+  SearchInput,
   Select,
   TableSkeleton,
   PageHeader,
   Badge,
-  Modal, DataTable
+  Modal, DataTable, Pagination
 } from "../../components/ui";
+import { usePagination } from "../../lib/usePagination";
 import { useConfirm } from "../../components/ConfirmDialog";
 import { formatDate } from "../../lib/format";
 import { Plus, KeyRound, Pencil, Trash2, ShieldCheck } from "lucide-react";
 
 const ROLE_COLOR = { ADMIN: "red", STAFF: "blue", MAO: "amber", MEMBER: "green" };
 const ROLES = ["ADMIN", "STAFF", "MAO", "MEMBER"];
+const PAGE_SIZES = [10, 20, 50, 100];
 
 export default function UsersList() {
   const { user: me } = useAuth();
@@ -26,6 +29,8 @@ export default function UsersList() {
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const { page, setPage, pageCount, pageItems } = usePagination(users, pageSize);
   const [error, setError] = useState("");
 
   // Modal state: { mode: "create" | "edit" | "password", user? }
@@ -124,7 +129,7 @@ export default function UsersList() {
           className="flex items-end gap-3"
         >
           <div className="flex-1">
-            <Input
+            <SearchInput
               label="Search username"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -139,7 +144,20 @@ export default function UsersList() {
               ))}
             </Select>
           </div>
-          <Button type="submit" variant="secondary">Search</Button>
+          <div className="w-32">
+            <Select
+              label="Rows per page"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              {PAGE_SIZES.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </Select>
+          </div>
         </form>
         {error && <p className="mt-2 text-sm text-[#9F2F2D]">{error}</p>}
       </Card>
@@ -160,7 +178,7 @@ export default function UsersList() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => {
+              {pageItems.map((u) => {
                 const isMe = u.id === me?.id;
                 return (
                   <tr key={u.id} className="hover:bg-[#F7F6F3]">
@@ -220,6 +238,7 @@ export default function UsersList() {
           </DataTable>
         </Card>
       )}
+      {users && <Pagination page={page} pageCount={pageCount} onPage={setPage} />}
 
       <UserModal
         modal={modal}
