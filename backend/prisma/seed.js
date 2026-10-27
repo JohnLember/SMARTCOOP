@@ -27,8 +27,13 @@ async function main() {
     },
   });
 
-  // --- Barangays (San Luis, Aurora sample barangays) ---
-  const barangayNames = ["Poblacion", "Dibalo", "Dibut", "Dikapinisan", "Dimanayat", "Nonong Senior", "Real", "San Isidro", "Bacong"];
+  // --- Barangays (the cooperative's list, SANLUIS_BRGYLIST.xlsx; "Outside SL" covers members living outside San Luis) ---
+  const barangayNames = [
+    "Anislagan", "Balit", "Baylo", "Binicalan", "Cecilia", "Coalicion", "Culi", "Dimasalang",
+    "Don Alejandro", "Don Pedro", "Doña Flavia", "Duangan", "KM7", "Doña Maxima", "Mahagsay",
+    "Mahapag", "Mahayahay", "Muritula", "Nuevo Trabajo", "Poblacion", "Policarpo", "San Isidro",
+    "San Pedro", "Santa Ines", "Santa Rita", "Santiago", "Tuburan", "Wegguam", "Outside SL",
+  ];
   const barangays = {};
   for (const name of barangayNames) {
     const b = await prisma.barangay.upsert({
@@ -59,10 +64,10 @@ async function main() {
   // --- Sample members ---
   const sampleMembers = [
     { memberNo: "M-0001", firstName: "Juan", lastName: "Dela Cruz", sex: "Male", barangay: "Poblacion", membershipType: "REGULAR", shareCapital: 15000, dateJoined: "2019-03-01" },
-    { memberNo: "M-0002", firstName: "Maria", lastName: "Santos", sex: "Female", barangay: "Dibut", membershipType: "ASSOCIATE", shareCapital: 6000, dateJoined: "2022-07-15" },
-    { memberNo: "M-0003", firstName: "Pedro", lastName: "Reyes", sex: "Male", barangay: "Real", membershipType: "ASSOCIATE", shareCapital: 2500, dateJoined: "2023-11-20" },
+    { memberNo: "M-0002", firstName: "Maria", lastName: "Santos", sex: "Female", barangay: "Santa Rita",membershipType: "ASSOCIATE", shareCapital: 6000, dateJoined: "2022-07-15" },
+    { memberNo: "M-0003", firstName: "Pedro", lastName: "Reyes", sex: "Male", barangay: "Mahayahay",membershipType: "ASSOCIATE", shareCapital: 2500, dateJoined: "2023-11-20" },
     { memberNo: "M-0004", firstName: "Ana", lastName: "Lim", sex: "Female", barangay: "San Isidro", membershipType: "ASSOCIATE", shareCapital: 8000, dateJoined: "2021-01-10" },
-    { memberNo: "M-0005", firstName: "Jose", lastName: "Garcia", sex: "Male", barangay: "Bacong", membershipType: "REGULAR", shareCapital: 18500, dateJoined: "2018-06-05" },
+    { memberNo: "M-0005", firstName: "Jose", lastName: "Garcia", sex: "Male", barangay: "Coalicion",membershipType: "REGULAR", shareCapital: 18500, dateJoined: "2018-06-05" },
   ];
 
   for (const m of sampleMembers) {

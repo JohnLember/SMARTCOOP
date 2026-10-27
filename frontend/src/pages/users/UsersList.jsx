@@ -199,7 +199,7 @@ export default function UsersList() {
                           disabled={isMe}
                           title={u.status === "ACTIVE" ? "Deactivate" : "Activate"}
                         >
-                          <ShieldCheck size={15} className={u.status === "ACTIVE" ? "text-[#346538]" : "text-[#5F5E5A]"} />
+                          <ShieldCheck size={15} className={u.status === "ACTIVE" ? "text-[var(--danger)]" : "text-[#5F5E5A]"} />
                         </Button>
                         <Button variant="ghost" onClick={() => remove(u)} disabled={isMe} title="Delete">
                           <Trash2 size={15} className="text-[#9F2F2D]" />
