@@ -178,11 +178,13 @@ export function SearchInput({ label = "Search", className = "", ...props }) {
   return (
     <FieldShell label={label}>
       <div className="relative">
-        <input className={`${FIELD} ${fieldBorder()} pr-10 ${className}`} {...props} />
+        <input className={`${FIELD} ${fieldBorder()} pr-11 ${className}`} {...props} />
+        {/* Inset 3px so it sits inside the border; radius = field radius (8px) − inset. */}
         <button
           type="submit"
           aria-label="Search"
-          className="focus-ring absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-[var(--radius-control)] text-[var(--ink-muted)] hover:bg-[var(--sunken)] hover:text-[var(--brand)]"
+          title="Search"
+          className="focus-ring btn-press absolute inset-y-[3px] right-[3px] flex w-8 items-center justify-center rounded-[5px] text-[var(--ink-muted)] hover:bg-[var(--brand-tint)] hover:text-[var(--brand)]"
         >
           <Search size={16} />
         </button>
