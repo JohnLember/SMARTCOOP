@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Input,
+  SearchInput,
   Select,
   TableSkeleton,
   PageHeader,
@@ -17,7 +18,7 @@ import {
   MemberCombobox,
 } from "../../components/ui";
 import { usePagination } from "../../lib/usePagination";
-import { Plus, AlertTriangle, Search, X } from "lucide-react";
+import { Plus, AlertTriangle, X } from "lucide-react";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
@@ -256,8 +257,7 @@ export default function LoansList() {
           className="flex flex-wrap items-end gap-3"
         >
           <div className="flex-1 min-w-48">
-            <Input
-              label="Search"
+            <SearchInput
               placeholder="Member No. or name"
               value={search}
               // Emptying the box is a filter change too: without this the list
@@ -280,10 +280,6 @@ export default function LoansList() {
               ))}
             </Select>
           </div>
-          <Button type="submit" variant="secondary">
-            <Search size={16} />
-            Filter
-          </Button>
           {hasFilters && (
             <Button type="button" variant="ghost" onClick={clearFilters}>
               <X size={16} />

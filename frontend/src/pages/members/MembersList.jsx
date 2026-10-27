@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import {
   Button,
   Card,
-  Input,
+  SearchInput,
   Select,
   TableSkeleton,
   PageHeader,
@@ -15,7 +15,7 @@ import {
   Avatar,
   Pagination, DataTable
 } from "../../components/ui";
-import { Plus, Search, RefreshCw, X } from "lucide-react";
+import { Plus, RefreshCw, X } from "lucide-react";
 
 export default function MembersList() {
   const [data, setData] = useState(null);
@@ -113,8 +113,7 @@ export default function MembersList() {
           className="flex flex-wrap items-end gap-3"
         >
           <div className="flex-1 min-w-48">
-            <Input
-              label="Search"
+            <SearchInput
               placeholder="Name or member no."
               value={search}
               // Emptying the box is a filter change too: without this the list
@@ -144,10 +143,6 @@ export default function MembersList() {
               ))}
             </Select>
           </div>
-          <Button type="submit" variant="secondary">
-            <Search size={16} />
-            Filter
-          </Button>
           {hasFilters && (
             <Button type="button" variant="ghost" onClick={clearFilters}>
               <X size={16} />

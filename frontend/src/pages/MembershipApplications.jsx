@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Input,
+  SearchInput,
   Select,
   TableSkeleton,
   PageHeader,
@@ -16,7 +17,7 @@ import { formatDate } from "../lib/format";
 import { usePagination } from "../lib/usePagination";
 import ReceiptDocument from "../components/ReceiptDocument";
 import { useConfirm } from "../components/ConfirmDialog";
-import { Check, X, Search, Printer } from "lucide-react";
+import { Check, X, Printer } from "lucide-react";
 import { toast } from "react-toastify";
 
 const STATUS_COLOR = { PENDING: "amber", APPROVED: "green", REJECTED: "red" };
@@ -86,8 +87,7 @@ export default function MembershipApplications() {
           className="flex flex-wrap items-end gap-3"
         >
           <div className="flex-1 min-w-48">
-            <Input
-              label="Search"
+            <SearchInput
               placeholder="Application No."
               value={search}
               // Emptying the box is a filter change too: without this the list
@@ -102,7 +102,10 @@ export default function MembershipApplications() {
             <Select
               label="Barangay"
               value={barangayId}
-              onChange={(e) => setBarangayId(e.target.value)}
+              onChange={(e) => {
+                setBarangayId(e.target.value);
+                load({ barangayId: e.target.value });
+              }}
             >
               <option value="">All barangays</option>
               {barangays.map((b) => (
@@ -110,10 +113,6 @@ export default function MembershipApplications() {
               ))}
             </Select>
           </div>
-          <Button type="submit" variant="secondary">
-            <Search size={16} />
-            Filter
-          </Button>
           {hasFilters && (
             <Button type="button" variant="ghost" onClick={clearFilters}>
               <X size={16} />
