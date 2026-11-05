@@ -241,13 +241,13 @@ The score maps to a **risk band** (LOW / MEDIUM / HIGH) with a lending recommend
 Classifies members as **Active / Moderate / Inactive / Not Applicable** for an evaluation period (default 30 days), tunable via `AppSetting` key `"categorization"`. Two indicators:
 
 - **Delivery Score (DS)** — from rubber kilos delivered in the period (bands: ≥300 kg → 50, ≥100 kg → 30, else 10).
-- **Loan Score (LS)** — from loan repayment rate `RR = paid ÷ due × 100` (≥90% → 50, ≥70% → 30, else 10).
+- **Loan Score (LS)** — from loan repayment rate `RR = paid ÷ due × 100` (≥90% → 50, ≥70% → 30, else 10). Only installments whose due date has passed count, on both sides: a member who pays every installment on time is at 100% from the first month, and paying ahead earns nothing extra.
 
 | Member situation | How they're scored |
 | --- | --- |
-| **Has a loan** | `Activity Score = DS + LS`, then thresholds (Active ≥ 80, Moderate ≥ 50, else Inactive) |
-| **No loan, but delivered this period** | **Delivery-only:** DS rescaled to the full 0–100 range (`DS ÷ 50 × 100`) so a strong deliverer can still reach Active |
-| **No loan and no deliveries this period** | **Not Applicable** — no signal to judge |
+| **Has a loan installment already due** | `Activity Score = DS + LS`, then thresholds (Active ≥ 80, Moderate ≥ 50, else Inactive) |
+| **No loan (or nothing due yet), but delivered this period** | **Delivery-only:** DS rescaled to the full 0–100 range (`DS ÷ 50 × 100`) so a strong deliverer can still reach Active, and taking a new loan never lowers the category |
+| **No loan (or nothing due yet) and no deliveries this period** | **Not Applicable** — no signal to judge |
 
 > This makes categorization **fair to associates**, who can't take loans: a heavy-delivering associate reaches Active on deliveries alone instead of being stuck at "Not Applicable." Because it is **period-based**, an associate who delivered heavily last period but nothing this period drops to Not Applicable for the current period.
 

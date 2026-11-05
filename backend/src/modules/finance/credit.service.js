@@ -1,6 +1,7 @@
 import prisma from "../../config/db.js";
 import { notFound } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
+import { deriveTotals } from "./allocate.js";
 
 // ---------------------------------------------------------------------------
 // Agricultural Credit Scoring System
@@ -72,7 +73,8 @@ export function scoreMember({ member, loans, deliveries }, config = DEFAULT_CONF
   let fullyRepaidLoans = 0;
 
   for (const loan of loans) {
-    if (loan.status === "ACTIVE") outstanding += Number(loan.remainingBalance);
+    // Interest included, so the card agrees with the member's "Loan balance".
+    if (loan.status === "ACTIVE") outstanding += deriveTotals(loan.schedule).totalOutstanding;
     const allPaid = loan.schedule.length > 0 && loan.schedule.every((r) => r.status === "PAID");
     if (loan.status === "INACTIVE" && allPaid) fullyRepaidLoans += 1;
     for (const row of loan.schedule) {

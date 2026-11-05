@@ -92,7 +92,10 @@ function previewAllocation(schedule, amount, anchorPeriodNo) {
 const METRICS = {
   count: { label: "Loans", per: () => null },
   principal: { label: "Total principal", per: (l) => peso(l.principalAmount) },
-  balance: { label: "Remaining balance", per: (l) => peso(l.remainingBalance) },
+  balance: {
+    label: "Total owed",
+    per: (l) => `${peso(l.totalOutstanding)} · principal ${peso(l.remainingBalance)}`,
+  },
   interest: { label: "Total interest", per: (l) => peso(interestOf(l)) },
 };
 
@@ -192,7 +195,10 @@ export default function MemberLoans() {
   const totals = {
     count: loans.length,
     principal: loans.reduce((s, l) => s + Number(l.principalAmount), 0),
-    balance: loans.reduce((s, l) => s + Number(l.remainingBalance), 0),
+    // Interest included, matching the member's own "Loan balance"; principal is
+    // shown underneath because it drops only when a whole period is paid.
+    balance: loans.reduce((s, l) => s + Number(l.totalOutstanding), 0),
+    principalLeft: loans.reduce((s, l) => s + Number(l.remainingBalance), 0),
     interest: loans.reduce((s, l) => s + interestOf(l), 0),
   };
   const active = loans.filter((l) => l.status === "ACTIVE").length;
@@ -233,8 +239,9 @@ export default function MemberLoans() {
           onClick={() => setMetric("principal")}
         />
         <StatCard
-          label="Remaining balance"
+          label="Total owed"
           value={peso(totals.balance)}
+          hint={`of which principal ${peso(totals.principalLeft)}`}
           icon={Wallet}
           accent="amber"
           onClick={() => setMetric("balance")}
@@ -613,8 +620,9 @@ function LoanSection({ loan, index, onPay, onVoid, onPrint, onSettle }) {
           </h2>
           <p className="text-sm text-[var(--ink-muted)]">
             Issued {formatDate(loan.dateIssued)} · {Number(loan.interestRate)}%/mo ·{" "}
-            {loan.termMonths} months · balance{" "}
-            <span className="font-medium text-[var(--ink-body)]">{peso(loan.remainingBalance)}</span>
+            {loan.termMonths} months · owes{" "}
+            <span className="font-medium text-[var(--ink-body)]">{peso(loan.totalOutstanding)}</span>{" "}
+            (principal {peso(loan.remainingBalance)})
           </p>
         </div>
         <div className="flex items-center gap-2">

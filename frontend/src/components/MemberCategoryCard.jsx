@@ -80,7 +80,7 @@ export default function MemberCategoryCard({ member, canRecategorize = false, on
                 {category === "NOT_APPLICABLE"
                   ? isAssociate
                     ? "No deliveries in the last 30 days, so there's nothing to score this period."
-                    : "No deliveries in the last 30 days and no loan on record, so there's nothing to score this period."
+                    : "No deliveries in the last 30 days and no loan payment due yet, so there's nothing to score this period."
                   : isAssociate
                     ? "Delivering more rubber can raise this to Active."
                     : "Delivering more and staying current on loan payments can raise this to Active."}
@@ -163,7 +163,8 @@ function buildGuide(isAssociate) {
       tips: [
         "Pay every loan installment on or before its due date.",
         "A repayment rate (paid ÷ due) of 90%+ earns the full 50 points; 70–89% earns 30.",
-        "No loan yet? You're scored on delivery alone — deliver 300 kg+ in 30 days to reach Active without a loan.",
+        "Only installments already due count, so a new loan never lowers your score, and paying ahead adds nothing extra.",
+        "No loan yet, or no payment due yet? You're scored on delivery alone — deliver 300 kg+ in 30 days to reach Active.",
       ],
     },
     {

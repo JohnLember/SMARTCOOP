@@ -17,3 +17,5 @@ SETUP.md
 graphify-out
 CLAUDE.md
 DESIGN.md
+# Local end-to-end API test (rebuilds a throwaway <db>_e2e database).
+backend/e2e/

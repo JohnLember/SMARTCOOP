@@ -103,27 +103,34 @@ export function evaluate({ rk, totalLoanPaid, totalLoanDue, hasLoan }, config = 
 }
 
 // Gathers RK (delivery kilos in the evaluation window) and loan totals.
+//
+// Only installments already due count. Summing the whole schedule scored a
+// member who pays every installment on time as a poor payer until the loan was
+// nearly finished, and dropped a member to Moderate the day a loan was issued.
+// Paying ahead earns nothing extra: a future row's payment is not in either sum.
 async function getInputs(memberId, config) {
   const since = new Date();
   since.setDate(since.getDate() - config.evaluationDays);
 
-  const [rkAgg, loanAgg, loanCount] = await Promise.all([
+  const [rkAgg, loanAgg] = await Promise.all([
     prisma.rubberDelivery.aggregate({
       where: { memberId, deliveryDate: { gte: since } },
       _sum: { weightKg: true },
     }),
     prisma.loanSchedule.aggregate({
-      where: { loan: { memberId } },
+      where: { loan: { memberId }, dueDate: { lte: new Date() } },
       _sum: { totalDue: true, amountPaid: true },
     }),
-    prisma.loan.count({ where: { memberId } }),
   ]);
 
+  const totalLoanDue = Number(loanAgg._sum.totalDue ?? 0);
   return {
     rk: Number(rkAgg._sum.weightKg ?? 0),
     totalLoanPaid: Number(loanAgg._sum.amountPaid ?? 0),
-    totalLoanDue: Number(loanAgg._sum.totalDue ?? 0),
-    hasLoan: loanCount > 0,
+    totalLoanDue,
+    // A loan with nothing due yet has no repayment record to judge, so the
+    // member is scored on delivery alone, exactly like a member with no loan.
+    hasLoan: totalLoanDue > 0,
   };
 }
 
@@ -185,10 +192,10 @@ export async function explain(memberId) {
 
   steps.push({
     label: "Step 1 — Repayment Rate (RR)",
-    formula: "Repayment Rate (RR) = Total Loan Paid ÷ Total Loan Due × 100",
+    formula: "Repayment Rate (RR) = Paid on installments due so far ÷ Installments due so far × 100",
     substitution: r.hasLoan
       ? `${fmt(r.totalLoanPaid)} ÷ ${fmt(r.totalLoanDue)} × 100`
-      : "member has no loan → Repayment Rate (RR) is undefined",
+      : "no loan installment due yet → Repayment Rate (RR) is undefined",
     result: r.hasLoan ? `${fmt(r.repaymentRate)}%` : "N/A",
   });
 
@@ -221,14 +228,14 @@ export async function explain(memberId) {
   } else if (r.category === "NOT_APPLICABLE") {
     steps.push({
       label: "Step 3 — Membership Category (MC)",
-      formula: "No loan and no deliveries this period — nothing to score",
-      substitution: `no loan on record, Rubber Kilos (RK) = ${fmt(r.rk)} kg`,
+      formula: "No loan installment due and no deliveries this period — nothing to score",
+      substitution: `no loan installment due yet, Rubber Kilos (RK) = ${fmt(r.rk)} kg`,
       result: "Not Applicable",
     });
   } else {
     steps.push({
       label: "Step 3 — Activity Score (AS), delivery-only",
-      formula: `No loan (associate) → judged on delivery alone: Activity Score (AS) = Delivery Score (DS) ÷ ${c.delivery.highPts} × 100`,
+      formula: `No loan installment due yet → judged on delivery alone: Activity Score (AS) = Delivery Score (DS) ÷ ${c.delivery.highPts} × 100`,
       substitution: `${r.deliveryScore} ÷ ${c.delivery.highPts} × 100`,
       result: `${r.activityScore}`,
     });
@@ -243,7 +250,7 @@ export async function explain(memberId) {
   return {
     title: "Dynamic Member Categorization",
     description:
-      "Activity Score (AS) = Delivery Score (DS) + Loan Score (LS) (equal weights) for members with a loan. Members with no loan are judged on delivery alone (Delivery Score (DS) rescaled to 0–100); those with no deliveries this period are Not Applicable. Thresholds are configurable in system settings (app_settings → categorization).",
+      "Activity Score (AS) = Delivery Score (DS) + Loan Score (LS) (equal weights) for members with loan installments already due; the repayment rate counts only those. Members with no loan, or nothing due yet, are judged on delivery alone (Delivery Score (DS) rescaled to 0–100); those with no deliveries this period are Not Applicable. Thresholds are configurable in system settings (app_settings → categorization).",
     steps,
     result: {
       label: r.category === "NOT_APPLICABLE" ? "Category" : "Category (Activity Score)",

@@ -52,11 +52,13 @@ export default function LoansList() {
     for (const l of loans ?? []) {
       const key = l.member.id;
       if (!map.has(key))
-        map.set(key, { member: l.member, loans: [], principal: 0, balance: 0, active: 0 });
+        map.set(key, { member: l.member, loans: [], principal: 0, owed: 0, principalLeft: 0, active: 0 });
       const g = map.get(key);
       g.loans.push(l);
       g.principal += Number(l.principalAmount);
-      g.balance += Number(l.remainingBalance);
+      // Interest included — the same figure the member sees on their own screen.
+      g.owed += Number(l.totalOutstanding);
+      g.principalLeft += Number(l.remainingBalance);
       if (l.status === "ACTIVE") g.active += 1;
     }
     return [...map.values()];
@@ -299,7 +301,7 @@ export default function LoansList() {
                 <th>Member</th>
                 <th>Loans</th>
                 <th>Total principal</th>
-                <th>Total balance</th>
+                <th>Total owed</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -321,7 +323,10 @@ export default function LoansList() {
                     )}
                   </td>
                   <td className="text-[#787774]">{peso(g.principal)}</td>
-                  <td className="font-medium text-[#2F3437]">{peso(g.balance)}</td>
+                  <td>
+                    <div className="font-medium text-[#2F3437]">{peso(g.owed)}</div>
+                    <div className="text-xs text-[var(--ink-muted)]">principal {peso(g.principalLeft)}</div>
+                  </td>
                   <td>
                     {/* One badge per member: how many of their loans are still running. */}
                     <Badge color={g.active > 0 ? "green" : "slate"}>
