@@ -1,7 +1,7 @@
 import prisma from "../../config/db.js";
 import { comparePassword, hashPassword } from "../../utils/password.js";
 import { signToken } from "../../utils/jwt.js";
-import { badRequest, conflict, unauthorized } from "../../utils/httpError.js";
+import { badRequest, conflict, forbidden, unauthorized } from "../../utils/httpError.js";
 import { logActivity } from "../../utils/activityLog.js";
 
 // Returns a safe user object (no password hash).
@@ -68,6 +68,30 @@ export async function register({ username, password, role, memberId }, actorId) 
   await logActivity(actorId, `Created ${role} account "${username}"`);
 
   return toSafeUser(user);
+}
+
+export async function updateProfile(userId, { firstName, middleName, lastName }) {
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { firstName, middleName: middleName ?? null, lastName },
+    include: { member: true },
+  });
+  await logActivity(userId, "Updated own profile");
+  return toSafeUser(user);
+}
+
+export async function changePassword(userId, currentPassword, newPassword) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw unauthorized("User no longer exists");
+  // 403, not 401: the shared axios client logs the user out on any 401.
+  if (!(await comparePassword(currentPassword, user.passwordHash))) {
+    throw forbidden("Current password is incorrect");
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(newPassword) },
+  });
+  await logActivity(userId, "Changed own password");
 }
 
 export async function getCurrentUser(userId) {

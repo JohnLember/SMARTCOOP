@@ -46,6 +46,7 @@ const NAV = {
     { section: "System", items: [
       { to: "/users", label: "User Management", icon: UserCog },
       { to: "/notifications", label: "Notifications", icon: Bell },
+      { to: "/profile", label: "My Profile", icon: UserCircle },
     ] },
   ],
   STAFF: [
@@ -67,6 +68,7 @@ const NAV = {
     ] },
     { section: "System", items: [
       { to: "/notifications", label: "Notifications", icon: Bell },
+      { to: "/profile", label: "My Profile", icon: UserCircle },
     ] },
   ],
   MAO: [
@@ -74,6 +76,7 @@ const NAV = {
       { to: "/mao", label: "MAO Dashboard", icon: LayoutDashboard, end: true },
       { to: "/mao/members-by-barangay", label: "Members by Barangay", icon: MapPin },
       { to: "/notifications", label: "Notifications", icon: Bell },
+      { to: "/profile", label: "My Profile", icon: UserCircle },
     ] },
   ],
   MEMBER: [

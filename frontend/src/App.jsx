@@ -23,12 +23,14 @@ import MyReceipts from "./pages/MyReceipts";
 import MyLoans from "./pages/MyLoans";
 import MemberDashboard from "./pages/MemberDashboard";
 import Notifications from "./pages/Notifications";
+import Profile from "./pages/Profile";
 import MaoDashboard from "./pages/mao/MaoDashboard";
 import MembersByBarangay from "./pages/mao/MembersByBarangay";
 
 const STAFF = ["ADMIN", "STAFF"];
 const ADMIN_ONLY = ["ADMIN"];
 const MAO_ACCESS = ["MAO"];
+const OFFICE = ["ADMIN", "STAFF", "MAO"];
 
 function App() {
   return (
@@ -83,6 +85,7 @@ function App() {
 
         {/* Shared */}
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/profile" element={<ProtectedRoute roles={OFFICE}><Profile /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

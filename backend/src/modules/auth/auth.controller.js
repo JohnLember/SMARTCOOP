@@ -13,6 +13,36 @@ const registerSchema = z.object({
   memberId: z.number().int().positive().optional(),
 });
 
+// Username, role and status are deliberately absent: only an admin changes those.
+const profileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required").max(100),
+  middleName: z.string().trim().max(100).transform((v) => v || null).nullable().optional(),
+  lastName: z.string().trim().min(1, "Last name is required").max(100),
+});
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(10, "Password must be at least 10 characters"),
+});
+
+export async function updateMe(req, res, next) {
+  try {
+    res.json(await authService.updateProfile(req.user.id, profileSchema.parse(req.body)));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function changePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = passwordSchema.parse(req.body);
+    await authService.changePassword(req.user.id, currentPassword, newPassword);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function login(req, res, next) {
   try {
     const { username, password } = loginSchema.parse(req.body);
