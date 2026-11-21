@@ -96,6 +96,10 @@ enum ApplicationStatus {
 model User {
   id           Int        @id @default(autoincrement())
   username     String     @unique
+  // Optional: MEMBER accounts take their name from the linked Member record.
+  firstName    String?    @map("first_name")
+  middleName   String?    @map("middle_name")
+  lastName     String?    @map("last_name")
   passwordHash String     @map("password_hash")
   role         Role
   status       UserStatus @default(ACTIVE)

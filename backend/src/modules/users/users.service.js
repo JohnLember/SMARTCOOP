@@ -7,6 +7,9 @@ import { logActivity } from "../../utils/activityLog.js";
 const userSelect = {
   id: true,
   username: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
   role: true,
   status: true,
   memberId: true,
@@ -19,7 +22,9 @@ const userSelect = {
 
 export async function list({ search, role, status }) {
   const where = {};
-  if (search) where.username = { contains: search };
+  if (search) {
+    where.OR = ["username", "firstName", "lastName"].map((f) => ({ [f]: { contains: search } }));
+  }
   if (role) where.role = role;
   if (status) where.status = status;
 
@@ -36,7 +41,7 @@ export async function getById(id) {
   return user;
 }
 
-export async function create({ username, password, role, memberId }, actorId) {
+export async function create({ username, password, role, memberId, firstName, middleName, lastName }, actorId) {
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) throw conflict("Username already taken");
 
@@ -54,6 +59,9 @@ export async function create({ username, password, role, memberId }, actorId) {
   const user = await prisma.user.create({
     data: {
       username,
+      firstName,
+      middleName,
+      lastName,
       passwordHash: await hashPassword(password),
       role,
       memberId: role === "MEMBER" ? memberId : null,
@@ -67,7 +75,7 @@ export async function create({ username, password, role, memberId }, actorId) {
 
 // Updates role and/or status. A MEMBER-linked account cannot change role away
 // from MEMBER (its identity is tied to a member record), and vice versa.
-export async function update(id, { role, status }, actorId) {
+export async function update(id, { role, status, firstName, middleName, lastName }, actorId) {
   const current = await prisma.user.findUnique({ where: { id } });
   if (!current) throw notFound("User not found");
 
@@ -85,6 +93,9 @@ export async function update(id, { role, status }, actorId) {
     data: {
       role: role ?? undefined,
       status: status ?? undefined,
+      firstName,
+      middleName,
+      lastName,
     },
     select: userSelect,
   });

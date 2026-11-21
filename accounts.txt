@@ -1,0 +1,22 @@
+Admin (1)
+
+Name			    Username	    Password
+Grace S. Cubello	gracecubello	Cubello@2026pass
+
+Staff (7)
+
+Name					    Username			        Password
+Nicolas O. Madula			nicolasmadula			    Madula@2026pass
+Anabella D. Yecyec			anabellayecyec			    Yecyec@2026pass
+Revilito Raman				revilitoraman			    Raman@2026pass
+Anna Carmela Y. Calderon	annacarmelacalderon		    Calderon@2026pass
+Anastasio Hagunos			anastasiohagunos		    Hagunos@2026pass
+Ferdinand Guzman			ferdinandguzman			    Guzman@2026pass
+Emelyn G. Ormega			emelynormega			    Ormega@2026pass
+
+
+MAO (3)
+Name			    Username		    Password
+Franklin Mañoza		franklinmanoza		Manoza@2026pass
+Arlene J. Idul		arleneidul		    Idul@2026pass
+Judith Leren		judithleren		    Leren@2026pass

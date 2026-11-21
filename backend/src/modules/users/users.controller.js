@@ -2,7 +2,12 @@ import { z } from "zod";
 import * as service from "./users.service.js";
 import { badRequest } from "../../utils/httpError.js";
 
+// Blank becomes null so an empty form field clears the name.
+const name = z.string().trim().max(100).transform((v) => v || null).nullable().optional();
+const nameFields = { firstName: name, middleName: name, lastName: name };
+
 const createSchema = z.object({
+  ...nameFields,
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(10, "Password must be at least 10 characters"),
   role: z.enum(["ADMIN", "STAFF", "MEMBER", "MAO"]),
@@ -10,6 +15,7 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
+  ...nameFields,
   role: z.enum(["ADMIN", "STAFF", "MEMBER", "MAO"]).optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).optional(),
 });

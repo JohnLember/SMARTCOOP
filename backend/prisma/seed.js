@@ -61,6 +61,39 @@ async function main() {
     create: { username: "mao", passwordHash: await hash("mao123"), role: "MAO" },
   });
 
+  // --- Cooperative office accounts ---
+  // Username = first + last name, lowercase, no spaces or accents; password = last name + "@2026pass".
+  // shortcut: guessable name-based passwords, have the admin reset them before real use.
+  const plain = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const officeUsers = [
+    ["ADMIN", "Grace", "S.", "Cubello"],
+    ["STAFF", "Nicolas", "O.", "Madula"],
+    ["STAFF", "Anabella", "D.", "Yecyec"],
+    ["STAFF", "Revilito", null, "Raman"],
+    ["STAFF", "Anna Carmela", "Y.", "Calderon"],
+    ["STAFF", "Anastasio", null, "Hagunos"],
+    ["STAFF", "Ferdinand", null, "Guzman"],
+    ["STAFF", "Emelyn", "G.", "Ormega"],
+    ["MAO", "Franklin", null, "Mañoza"],
+    ["MAO", "Arlene", "J.", "Idul"],
+    ["MAO", "Judith", null, "Leren"],
+  ];
+  for (const [role, firstName, middleName, lastName] of officeUsers) {
+    const username = plain(firstName + lastName).replace(/\s+/g, "").toLowerCase();
+    await prisma.user.upsert({
+      where: { username },
+      update: { firstName, middleName, lastName }, // never reset a password on re-seed
+      create: {
+        username,
+        firstName,
+        middleName,
+        lastName,
+        role,
+        passwordHash: await hash(`${plain(lastName)}@2026pass`),
+      },
+    });
+  }
+
   // --- Sample members ---
   const sampleMembers = [
     { memberNo: "M-0001", firstName: "Juan", lastName: "Dela Cruz", sex: "Male", barangay: "Poblacion", membershipType: "REGULAR", shareCapital: 15000, dateJoined: "2019-03-01" },
@@ -173,6 +206,7 @@ async function main() {
   console.log("  staff / staff123   (STAFF)");
   console.log("  mao   / mao123     (MAO)");
   console.log("  juan  / member123  (MEMBER → M-0001)");
+  console.log("  + 11 office accounts: <first><last> / <Last>@2026pass (e.g. gracecubello / Cubello@2026pass)");
 }
 
 main()
