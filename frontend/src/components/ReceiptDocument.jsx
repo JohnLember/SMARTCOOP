@@ -1,4 +1,3 @@
-import { Leaf } from "lucide-react";
 import { formatDate } from "../lib/format";
 
 const peso = (n) => `₱${Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -82,9 +81,7 @@ export default function ReceiptDocument({ receipt }) {
 
       {/* Header */}
       <div className="mb-4 flex items-center gap-3 border-b border-[#EAEAEA] pb-4">
-        <div className="rounded-lg bg-[#346538] p-2 text-white">
-          <Leaf size={22} />
-        </div>
+        <img src="/smartcoop-mark.png" alt="" className="h-10 w-10 flex-none" />
         <div className="leading-tight">
           <p className="text-base font-bold text-[#111111]">SMARTCOOP</p>
           <p className="text-xs text-[#787774]">San Luis Rubber Producer&apos;s Cooperative</p>

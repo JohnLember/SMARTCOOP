@@ -394,6 +394,18 @@ body {
   body * {
     visibility: hidden;
   }
+  /* The receipt lives in a modal: print restarts its fade/slide-in animations
+     (fill-mode both), so without this the page is captured at opacity 0. */
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  /* A fixed scrim repeats on every printed page; let the receipt anchor to page 1. */
+  .modal-scrim {
+    position: static !important;
+  }
   #printable-receipt,
   #printable-receipt * {
     visibility: visible;
