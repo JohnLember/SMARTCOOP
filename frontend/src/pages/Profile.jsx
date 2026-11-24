@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
-import api, { apiError } from "../lib/api";
+import api from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useConfirm } from "../components/ConfirmDialog";
 import { Badge, Button, Card, Field, Input, PageHeader } from "../components/ui";
@@ -52,24 +52,32 @@ function NameForm({ user, onSaved }) {
     middleName: user.middleName ?? "",
     lastName: user.lastName ?? "",
   };
+  const confirm = useConfirm();
   const [form, setForm] = useState(initial);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const dirty = Object.keys(initial).some((k) => form[k].trim() !== initial[k]);
+  const fullName = (n) => [n.firstName, n.middleName, n.lastName].map((s) => s.trim()).filter(Boolean).join(" ");
 
   async function submit(e) {
     e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      const res = await api.patch("/auth/me", form);
-      onSaved(res.data);
-      toast.success("Profile updated");
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusy(false);
-    }
+    // Same pattern as the password form: the dialog runs the save, shows progress,
+    // and keeps a server error in view. Cancel leaves the name unchanged.
+    let saved;
+    const ok = await confirm({
+      title: "Save changes to your name?",
+      details: [
+        { label: "Current", value: fullName(initial) || "—" },
+        { label: "New", value: fullName(form) },
+      ],
+      tone: "default",
+      confirmLabel: "Save changes",
+      busyLabel: "Saving…",
+      onConfirm: async () => {
+        saved = (await api.patch("/auth/me", form)).data;
+      },
+    });
+    if (!ok) return;
+    onSaved(saved);
+    toast.success("Profile updated");
   }
 
   const field = (key, label, required) => (
@@ -91,10 +99,12 @@ function NameForm({ user, onSaved }) {
           {field("middleName", "Middle name (optional)", false)}
           {field("lastName", "Last name", true)}
         </div>
-        {error && <p className="mt-3 text-sm text-[#9F2F2D]">{error}</p>}
-        <div className="mt-4 flex justify-end">
-          <Button type="submit" disabled={!dirty || busy}>
-            {busy ? "Saving…" : "Save changes"}
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setForm(initial)} disabled={!dirty}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!dirty}>
+            Save changes
           </Button>
         </div>
       </form>
@@ -167,7 +177,14 @@ function PasswordForm() {
             />
           </div>
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setForm(empty)}
+            disabled={!Object.values(form).some(Boolean)}
+          >
+            Cancel
+          </Button>
           <Button type="submit" disabled={mismatch}>
             Update password
           </Button>
